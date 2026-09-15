@@ -4,38 +4,104 @@ Runtime configuration for the generation engine.
 Values are read from environment variables (see .env.example). Nothing here
 is hard-coded so the Backend module can override settings per-environment
 without touching code.
+
+Note on `.env`: `load_dotenv()` runs at import, and every field resolves
+through a `default_factory` rather than a class-level default, so values are
+read when `Settings()` is constructed rather than when this module is first
+imported. That ordering matters — a class-level `os.getenv(...)` default
+freezes whatever the environment looked like at import time, which means a
+`.env` file loaded later is silently ignored.
 """
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+try:  # python-dotenv is optional at runtime, required for local dev
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:  # pragma: no cover
+    pass
 
 
-def _env_int(name: str, default: int) -> int:
-    val = os.getenv(name)
-    return int(val) if val else default
+def _env_str(name: str, default: str):
+    return lambda: os.getenv(name, default)
 
 
-def _env_float(name: str, default: float) -> float:
-    val = os.getenv(name)
-    return float(val) if val else default
+def _env_int(name: str, default: int):
+    def resolve() -> int:
+        val = os.getenv(name)
+        return int(val) if val else default
+
+    return resolve
+
+
+def _env_float(name: str, default: float):
+    def resolve() -> float:
+        val = os.getenv(name)
+        return float(val) if val else default
+
+    return resolve
+
+
+def _env_bool(name: str, default: bool):
+    def resolve() -> bool:
+        val = os.getenv(name)
+        if not val:
+            return default
+        return val.strip().lower() in {"1", "true", "yes", "on"}
+
+    return resolve
 
 
 @dataclass(frozen=True)
 class Settings:
-    # Groq API
-    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
-    groq_base_url: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
-    groq_model: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-    groq_timeout_seconds: float = _env_float("GROQ_TIMEOUT_SECONDS", 30.0)
-    groq_temperature: float = _env_float("GROQ_TEMPERATURE", 0.7)
-
-    # Generation / validation behaviour
-    max_regeneration_retries: int = _env_int("MAX_REGENERATION_RETRIES", 2)
-    near_duplicate_similarity_threshold: float = _env_float(
-        "NEAR_DUPLICATE_SIMILARITY_THRESHOLD", 0.90
+    # --- Groq API ---
+    groq_api_key: str = field(default_factory=_env_str("GROQ_API_KEY", ""))
+    groq_base_url: str = field(
+        default_factory=_env_str("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
     )
-    max_batch_count: int = _env_int("MAX_BATCH_COUNT", 25)
+    groq_model: str = field(
+        default_factory=_env_str("GROQ_MODEL", "llama-3.3-70b-versatile")
+    )
+    groq_timeout_seconds: float = field(
+        default_factory=_env_float("GROQ_TIMEOUT_SECONDS", 30.0)
+    )
+    groq_temperature: float = field(default_factory=_env_float("GROQ_TEMPERATURE", 0.7))
+
+    # Transport-level retries (429s / transient 5xx). Distinct from the
+    # generation-level regeneration retries below.
+    groq_max_retries: int = field(default_factory=_env_int("GROQ_MAX_RETRIES", 3))
+    groq_retry_backoff_seconds: float = field(
+        default_factory=_env_float("GROQ_RETRY_BACKOFF_SECONDS", 1.0)
+    )
+
+    # --- Generation / validation behaviour ---
+    max_regeneration_retries: int = field(
+        default_factory=_env_int("MAX_REGENERATION_RETRIES", 2)
+    )
+    near_duplicate_similarity_threshold: float = field(
+        default_factory=_env_float("NEAR_DUPLICATE_SIMILARITY_THRESHOLD", 0.90)
+    )
+    max_batch_count: int = field(default_factory=_env_int("MAX_BATCH_COUNT", 25))
+
+    # Optional second-pass LLM relevance check. Off by default because it
+    # adds one extra Groq call per batch.
+    enable_llm_relevance_check: bool = field(
+        default_factory=_env_bool("ENABLE_LLM_RELEVANCE_CHECK", False)
+    )
 
 
 settings = Settings()
+
+
+def reload_settings() -> Settings:
+    """
+    Re-read every value from the current environment and return a fresh
+    Settings. Used by tests, and by the Backend if it sets configuration
+    after this module has been imported.
+    """
+    global settings
+    settings = Settings()
+    return settings

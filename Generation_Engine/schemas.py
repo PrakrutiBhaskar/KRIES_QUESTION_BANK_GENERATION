@@ -39,12 +39,18 @@ class Difficulty(str, Enum):
 VALID_MARKS = {1, 2, 3, 5}
 
 # Which marks are valid for which question type.
-# - MCQ is fixed at 1 mark (spec.md Section 7: "MCQs ... typically fixed at 1 mark")
-# - Short answer covers the 2- and 3-mark formats (prompt-library.md)
-# - Long answer is the 5-mark, exam-response format (prompt-library.md)
+#
+# - MCQ is fixed at 1 mark (spec.md Section 7: "MCQs ... typically fixed at
+#   1 mark").
+# - Short answer covers the 1-, 2- and 3-mark formats. The 1-mark descriptive
+#   case is explicitly required by spec.md Section 7 — the mark-scheme table
+#   gives non-MCQ 1-mark examples for every subject ("What is the SI unit of
+#   force?" -> Newton), and Module A lists "1 mark -> direct one-line answer,
+#   no explanation" as a bullet separate from the MCQ rule.
+# - Long answer is the 5-mark, exam-response format (prompt-library.md).
 VALID_MARKS_BY_TYPE = {
     QuestionType.MCQ: {1},
-    QuestionType.SHORT: {2, 3},
+    QuestionType.SHORT: {1, 2, 3},
     QuestionType.LONG: {5},
 }
 
@@ -89,18 +95,22 @@ class Question(BaseModel):
             if self.answer.strip() not in [o.strip() for o in self.options]:
                 raise ValueError("MCQ answer must be one of the provided options")
             if not self.explanation or not self.explanation.strip():
-                raise ValueError("MCQ questions require a 1-line justification (explanation)")
+                raise ValueError(
+                    "MCQ questions require a 1-line justification (explanation)"
+                )
             if self.marks != 1:
                 raise ValueError("MCQ questions must be worth 1 mark")
         else:
             if self.options:
-                raise ValueError(f"{self.type.value} questions must not carry MCQ options")
+                raise ValueError(
+                    f"{self.type.value} questions must not carry MCQ options"
+                )
 
         expected_marks = VALID_MARKS_BY_TYPE[self.type]
         if self.marks not in expected_marks:
             raise ValueError(
-                f"{self.type.value} questions must use marks in {sorted(expected_marks)}, "
-                f"got {self.marks}"
+                f"{self.type.value} questions must use marks in "
+                f"{sorted(expected_marks)}, got {self.marks}"
             )
         return self
 

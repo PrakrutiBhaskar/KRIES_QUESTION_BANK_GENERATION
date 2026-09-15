@@ -8,37 +8,47 @@ called out across spec.md / prompt-library.md / test-plan.md:
 
 Also implements the request-level combination check (subject/chapter/type/
 marks) that api-contract.md's 400 error refers to.
+
+All marks/subject thresholds live in subject_formats.py rather than here, so
+the prompt layer and this layer can't drift apart.
 """
 from __future__ import annotations
 
 import difflib
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import ValidationError as PydanticValidationError
 
 from .config import settings
 from .schemas import (
-    Difficulty,
     GenerationRequest,
     Question,
     QuestionType,
-    Subject,
     VALID_MARKS_BY_TYPE,
 )
+from .subject_formats import compile_required_pattern, get_marks_rule
 
 
 # ---------------------------------------------------------------------------
 # 0. Request-level combination check (-> 400 InvalidRequestError upstream)
 # ---------------------------------------------------------------------------
 
-def validate_request_combination(request: GenerationRequest) -> list[str]:
+def validate_request_combination(
+    request: GenerationRequest,
+    syllabus: Optional["SyllabusIndex"] = None,  # noqa: F821 - see syllabus.py
+) -> list[str]:
     """
     Returns a list of human-readable problems with the request combination.
     Empty list means the request is valid. Callers raise InvalidRequestError
     (400) if this is non-empty — kept as pure validation here so it's
     trivially testable.
+
+    If a `syllabus` index is supplied, the chapter is additionally checked
+    against the known chapter list for that subject. Without one, any
+    non-blank chapter string is accepted (the MVP has no syllabus source
+    wired up yet — see spec.md Section 8).
     """
     problems: list[str] = []
 
@@ -56,6 +66,13 @@ def validate_request_combination(request: GenerationRequest) -> list[str]:
 
     if not request.chapter or not request.chapter.strip():
         problems.append("chapter must not be blank")
+    elif syllabus is not None and not syllabus.has_chapter(
+        request.subject, request.chapter
+    ):
+        problems.append(
+            f'unknown chapter "{request.chapter}" for subject '
+            f"{request.subject.value}"
+        )
 
     return problems
 
@@ -77,6 +94,13 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
     the fields the model wasn't asked to produce (id/subject/chapter/type/
     marks/difficulty), and validates it against the Question schema.
     """
+    if not isinstance(raw, dict):
+        return BuildResult(
+            question=None,
+            error=f"expected a JSON object, got {type(raw).__name__}",
+            raw={},
+        )
+
     try:
         payload = {
             "subject": request.subject,
@@ -87,8 +111,8 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
             "text": raw.get("text", ""),
             "options": raw.get("options"),
             "answer": raw.get("answer", ""),
-            "explanation": raw.get("explanation", ""),
-            "topic": raw.get("topic", ""),
+            "explanation": raw.get("explanation", "") or "",
+            "topic": raw.get("topic", "") or "",
             "tags": raw.get("tags") or [],
         }
         question = Question(**payload)
@@ -145,127 +169,161 @@ def find_duplicates(
 
 
 # ---------------------------------------------------------------------------
-# 3. Marks-vs-answer-length check (project-context.md mark-scheme table)
+# 3. Marks-vs-answer-length check (spec.md Section 7 mark-scheme table)
 # ---------------------------------------------------------------------------
+
+# Matches a list marker at the start of the string, at the start of a line, or
+# mid-line after whitespace. The mid-line case matters: the 3-mark prompt asks
+# the model to number points "1., 2., 3." inside the answer string, and models
+# routinely return all three on a single line. A line-anchored pattern silently
+# falls through to sentence-splitting there and counts 6 points instead of 3,
+# which rejects correctly-formatted answers.
+#
+# `\d+[.)]` requires trailing whitespace, so decimals ("2.5 kg") and
+# coordinates are not mistaken for markers.
+_MARKER_SPLIT = re.compile(r"(?:^|(?<=\s))(?:\d+[.)]|[-*•])\s+", re.MULTILINE)
+
+# Labeled sections, e.g. "Causes: ... Effects: ..." — used by Social Science
+# 5-mark answers, which are structured by heading rather than by number.
+_LABEL_SPLIT = re.compile(r"(?:^|(?<=\s))[A-Z][A-Za-z ]{2,24}:\s+", re.MULTILINE)
+
 
 def _split_points(answer: str) -> list[str]:
     """
     Splits an answer into discrete points/steps using common list markers
-    (numbered "1." / "1)", bullets, or newlines) so we can count them. Falls
-    back to sentence-splitting if no explicit markers are present.
+    (numbered "1." / "1)", bullets, newlines, or labeled sections) so we can
+    count them. Falls back to sentence-splitting if no explicit markers are
+    present.
     """
-    marker_split = re.split(r"(?:\n|^)\s*(?:\d+[.)]|[-*•])\s+", answer.strip())
-    marker_split = [p.strip() for p in marker_split if p.strip()]
+    answer = answer.strip()
+    if not answer:
+        return []
+
+    marker_split = [p.strip() for p in _MARKER_SPLIT.split(answer) if p.strip()]
     if len(marker_split) >= 2:
         return marker_split
 
-    sentence_split = re.split(r"(?<=[.!?])\s+", answer.strip())
-    return [s.strip() for s in sentence_split if s.strip()]
+    # Labeled sections ("Causes: ... Effects: ..."). Each section body is
+    # itself flattened into sentences, so a two-section answer with several
+    # sentences per section counts as the several points it actually is.
+    if len(_LABEL_SPLIT.findall(answer)) >= 2:
+        bodies = [p.strip() for p in _LABEL_SPLIT.split(answer) if p.strip()]
+        flattened: list[str] = []
+        for body in bodies:
+            flattened.extend(_split_sentences(body))
+        if flattened:
+            return flattened
+
+    line_split = [p.strip() for p in answer.splitlines() if p.strip()]
+    if len(line_split) >= 2:
+        return line_split
+
+    return _split_sentences(answer)
+
+
+def _split_sentences(text: str) -> list[str]:
+    """Sentence split, including the Kannada/Devanagari danda as a terminator."""
+    return [s.strip() for s in re.split(r"(?<=[.!?।])\s+", text.strip()) if s.strip()]
 
 
 def check_marks_format(question: Question) -> list[str]:
     """
     Returns a list of format problems for the given question's answer,
-    checked against the marks-based expected format
-    (project-context.md / spec.md Section 7). Empty list = passes.
+    checked against the marks-based expected format for its subject
+    (subject_formats.py, derived from spec.md Section 7). Empty list = passes.
     """
     problems: list[str] = []
     answer = question.answer.strip()
     word_count = len(answer.split())
 
     if question.type == QuestionType.MCQ:
-        # MCQ answers are the option text; the *justification* is what
-        # carries the marks-format expectation (1-line).
-        expl_words = len(question.explanation.split())
+        # An MCQ's answer is just the option text; the *justification* is what
+        # carries the marks-format expectation (1 line).
+        explanation = question.explanation.strip()
+        expl_words = len(explanation.split())
         if expl_words > 40:
             problems.append(
                 f"MCQ justification should be ~1 line; got {expl_words} words"
             )
+        if len(_split_points(explanation)) > 2:
+            problems.append(
+                "MCQ justification should be a single line, not a multi-point answer"
+            )
         return problems
 
-    if question.marks == 1:
-        if word_count > 8:
-            problems.append(
-                f"1-mark answer should be a single word/phrase; got {word_count} words"
-            )
-        if question.explanation.strip():
-            problems.append("1-mark answer should not include an explanation")
+    rule = get_marks_rule(question.subject, question.marks)
+    points = _split_points(answer)
+    label = f"{question.marks}-mark answer"
 
-    elif question.marks == 2:
-        points = _split_points(answer)
-        if len(points) > 2:
+    if rule.min_points is not None and len(points) < rule.min_points:
+        if rule.min_points == rule.max_points:
             problems.append(
-                f"2-mark answer should be 1-2 lines with one supporting point; "
-                f"detected {len(points)} distinct points"
+                f"{label} must contain exactly {rule.min_points} distinct "
+                f"points/steps; detected {len(points)}"
             )
-        if word_count > 60:
+        else:
             problems.append(
-                f"2-mark answer looks too long for a 1-2 line response "
-                f"({word_count} words)"
+                f"{label} must contain at least {rule.min_points} distinct "
+                f"points/steps; detected {len(points)}"
             )
-        if word_count < 3:
-            problems.append("2-mark answer is too short to contain a supporting point")
-
-    elif question.marks == 3:
-        points = _split_points(answer)
-        if len(points) != 3:
+    elif rule.max_points is not None and len(points) > rule.max_points:
+        if rule.min_points == rule.max_points:
             problems.append(
-                f"3-mark answer must contain exactly 3 distinct points/steps; "
-                f"detected {len(points)}"
+                f"{label} must contain exactly {rule.max_points} distinct "
+                f"points/steps; detected {len(points)}"
+            )
+        else:
+            problems.append(
+                f"{label} should contain at most {rule.max_points} distinct "
+                f"point(s); detected {len(points)}"
             )
 
-    elif question.marks == 5:
-        points = _split_points(answer)
-        if len(points) < 3:
-            problems.append(
-                f"5-mark answer must be a detailed multi-point response; "
-                f"detected only {len(points)} distinct point(s)"
-            )
-        if word_count < 40:
-            problems.append(
-                f"5-mark answer looks too short for exam-response depth "
-                f"({word_count} words)"
-            )
+    if rule.min_words is not None and word_count < rule.min_words:
+        problems.append(
+            f"{label} looks too short for the expected depth "
+            f"({word_count} words, expected at least {rule.min_words})"
+        )
+    if rule.max_words is not None and word_count > rule.max_words:
+        problems.append(
+            f"{label} looks too long for the expected format "
+            f"({word_count} words, expected at most {rule.max_words})"
+        )
 
-        subject_checks = {
-            Subject.MATH: (
-                r"step|derive|substitut|therefore|hence",
-                "Math 5-mark answers should show step-by-step derivation language",
-            ),
-            Subject.SOCIAL_SCIENCE: (
-                r"cause|effect|reason|consequence|impact|result",
-                "Social Science 5-mark answers should reference causes/effects language",
-            ),
-        }
-        check = subject_checks.get(question.subject)
-        if check:
-            pattern, message = check
-            if not re.search(pattern, answer, re.IGNORECASE):
-                problems.append(message)
+    if rule.forbid_explanation and question.explanation.strip():
+        problems.append(f"{label} should not include an explanation")
+
+    pattern = compile_required_pattern(rule)
+    if pattern and not pattern.search(answer):
+        problems.append(rule.required_pattern_message)
 
     return problems
 
 
 def check_answer_relevance(question: Question) -> list[str]:
     """
-    Lightweight heuristic guard against obviously broken answers (empty,
-    or a verbatim echo of the question text). This is NOT a substitute for
-    the manual factual-correctness spot-check in test-plan.md Section 4 —
-    true semantic "does the answer match the question" verification needs
-    either human review or a second LLM pass (see engine.verify_relevance_llm
-    for an optional hook).
+    Lightweight heuristic guard against obviously broken answers (empty, a
+    verbatim echo of the question text, or an MCQ answer that isn't one of
+    the options). This is NOT a substitute for the manual factual-correctness
+    spot-check in test-plan.md Section 4 — true semantic "does the answer
+    match the question" verification needs either human review or a second
+    LLM pass (see GenerationEngine.verify_relevance_llm, enabled via
+    ENABLE_LLM_RELEVANCE_CHECK).
     """
     problems: list[str] = []
     if not question.answer.strip():
         problems.append("answer is empty")
     elif _normalize(question.answer) == _normalize(question.text):
         problems.append("answer appears to be a copy of the question text")
+
+    if not question.text.strip().endswith(("?", ":", ".", "।")) and len(
+        question.text.split()
+    ) < 3:
+        problems.append("question text is too short to be a real question")
+
     return problems
 
 
-def validate_batch(
-    questions: list[Question],
-) -> dict[int, list[str]]:
+def validate_batch(questions: list[Question]) -> dict[int, list[str]]:
     """
     Runs marks-format + relevance checks across a batch and duplicate
     detection across the batch as a whole. Returns {index: [problems]} for
@@ -279,6 +337,8 @@ def validate_batch(
             failures[i] = problems
 
     for i in find_duplicates(questions):
-        failures.setdefault(i, []).append("duplicate of an earlier question in this batch")
+        failures.setdefault(i, []).append(
+            "duplicate of an earlier question in this batch"
+        )
 
     return failures

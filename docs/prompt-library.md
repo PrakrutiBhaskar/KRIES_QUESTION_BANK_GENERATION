@@ -29,7 +29,27 @@ For each question return:
 Return as a JSON array matching this shape: [...]
 ```
 
-**Known issues:** (fill in as discovered — e.g. model sometimes returns 3 or 5 options, duplicate distractors, etc.)
+**Known issues:** model occasionally returns 3 or 5 options, or duplicate distractors — both are rejected by the `Question` schema rather than repaired. `response_format: json_object` is set on the Groq call, which means the array often arrives nested under a key; `GroqClient._parse_json_array` unwraps it.
+
+**Last updated:** engine implementation (see `generation_engine/prompts.py`).
+
+---
+
+## Short answer (1 mark)
+
+**Prompt template:**
+```
+Generate {count} one-mark questions for {subject}, chapter "{chapter}",
+difficulty {difficulty}, suitable for a Karnataka State Board grade 7-9
+student.
+
+Each answer must be a single word, a short phrase, or one direct factual
+line — the kind of answer a 1-mark question is awarded full marks for
+(e.g. "What is the SI unit of force?" -> "Newton"). Do NOT explain,
+justify, or add working. Leave "explanation" as an empty string.
+```
+
+**Known issues:** the non-MCQ 1-mark case is required by spec.md Section 7 (the mark-scheme table gives 1-mark examples for Math, Science and Social Science that are not MCQs). It is generated as `type: Short, marks: 1`. Validation rejects any answer over 15 words, or any answer that carries an explanation.
 
 ---
 
@@ -68,10 +88,16 @@ structure implicit.
 ---
 
 ## Subject-specific notes
-- **Math:** 5-mark answers need full step-by-step derivations, not just the final answer.
-- **Social Science:** 5-mark answers should be split into clearly labeled sections (e.g. causes / effects).
+
+These live in code as a single registry — `generation_engine/subject_formats.py`. Both the prompt layer and the validation layer read from it, so a subject's prompt guidance and the rule that checks the model's output cannot drift apart. Edit `SUBJECT_FORMATS` there (or call `register_subject_format` at startup) rather than editing prompts and validators separately.
+
+- **Math:** 5-mark answers need full step-by-step derivations, not just the final answer. Validated by requiring derivation language or working in the answer.
+- **Social Science:** 5-mark answers should be split into clearly labeled sections (e.g. causes / effects). The splitter treats `Label:` headings as structure and flattens each section into its sentences when counting points.
 - **Science:** encourage diagram references in explanation text even though no actual diagram is generated.
-- **English / Kannada:** short/long answers may need passage-based context — confirm format once syllabus parsing is in place.
+- **English / Kannada:** questions must be self-contained — any passage or sentence the question asks about is included in the question text, since there is no external passage the student can see. Kannada additionally asks for Kannada script and uses relaxed word-count bounds, because whitespace word counts don't map cleanly onto the script. Still to confirm against real syllabus data once PDF parsing lands.
+
+## Where the marks rules live
+Numeric thresholds (point counts, word counts, whether an explanation is allowed) are **not** hardcoded in the validators. They live in `DEFAULT_MARKS_RULES` and per-subject overrides in `subject_formats.py`, derived from the mark-scheme reference table in spec.md Section 7.
 
 ## Validation checklist (apply to every generated batch)
 - [ ] Output is valid JSON matching the shared `Question` schema
