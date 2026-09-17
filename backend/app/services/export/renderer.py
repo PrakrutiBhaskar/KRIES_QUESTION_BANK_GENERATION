@@ -288,10 +288,47 @@ def _instruction_lines(items) -> list[str]:
     return lines
 
 
+# Groq's output routinely contains typographic punctuation and scientific
+# notation (non-breaking hyphens, subscript/superscript digits for CO2, O2,
+# exponents, etc.) that base-14 PDF fonts — and some system TTFs, depending
+# on what's installed on the host — simply have no glyph for. ReportLab
+# drops or box-renders anything the active font can't map, silently, so a
+# missing glyph never surfaces as an error. Normalizing to plain ASCII
+# before layout guarantees correct rendering regardless of which font ends
+# up registered on a given machine.
+_CHAR_NORMALIZE_MAP = {
+    "\u2010": "-",  # hyphen
+    "\u2011": "-",  # non-breaking hyphen
+    "\u2012": "-",  # figure dash
+    "\u2013": "-",  # en dash
+    "\u2014": "-",  # em dash
+    "\u2015": "-",  # horizontal bar
+    "\u2212": "-",  # minus sign
+    "\u2018": "'", "\u2019": "'",  # curly single quotes
+    "\u201c": '"', "\u201d": '"',  # curly double quotes
+    "\u2026": "...",  # ellipsis
+    "\u00a0": " ",  # non-breaking space
+    "\u00d7": "x",  # multiplication sign
+    "\u00f7": "/",  # division sign
+    # Subscript digits (e.g. CO2, O2)
+    "\u2080": "0", "\u2081": "1", "\u2082": "2", "\u2083": "3", "\u2084": "4",
+    "\u2085": "5", "\u2086": "6", "\u2087": "7", "\u2088": "8", "\u2089": "9",
+    # Superscript digits (e.g. exponents)
+    "\u2070": "0", "\u00b9": "1", "\u00b2": "2", "\u00b3": "3", "\u2074": "4",
+    "\u2075": "5", "\u2076": "6", "\u2077": "7", "\u2078": "8", "\u2079": "9",
+}
+_CHAR_NORMALIZE_TABLE = str.maketrans(_CHAR_NORMALIZE_MAP)
+
+
+def _normalize_text(text: str) -> str:
+    """Map characters base-14/system fonts commonly can't render to ASCII."""
+    return str(text).translate(_CHAR_NORMALIZE_TABLE)
+
+
 def _esc(text: str) -> str:
-    """Escape for ReportLab's mini-HTML paragraph markup."""
+    """Normalize, then escape for ReportLab's mini-HTML paragraph markup."""
     return (
-        str(text)
+        _normalize_text(text)
         .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")

@@ -40,6 +40,15 @@ class MarksRule:
     # Regex the answer must match, plus the message shown when it doesn't.
     required_pattern: Optional[str] = None
     required_pattern_message: str = ""
+    # If set, `required_pattern` is only enforced when the question TEXT
+    # (not the answer) matches this regex too. Use this when a pattern only
+    # makes sense for some questions at this mark value — e.g. Social
+    # Science 5-mark answers should use causes/effects language, but only
+    # for questions that are actually asking about causes/effects; a
+    # question like "explain the significance of X" or "describe the
+    # procedure for Y" is an equally valid 5-mark Social Science question
+    # and forcing causes/effects language onto its answer would be wrong.
+    required_pattern_only_if_question_matches: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -76,10 +85,11 @@ DEFAULT_MARKS_RULES: dict[int, MarksRule] = {
 SUBJECT_FORMATS: dict[Subject, SubjectFormat] = {
     Subject.MATH: SubjectFormat(
         prompt_note=(
-            "For 5-mark answers, show the FULL step-by-step derivation, not "
-            "just the final answer — number each step. For lower marks, show "
-            "only as much working as the mark value implies (1 mark = no "
-            "working, 2 marks = 1 line of working, 3 marks = 2-3 steps)."
+            "Show only as much working as the mark value implies. Follow the "
+            "exact point/step count given in the instructions for this "
+            "question's mark value below — do not add extra steps beyond "
+            "what's requested, and for 5-mark answers show the FULL "
+            "step-by-step derivation, numbering each step."
         ),
         marks_rules={
             5: MarksRule(
@@ -108,6 +118,14 @@ SUBJECT_FORMATS: dict[Subject, SubjectFormat] = {
                 required_pattern_message=(
                     "Social Science 5-mark answers should reference "
                     "causes/effects language"
+                ),
+                # Only enforce the causes/effects wording on questions that
+                # are themselves asking about causes/effects — not every
+                # 5-mark Social Science question is (e.g. "explain the
+                # significance of...", "describe the procedure for...").
+                required_pattern_only_if_question_matches=(
+                    r"cause|effect|reason|consequence|impact|result|"
+                    r"led to|resulted in|why did|factors"
                 ),
             ),
         },

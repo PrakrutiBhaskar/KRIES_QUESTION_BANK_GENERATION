@@ -179,16 +179,56 @@ def find_duplicates(
 # 3. Marks-vs-answer-length check (spec.md Section 7 mark-scheme table)
 # ---------------------------------------------------------------------------
 
-# Matches a list marker at the start of the string, at the start of a line, or
-# mid-line after whitespace. The mid-line case matters: the 3-mark prompt asks
-# the model to number points "1., 2., 3." inside the answer string, and models
-# routinely return all three on a single line. A line-anchored pattern silently
-# falls through to sentence-splitting there and counts 6 points instead of 3,
-# which rejects correctly-formatted answers.
-#
+# Candidate list markers: numbered ("1." / "1)") or bulleted (-, *, •).
 # `\d+[.)]` requires trailing whitespace, so decimals ("2.5 kg") and
 # coordinates are not mistaken for markers.
-_MARKER_SPLIT = re.compile(r"(?:^|(?<=\s))(?:\d+[.)]|[-*•])\s+", re.MULTILINE)
+_MARKER_CANDIDATE = re.compile(r"(?:\d+[.)]|[-*•])\s+")
+
+_SENTENCE_END_CHARS = ".!?।"
+
+
+def _is_marker_boundary(text: str, match_start: int) -> bool:
+    """
+    True if a marker candidate at `match_start` actually starts a new point
+    — i.e. it sits at the very start of the answer, right after a newline,
+    or right after a sentence-ending punctuation mark (skipping any spaces
+    in between).
+
+    This exists because math answers are full of things that LOOK like list
+    markers but aren't: "3x - 2x" has a bare "-" doing subtraction, not
+    bulleting a point, and "... = 5 + 7." has a number immediately before a
+    newline that isn't the start of a new step, just the end of the current
+    one. Requiring a real sentence/line boundary before the marker filters
+    those out while still catching genuine numbered points — including the
+    case where a model puts "1. ... 2. ... 3. ..." all on one line, since
+    each point still ends with a period before the next marker starts.
+    """
+    i = match_start
+    while i > 0 and text[i - 1] in " \t":
+        i -= 1
+    if i == 0:
+        return True
+    prev = text[i - 1]
+    return prev == "\n" or prev in _SENTENCE_END_CHARS
+
+
+def _split_on_markers(answer: str) -> list[str]:
+    """Splits `answer` at marker candidates that pass `_is_marker_boundary`."""
+    matches = [
+        m for m in _MARKER_CANDIDATE.finditer(answer)
+        if _is_marker_boundary(answer, m.start())
+    ]
+    if not matches:
+        return []
+    points = []
+    for idx, m in enumerate(matches):
+        start = m.end()
+        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(answer)
+        point = answer[start:end].strip()
+        if point:
+            points.append(point)
+    return points
+
 
 # Labeled sections, e.g. "Causes: ... Effects: ..." — used by Social Science
 # 5-mark answers, which are structured by heading rather than by number.
@@ -206,7 +246,7 @@ def _split_points(answer: str) -> list[str]:
     if not answer:
         return []
 
-    marker_split = [p.strip() for p in _MARKER_SPLIT.split(answer) if p.strip()]
+    marker_split = _split_on_markers(answer)
     if len(marker_split) >= 2:
         return marker_split
 
@@ -301,9 +341,23 @@ def check_marks_format(question: Question) -> list[str]:
 
     pattern = compile_required_pattern(rule)
     if pattern and not pattern.search(answer):
-        problems.append(rule.required_pattern_message)
+        skip = False
+        if rule.required_pattern_only_if_question_matches:
+            question_pattern = re.compile(
+                rule.required_pattern_only_if_question_matches, re.IGNORECASE
+            )
+            skip = not question_pattern.search(question.text)
+        if not skip:
+            problems.append(rule.required_pattern_message)
 
     return problems
+
+
+# Two or more lettered options ("A) ...", "B) ...") at the start of a line —
+# a real MCQ shape leaking into a question `text` field for a non-MCQ type.
+# Require at least 2 so a single incidental "A)" (e.g. referencing a part of
+# a diagram) doesn't false-positive.
+_OPTION_LEAK_RE = re.compile(r"(?:^|\n)\s*[A-D][).]\s", re.MULTILINE)
 
 
 def check_answer_relevance(question: Question) -> list[str]:
@@ -326,6 +380,17 @@ def check_answer_relevance(question: Question) -> list[str]:
         question.text.split()
     ) < 3:
         problems.append("question text is too short to be a real question")
+
+    if question.type != QuestionType.MCQ and len(
+        _OPTION_LEAK_RE.findall(question.text)
+    ) >= 2:
+        problems.append(
+            f"{question.type.value} question text contains embedded "
+            f"multiple-choice-style options ('A)', 'B)', ...), but this "
+            f"is not an MCQ — options belong in the \"options\" field of "
+            f"an MCQ question, not inside a {question.type.value} "
+            f"question's text"
+        )
 
     return problems
 

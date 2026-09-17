@@ -4,6 +4,7 @@ from generation_engine.schemas import Question, GenerationRequest, Subject, Ques
 from generation_engine.validation import (
     validate_request_combination,
     check_marks_format,
+    check_answer_relevance,
     find_duplicates,
     build_question,
 )
@@ -140,9 +141,62 @@ def test_5_mark_math_flags_missing_derivation_language():
 
 def test_5_mark_social_science_requires_cause_effect_language():
     long_answer = "This is a fairly long answer with several words to pass length checks. " * 3
-    q = make_short(5, long_answer, subject=Subject.SOCIAL_SCIENCE, text="Discuss the French Revolution.")
+    q = make_short(5, long_answer, subject=Subject.SOCIAL_SCIENCE,
+                   text="Discuss the causes and effects of the French Revolution.")
     problems = check_marks_format(q)
     assert any("causes/effects" in p for p in problems)
+
+
+def test_5_mark_social_science_skips_cause_effect_check_for_non_causal_questions():
+    # Not every 5-mark Social Science question is a causes/effects essay —
+    # "explain the significance of..." is an equally valid 5-mark question,
+    # and forcing causes/effects wording onto its answer would be wrong.
+    long_answer = "This is a fairly long answer with several words to pass length checks. " * 3
+    q = make_short(5, long_answer, subject=Subject.SOCIAL_SCIENCE,
+                   text="Explain the significance of the Preamble of the Indian Constitution.")
+    problems = check_marks_format(q)
+    assert not any("causes/effects" in p for p in problems)
+
+
+# --- answer relevance checks ------------------------------------------------
+
+def test_option_leak_flagged_for_non_mcq():
+    # A real failure mode seen in production: the model embeds MCQ-style
+    # lettered options directly in a Short/Long question's text, even though
+    # that type has no "options" field at all.
+    q = make_short(
+        3,
+        "1. First point. 2. Second point. 3. Third point.",
+        text=(
+            'Identify the grammatical relation of the word in: "The '
+            'children\'s playground is clean."\n'
+            "A) Object\nB) Karma\nC) Karaka\nD) Sandhi"
+        ),
+    )
+    problems = check_answer_relevance(q)
+    assert any("multiple-choice-style options" in p for p in problems)
+
+
+def test_option_leak_not_flagged_for_real_mcq():
+    q = Question(
+        subject=Subject.SCIENCE, chapter="Force", type=QuestionType.MCQ,
+        grade=8, text="What is the SI unit of force?",
+        options=["Newton", "Joule", "Watt", "Pascal"], answer="Newton",
+        explanation="Named after Isaac Newton.", marks=1, difficulty=Difficulty.EASY,
+    )
+    assert check_answer_relevance(q) == []
+
+
+def test_single_lettered_reference_does_not_false_positive():
+    # One incidental "A)" (e.g. labeling a diagram part) shouldn't trip the
+    # option-leak check — it takes 2+ lettered markers to look like a real
+    # embedded options list.
+    q = make_short(
+        2,
+        "Petal; it attracts pollinators.",
+        text="In the diagram, label part A) of the flower and explain its function.",
+    )
+    assert check_answer_relevance(q) == []
 
 
 # --- duplicate detection ---------------------------------------------------------

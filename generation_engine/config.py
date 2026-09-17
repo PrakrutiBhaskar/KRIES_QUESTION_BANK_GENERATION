@@ -63,7 +63,12 @@ class Settings:
         default_factory=_env_str("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
     )
     groq_model: str = field(
-        default_factory=_env_str("GROQ_MODEL", "llama-3.3-70b-versatile")
+        # llama-3.3-70b-versatile was deprecated by Groq (announced 2026-06-17,
+        # decommissioned 2026-08-16). Groq's recommended replacement for this
+        # use case is openai/gpt-oss-120b; verify against
+        # https://console.groq.com/docs/deprecations if this default ever
+        # starts failing with model_decommissioned.
+        default_factory=_env_str("GROQ_MODEL", "openai/gpt-oss-120b")
     )
     groq_timeout_seconds: float = field(
         default_factory=_env_float("GROQ_TIMEOUT_SECONDS", 30.0)
@@ -75,6 +80,21 @@ class Settings:
     groq_max_retries: int = field(default_factory=_env_int("GROQ_MAX_RETRIES", 3))
     groq_retry_backoff_seconds: float = field(
         default_factory=_env_float("GROQ_RETRY_BACKOFF_SECONDS", 1.0)
+    )
+
+    # Client-side approximation of Groq's tokens-per-minute (TPM) limit.
+    # The client proactively waits before a call likely to blow this budget
+    # instead of firing it and eating a 429 + backoff. 8000 matches the
+    # `on_demand` free tier seen in practice; raise it (or check
+    # https://console.groq.com/settings/billing) after upgrading to Dev
+    # Tier. Set to 0 to disable proactive throttling entirely.
+    groq_tpm_limit: int = field(default_factory=_env_int("GROQ_TPM_LIMIT", 8000))
+    # Used to estimate an upcoming call's cost before Groq's actual
+    # `usage.total_tokens` is known (i.e. for the very first calls in a
+    # window). Real usage is recorded once a response comes back, so this
+    # only affects how cautious the client is early on.
+    groq_estimated_output_tokens: int = field(
+        default_factory=_env_int("GROQ_ESTIMATED_OUTPUT_TOKENS", 900)
     )
 
     # --- Generation / validation behaviour ---

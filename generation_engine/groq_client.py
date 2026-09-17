@@ -17,6 +17,8 @@ import asyncio
 import json
 import logging
 import re
+import time
+from collections import deque
 from typing import Any
 
 import httpx
@@ -39,6 +41,66 @@ def _strip_markdown_fence(text: str) -> str:
     return text
 
 
+class _TokenRateLimiter:
+    """
+    Client-side approximation of Groq's tokens-per-minute (TPM) limit.
+
+    Tracks a sliding 60s window of tokens actually spent (from the `usage`
+    block Groq returns with each response). Before a new call, it estimates
+    that call's likely cost and — if the window is already close to the
+    budget — sleeps until enough of the window has aged out, rather than
+    firing the request and relying on 429 + backoff to recover. This is a
+    proactive approximation, not a guarantee: it can't see other processes
+    sharing the same Groq org, and its pre-response estimate is a rough
+    chars/4 heuristic, not a real tokenizer count.
+    """
+
+    def __init__(self, tpm_limit: int, estimated_output_tokens: int):
+        self.tpm_limit = tpm_limit
+        self.estimated_output_tokens = max(0, estimated_output_tokens)
+        self._window: deque[tuple[float, int]] = deque()
+
+    def _window_total(self, now: float) -> int:
+        while self._window and now - self._window[0][0] > 60:
+            self._window.popleft()
+        return sum(tokens for _, tokens in self._window)
+
+    def estimate_request_tokens(self, system_prompt: str, user_prompt: str) -> int:
+        # Rough chars/4 heuristic for input; Groq's real token count is
+        # recorded via `record()` once the response comes back.
+        input_tokens = (len(system_prompt) + len(user_prompt)) // 4
+        return input_tokens + self.estimated_output_tokens
+
+    async def wait_for_budget(self, projected_tokens: int) -> None:
+        if self.tpm_limit <= 0:
+            return  # throttling disabled
+        while True:
+            now = time.monotonic()
+            used = self._window_total(now)
+            if used + projected_tokens <= self.tpm_limit:
+                return
+            if not self._window:
+                # Even an empty window can't fit this request — nothing to
+                # wait out; let it go and let the transport-level retry
+                # handle whatever Groq says.
+                return
+            oldest_ts, _ = self._window[0]
+            sleep_for = max(0.0, 60 - (now - oldest_ts)) + 0.05
+            logger.info(
+                "Approaching Groq TPM budget (%d/%d used, +%d projected) — "
+                "waiting %.1fs for the window to roll over",
+                used,
+                self.tpm_limit,
+                projected_tokens,
+                sleep_for,
+            )
+            await asyncio.sleep(sleep_for)
+
+    def record(self, tokens: int) -> None:
+        if tokens > 0:
+            self._window.append((time.monotonic(), tokens))
+
+
 class GroqClient:
     def __init__(
         self,
@@ -49,6 +111,8 @@ class GroqClient:
         temperature: float | None = None,
         max_retries: int | None = None,
         retry_backoff: float | None = None,
+        tpm_limit: int | None = None,
+        estimated_output_tokens: int | None = None,
     ):
         self.api_key = api_key or settings.groq_api_key
         self.base_url = (base_url or settings.groq_base_url).rstrip("/")
@@ -64,6 +128,12 @@ class GroqClient:
             retry_backoff
             if retry_backoff is not None
             else settings.groq_retry_backoff_seconds
+        )
+        self._rate_limiter = _TokenRateLimiter(
+            tpm_limit if tpm_limit is not None else settings.groq_tpm_limit,
+            estimated_output_tokens
+            if estimated_output_tokens is not None
+            else settings.groq_estimated_output_tokens,
         )
 
     async def complete_json(
@@ -93,6 +163,11 @@ class GroqClient:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+
+        projected = self._rate_limiter.estimate_request_tokens(
+            system_prompt, user_prompt
+        )
+        await self._rate_limiter.wait_for_budget(projected)
 
         content = await self._post_with_retries(payload, headers)
         return self._parse_json_array(content)
@@ -134,6 +209,10 @@ class GroqClient:
                 else:
                     try:
                         body = response.json()
+                        usage = body.get("usage") or {}
+                        total_tokens = usage.get("total_tokens")
+                        if isinstance(total_tokens, int):
+                            self._rate_limiter.record(total_tokens)
                         return body["choices"][0]["message"]["content"]
                     except (KeyError, IndexError, ValueError) as e:
                         raise GroqAPIError(
@@ -186,4 +265,21 @@ class GroqClient:
 
         if not isinstance(parsed, list):
             raise GroqAPIError("Groq response JSON was not an array")
+
+        # Diagnostic signal for a specific failure mode: the model numbers
+        # the outer array items ("1.", "2.", "3.") instead of the points
+        # inside each answer field, so the array unwraps fine but its items
+        # are bare strings, not question objects. Left to fall through to
+        # the generic per-item "expected a JSON object, got str" in
+        # build_question either way — this just makes that mode easy to
+        # grep for in logs instead of looking identical to any other
+        # schema-invalid item.
+        if parsed and all(isinstance(item, str) for item in parsed):
+            logger.warning(
+                "Groq returned %d bare string(s) instead of question objects "
+                "— likely numbered the outer array instead of the points "
+                "inside an answer field",
+                len(parsed),
+            )
+
         return parsed

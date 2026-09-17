@@ -31,6 +31,7 @@ from generation_engine import (  # noqa: E402
     GenerationRequest,
     GenerationValidationError,
     GroqAPIError,
+    GroqClient,
     InvalidRequestError,
     QuestionType,
     Subject,
@@ -151,6 +152,16 @@ async def main():
                         help="run one batch per subject")
     parser.add_argument("--json", action="store_true",
                         help="dump raw Question JSON instead of formatted output")
+    parser.add_argument("--batch-delay", type=float, default=3.0,
+                        help="seconds to sleep between batches when running "
+                             "--all-combos/--all-subjects, to stay clear of "
+                             "the Groq tokens-per-minute limit (default: 3.0)")
+    parser.add_argument("--max-retries", type=int, default=None,
+                        help="Groq transport-level retries per call. "
+                             "Defaults to settings.groq_max_retries normally, "
+                             "or 5 for --all-combos/--all-subjects runs, "
+                             "which are more likely to hit the TPM ceiling "
+                             "and need a longer runway to recover.")
     args = parser.parse_args()
 
     if args.grade not in VALID_GRADES:
@@ -172,11 +183,20 @@ async def main():
         else [(QuestionType(args.type), args.marks)]
     )
 
-    engine = GenerationEngine()
+    multi_batch = args.all_combos or args.all_subjects
+    max_retries = args.max_retries
+    if max_retries is None:
+        max_retries = 5 if multi_batch else settings.groq_max_retries
+
+    engine = GenerationEngine(groq_client=GroqClient(max_retries=max_retries))
     results = []
     for subject in subjects:
         chapter = args.chapter or DEFAULT_CHAPTERS[subject]
         for qtype, marks in combos:
+            if multi_batch and results:
+                # Space batches out so we don't repeatedly slam into Groq's
+                # tokens-per-minute limit and burn the whole retry budget.
+                await asyncio.sleep(args.batch_delay)
             request = GenerationRequest(
                 subject=subject, chapter=chapter, type=qtype, grade=args.grade,
                 marks=marks, difficulty=Difficulty(args.difficulty),

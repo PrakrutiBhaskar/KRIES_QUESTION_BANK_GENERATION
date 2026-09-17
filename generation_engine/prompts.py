@@ -68,7 +68,14 @@ def _footer(
         bullets = "\n".join(f"- {r}" for r in retry_feedback[:6])
         feedback_block = (
             "\n\nA previous attempt was rejected for the following reasons. "
-            "Fix all of them in this batch:\n" + bullets
+            "Fix all of them in this batch, but do NOT change the JSON "
+            "shape while doing so: the array must still contain exactly "
+            "one complete question object per item, with every required "
+            "field. If a fix means adding more detail, more steps, or "
+            "numbered points, put that content INSIDE the relevant "
+            "object's string field (usually \"answer\") — never as "
+            "separate bare strings replacing the objects themselves:\n"
+            + bullets
         )
 
     return f"""
@@ -111,7 +118,7 @@ def _prompt_short_2_marks(request: GenerationRequest) -> str:
 def _prompt_short_3_marks(request: GenerationRequest) -> str:
     return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. Each answer must contain EXACTLY 3 distinct points or steps, matching how a 3-mark answer is evaluated on a Karnataka State Board exam.
 
-Number the three points inside the "answer" string as "1. ", "2. ", "3. " and put each on its own line. Do not merge two points into one, and do not add a fourth."""
+This numbering is INSIDE each object's "answer" field only — it has nothing to do with how many objects are in the outer array (that count is always {request.count}, one object per question). Within each "answer" string, number the three points "1. ", "2. ", "3. ", each on its own line. Do not merge two points into one, and do not add a fourth."""
 
 
 def _prompt_long_5_marks(request: GenerationRequest) -> str:
