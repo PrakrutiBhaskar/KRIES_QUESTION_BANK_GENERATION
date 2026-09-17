@@ -26,6 +26,7 @@ from .schemas import (
     GenerationRequest,
     Question,
     QuestionType,
+    VALID_GRADES,
     VALID_MARKS_BY_TYPE,
 )
 from .subject_formats import compile_required_pattern, get_marks_rule
@@ -51,6 +52,11 @@ def validate_request_combination(
     wired up yet — see spec.md Section 8).
     """
     problems: list[str] = []
+
+    if request.grade not in VALID_GRADES:
+        problems.append(
+            f"grade must be one of {sorted(VALID_GRADES)}, got {request.grade}"
+        )
 
     allowed_marks = VALID_MARKS_BY_TYPE.get(request.type, set())
     if request.marks not in allowed_marks:
@@ -106,6 +112,7 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
             "subject": request.subject,
             "chapter": request.chapter,
             "type": request.type,
+            "grade": request.grade,
             "marks": request.marks,
             "difficulty": request.difficulty,
             "text": raw.get("text", ""),

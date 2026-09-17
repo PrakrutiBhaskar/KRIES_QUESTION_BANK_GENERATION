@@ -14,6 +14,7 @@ def make_short(marks, answer, subject=Subject.SCIENCE, text="Why does ice float 
         subject=subject,
         chapter="States of Matter",
         type=QuestionType.SHORT if marks in (1, 2, 3) else QuestionType.LONG,
+        grade=8,
         text=text,
         answer=answer,
         marks=marks,
@@ -26,7 +27,7 @@ def make_short(marks, answer, subject=Subject.SCIENCE, text="Why does ice float 
 def test_mcq_must_request_1_mark():
     req = GenerationRequest(
         subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
-        marks=3, difficulty=Difficulty.EASY, count=5,
+        grade=8, marks=3, difficulty=Difficulty.EASY, count=5,
     )
     problems = validate_request_combination(req)
     assert problems
@@ -35,15 +36,34 @@ def test_mcq_must_request_1_mark():
 def test_valid_combination_has_no_problems():
     req = GenerationRequest(
         subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
-        marks=1, difficulty=Difficulty.EASY, count=5,
+        grade=8, marks=1, difficulty=Difficulty.EASY, count=5,
     )
     assert validate_request_combination(req) == []
+
+
+@pytest.mark.parametrize("grade", [7, 8, 9])
+def test_every_supported_grade_has_no_problems(grade):
+    req = GenerationRequest(
+        subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
+        grade=grade, marks=1, difficulty=Difficulty.EASY, count=5,
+    )
+    assert validate_request_combination(req) == []
+
+
+@pytest.mark.parametrize("grade", [6, 10, 0, 12])
+def test_out_of_range_grade_is_rejected(grade):
+    req = GenerationRequest(
+        subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
+        grade=grade, marks=1, difficulty=Difficulty.EASY, count=5,
+    )
+    problems = validate_request_combination(req)
+    assert any("grade" in p for p in problems)
 
 
 def test_count_exceeding_max_is_rejected():
     req = GenerationRequest(
         subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.SHORT,
-        marks=2, difficulty=Difficulty.EASY, count=25,
+        grade=8, marks=2, difficulty=Difficulty.EASY, count=25,
     )
     # bump count past the configured max via model_copy to bypass the 1-25 field bound
     req = req.model_copy(update={"count": 999})
@@ -55,7 +75,7 @@ def test_count_exceeding_max_is_rejected():
 def test_mcq_marks_format_passes():
     q = Question(
         subject=Subject.SCIENCE, chapter="Force", type=QuestionType.MCQ,
-        text="What is the SI unit of force?", options=["Newton", "Joule", "Watt", "Pascal"],
+        grade=8, text="What is the SI unit of force?", options=["Newton", "Joule", "Watt", "Pascal"],
         answer="Newton", explanation="It is the SI unit of force, named after Isaac Newton.",
         marks=1, difficulty=Difficulty.EASY,
     )
@@ -77,7 +97,7 @@ def test_1_mark_rejects_long_answer():
 def test_1_mark_rejects_explanation():
     q = Question(
         subject=Subject.SCIENCE, chapter="Force", type=QuestionType.SHORT,
-        text="What is the SI unit of force?", answer="Newton",
+        grade=8, text="What is the SI unit of force?", answer="Newton",
         explanation="Named after Isaac Newton.", marks=1, difficulty=Difficulty.EASY,
     )
     assert any("explanation" in p for p in check_marks_format(q))
@@ -152,7 +172,7 @@ def test_distinct_questions_not_flagged():
 def test_build_question_from_valid_raw():
     req = GenerationRequest(
         subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
-        marks=1, difficulty=Difficulty.EASY, count=1,
+        grade=8, marks=1, difficulty=Difficulty.EASY, count=1,
     )
     raw = {
         "text": "What gas do plants absorb during photosynthesis?",
@@ -165,12 +185,13 @@ def test_build_question_from_valid_raw():
     result = build_question(raw, req)
     assert result.error is None
     assert result.question.subject == Subject.SCIENCE
+    assert result.question.grade == 8
 
 
 def test_build_question_from_invalid_raw():
     req = GenerationRequest(
         subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
-        marks=1, difficulty=Difficulty.EASY, count=1,
+        grade=8, marks=1, difficulty=Difficulty.EASY, count=1,
     )
     raw = {"text": "Missing options and answer"}
     result = build_question(raw, req)

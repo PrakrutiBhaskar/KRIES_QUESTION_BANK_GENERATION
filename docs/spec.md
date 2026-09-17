@@ -49,6 +49,7 @@ Question {
   subject        // Math | Science | Social Science | English | Kannada
   chapter
   type           // MCQ | Short | Long
+  grade          // 7 | 8 | 9 — selected per request, not assumed
   text
   options        // only for MCQ
   answer
@@ -87,7 +88,7 @@ Syllabus structure: `Subject → Chapter` (topic is a tag on each question's ans
 *Owner should expand this into a standalone doc covering: full schema/migrations, all API endpoint specs (request/response shape, error handling), and caching strategy.*
 
 - **Schema:** `subjects → chapters → topics → questions`, using the shared `Question` object (Section 4)
-- **Generation API:** accepts `{subject, chapter, type, marks, difficulty, count}` → calls Module A's generation logic → validates → stores → returns questions
+- **Generation API:** accepts `{subject, chapter, type, grade, marks, difficulty, count}` → calls Module A's generation logic → validates → stores → returns questions
 - **Retrieval API:** filter/search questions by subject/chapter/type/marks/difficulty
 - **Export API:** compiles a selected question set into a PDF
 - **Auth:** deferred post-MVP — design schema so it can be added without a rewrite (e.g. nullable `user_id` on saved sets)
@@ -98,7 +99,7 @@ Syllabus structure: `Subject → Chapter` (topic is a tag on each question's ans
 *Owner should expand this into a standalone doc covering: screen list with wireframes, navigation flow, and state management approach.*
 
 - Subject/chapter selector
-- Generation request screen (type, marks, difficulty, count) with loading state
+- Generation request screen (type, grade, marks, difficulty, count) with loading state
 - Question bank browser: search, filter, edit, discard
 - Paper builder (teacher): select, reorder, assign marks, preview
 - Practice mode (student): attempt, reveal answer/explanation

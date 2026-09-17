@@ -21,6 +21,12 @@ Expected JSON shape:
       "Math": {"chapters": ["Rational Numbers", "Linear Equations"]}
     }
 
+Note: the "grade" key above is unrelated to `GenerationRequest.grade` /
+`Question.grade` (schemas.py) — it's syllabus-source metadata (which grade
+this subject's chapter list was parsed for) and isn't currently read by
+`from_dict`. A generation request's grade is chosen by the caller per call,
+independent of whatever grade the syllabus chapter list itself came from.
+
 The index is optional everywhere. With no index supplied, any non-blank
 chapter string is accepted — which is the MVP behaviour, since no syllabus
 data has been ingested yet.

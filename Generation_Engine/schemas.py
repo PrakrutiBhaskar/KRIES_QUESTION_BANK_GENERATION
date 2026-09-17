@@ -38,6 +38,11 @@ class Difficulty(str, Enum):
 # Mark values allowed system-wide (spec.md Section 4: marks: 1 | 2 | 3 | 5)
 VALID_MARKS = {1, 2, 3, 5}
 
+# Grades this engine is scoped to (spec.md Section 2: "Karnataka State Board,
+# grades 7-9"). Selected per request rather than assumed, so prompts and
+# validation stay in step with whatever the caller actually asked for.
+VALID_GRADES = {7, 8, 9}
+
 # Which marks are valid for which question type.
 #
 # - MCQ is fixed at 1 mark (spec.md Section 7: "MCQs ... typically fixed at
@@ -62,6 +67,7 @@ class Question(BaseModel):
     subject: Subject
     chapter: str
     type: QuestionType
+    grade: int
     text: str
     options: Optional[List[str]] = None
     answer: str
@@ -83,6 +89,13 @@ class Question(BaseModel):
     def marks_in_range(cls, v: int) -> int:
         if v not in VALID_MARKS:
             raise ValueError(f"marks must be one of {sorted(VALID_MARKS)}, got {v}")
+        return v
+
+    @field_validator("grade")
+    @classmethod
+    def grade_in_range(cls, v: int) -> int:
+        if v not in VALID_GRADES:
+            raise ValueError(f"grade must be one of {sorted(VALID_GRADES)}, got {v}")
         return v
 
     @model_validator(mode="after")
@@ -121,6 +134,7 @@ class GenerationRequest(BaseModel):
     subject: Subject
     chapter: str
     type: QuestionType
+    grade: int
     marks: int
     difficulty: Difficulty
     count: int = Field(ge=1, le=25)
@@ -132,3 +146,9 @@ class GenerationRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("chapter must not be blank")
         return v.strip()
+
+    # NOTE: grade range is deliberately NOT enforced here (mirrors `marks`,
+    # which also isn't schema-validated on this class). An out-of-range grade
+    # should surface as a 400 InvalidRequestError via
+    # validate_request_combination(), not a raw pydantic ValidationError at
+    # construction time — that's what api-contract.md's 400 case describes.

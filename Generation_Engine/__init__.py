@@ -31,6 +31,7 @@ from .schemas import (
     Difficulty,
     VALID_MARKS,
     VALID_MARKS_BY_TYPE,
+    VALID_GRADES,
 )
 from .exceptions import (
     GenerationEngineError,
@@ -69,6 +70,7 @@ __all__ = [
     "Difficulty",
     "VALID_MARKS",
     "VALID_MARKS_BY_TYPE",
+    "VALID_GRADES",
     # errors
     "GenerationEngineError",
     "InvalidRequestError",

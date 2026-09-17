@@ -9,6 +9,7 @@ def make_mcq(**overrides):
         subject=Subject.SCIENCE,
         chapter="Photosynthesis",
         type=QuestionType.MCQ,
+        grade=8,
         text="What is the SI unit of force?",
         options=["Newton", "Joule", "Watt", "Pascal"],
         answer="Newton",
@@ -53,6 +54,7 @@ def test_non_mcq_cannot_carry_options():
             subject=Subject.MATH,
             chapter="Algebra",
             type=QuestionType.SHORT,
+            grade=8,
             text="Solve for x: 2x + 3 = 7",
             options=["1", "2", "3", "4"],
             answer="x = 2",
@@ -74,6 +76,7 @@ def test_marks_must_match_type(qtype, valid_marks, invalid_mark):
             subject=Subject.MATH,
             chapter="Algebra",
             type=qtype,
+            grade=8,
             text="Explain the quadratic formula.",
             answer="Some answer",
             marks=invalid_mark,
@@ -85,6 +88,7 @@ def test_marks_must_match_type(qtype, valid_marks, invalid_mark):
         subject=Subject.MATH,
         chapter="Algebra",
         type=qtype,
+        grade=8,
         text="Explain the quadratic formula.",
         answer="Some answer",
         marks=ok_mark,
@@ -104,7 +108,58 @@ def test_generation_request_count_bounds():
             subject=Subject.MATH,
             chapter="Algebra",
             type=QuestionType.MCQ,
+            grade=8,
             marks=1,
             difficulty=Difficulty.EASY,
             count=0,
         )
+
+
+# --- grade -----------------------------------------------------------------
+
+
+@pytest.mark.parametrize("grade", [7, 8, 9])
+def test_question_accepts_every_supported_grade(grade):
+    q = make_mcq(grade=grade)
+    assert q.grade == grade
+
+
+@pytest.mark.parametrize("grade", [6, 10, 0, -1])
+def test_question_rejects_out_of_range_grade(grade):
+    with pytest.raises(ValidationError):
+        make_mcq(grade=grade)
+
+
+def test_question_requires_grade():
+    with pytest.raises(ValidationError):
+        make_mcq(grade=None)
+
+
+def test_generation_request_accepts_every_supported_grade():
+    for grade in (7, 8, 9):
+        req = GenerationRequest(
+            subject=Subject.MATH,
+            chapter="Algebra",
+            type=QuestionType.MCQ,
+            grade=grade,
+            marks=1,
+            difficulty=Difficulty.EASY,
+            count=1,
+        )
+        assert req.grade == grade
+
+
+def test_generation_request_does_not_schema_validate_grade_range():
+    # Mirrors `marks`: an out-of-range grade is accepted at construction and
+    # is instead caught by validation.validate_request_combination() as a
+    # 400 InvalidRequestError, not raised here as a pydantic ValidationError.
+    req = GenerationRequest(
+        subject=Subject.MATH,
+        chapter="Algebra",
+        type=QuestionType.MCQ,
+        grade=12,
+        marks=1,
+        difficulty=Difficulty.EASY,
+        count=1,
+    )
+    assert req.grade == 12

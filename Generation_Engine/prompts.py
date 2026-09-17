@@ -43,11 +43,12 @@ _JSON_SHAPE_DESCRIPTIVE = """{
 
 def _base_system_prompt() -> str:
     return (
-        "You are an expert Karnataka State Board question paper setter for "
-        "grades 7-9. You write syllabus-aligned exam questions with answer "
-        "keys. You always follow the requested JSON output shape exactly, "
-        "with no markdown fences, no commentary, and no text outside the "
-        "JSON array."
+        "You are an expert Karnataka State Board question paper setter. "
+        "You write syllabus-aligned exam questions with answer keys, "
+        "calibrated to whichever grade you're told to target for a given "
+        "request. You always follow the requested JSON output shape "
+        "exactly, with no markdown fences, no commentary, and no text "
+        "outside the JSON array."
     )
 
 
@@ -57,6 +58,7 @@ def _footer(
     retry_feedback: Optional[list[str]] = None,
 ) -> str:
     subject_note = get_prompt_note(request.subject)
+    grade_line = f"\nTarget grade: Karnataka State Board Class {request.grade}."
     topic_line = (
         f'\nFocus on the sub-topic: "{request.topic}".' if request.topic else ""
     )
@@ -70,16 +72,16 @@ def _footer(
         )
 
     return f"""
-{subject_note}{topic_line}{feedback_block}
+{subject_note}{grade_line}{topic_line}{feedback_block}
 
 Return ONLY a JSON array of exactly {request.count} objects, each matching this shape:
 [{json_shape}, ...]
 
 Every question in the array must be distinct — do not rephrase the same
 question twice. Do not include the "id", "subject", "chapter", "type",
-"marks", or "difficulty" fields in your output — those are filled in by the
-caller. Do not wrap the array in markdown code fences. Do not include any
-text before or after the JSON array."""
+"grade", "marks", or "difficulty" fields in your output — those are filled
+in by the caller. Do not wrap the array in markdown code fences. Do not
+include any text before or after the JSON array."""
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +89,7 @@ text before or after the JSON array."""
 # ---------------------------------------------------------------------------
 
 def _prompt_mcq_1_mark(request: GenerationRequest) -> str:
-    return f"""Generate {request.count} multiple-choice questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}, suitable for a Karnataka State Board grade 7-9 student.
+    return f"""Generate {request.count} multiple-choice questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}.
 
 For each question return:
 - question text
@@ -97,7 +99,7 @@ For each question return:
 
 
 def _prompt_short_1_mark(request: GenerationRequest) -> str:
-    return f"""Generate {request.count} one-mark questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}, suitable for a Karnataka State Board grade 7-9 student.
+    return f"""Generate {request.count} one-mark questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}.
 
 Each answer must be a single word, a short phrase, or one direct factual line — the kind of answer a 1-mark question is awarded full marks for (e.g. "What is the SI unit of force?" -> "Newton"). Do NOT explain, justify, or add working. Leave "explanation" as an empty string."""
 

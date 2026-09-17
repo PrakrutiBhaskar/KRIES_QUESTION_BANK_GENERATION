@@ -12,6 +12,7 @@ All endpoints return JSON. Base path: `/api/v1`
   "subject": "Math | Science | Social Science | English | Kannada",
   "chapter": "string",
   "type": "MCQ | Short | Long",
+  "grade": 8,
   "text": "string",
   "options": ["string"],
   "answer": "string",
@@ -36,6 +37,7 @@ Generate a batch of new questions for a subject/chapter.
   "subject": "Science",
   "chapter": "Photosynthesis",
   "type": "Short",
+  "grade": 8,
   "marks": 3,
   "difficulty": "medium",
   "count": 5
@@ -50,7 +52,7 @@ Generate a batch of new questions for a subject/chapter.
 ```
 
 **Errors**
-- `400` — invalid subject/chapter/type/marks combination
+- `400` — invalid subject/chapter/type/grade/marks combination
 - `502` — Groq API call failed
 - `422` — generated output failed validation (schema mismatch, marks/answer length mismatch)
 
@@ -61,7 +63,7 @@ Generate a batch of new questions for a subject/chapter.
 ### `GET /questions`
 Filter/search stored questions.
 
-**Query params:** `subject`, `chapter`, `type`, `marks`, `difficulty`, `topic`, `search`, `page`, `page_size`
+**Query params:** `subject`, `chapter`, `type`, `grade`, `marks`, `difficulty`, `topic`, `search`, `page`, `page_size`
 
 **Response `200`**
 ```json
@@ -134,6 +136,7 @@ Start a practice session for a subject/chapter.
   "subject": "Math",
   "chapter": "Algebra",
   "type": "MCQ",
+  "grade": 7,
   "difficulty": "easy",
   "count": 10
 }
