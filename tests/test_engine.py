@@ -111,6 +111,7 @@ def make_request(**overrides):
         subject=Subject.SCIENCE,
         chapter="Nutrition in Plants",
         type=QuestionType.MCQ,
+        grade=8,
         marks=1,
         difficulty=Difficulty.EASY,
         count=3,

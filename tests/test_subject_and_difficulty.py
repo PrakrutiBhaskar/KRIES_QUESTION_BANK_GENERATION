@@ -24,6 +24,7 @@ def long_question(subject, answer, text="Describe the topic in detail."):
         subject=subject,
         chapter="Test Chapter",
         type=QuestionType.LONG,
+        grade=8,
         text=text,
         answer=answer,
         marks=5,
@@ -37,7 +38,7 @@ def long_question(subject, answer, text="Describe the topic in detail."):
 def test_short_factual_answer_scores_easy():
     q = Question(
         subject=Subject.SCIENCE, chapter="Force", type=QuestionType.SHORT,
-        text="What is the SI unit of force?", answer="Newton",
+        grade=8, text="What is the SI unit of force?", answer="Newton",
         marks=1, difficulty=Difficulty.EASY,
     )
     assert estimate_difficulty(q) == Difficulty.EASY
@@ -57,7 +58,7 @@ def test_long_analytical_answer_scores_hard():
 def test_sharp_mismatch_is_flagged():
     q = Question(
         subject=Subject.SCIENCE, chapter="Force", type=QuestionType.SHORT,
-        text="What is the SI unit of force?", answer="Newton",
+        grade=8, text="What is the SI unit of force?", answer="Newton",
         marks=1, difficulty=Difficulty.HARD,
     )
     assert flag_difficulty_mismatch(q) is not None
@@ -66,7 +67,7 @@ def test_sharp_mismatch_is_flagged():
 def test_adjacent_difficulty_is_not_flagged():
     q = Question(
         subject=Subject.SCIENCE, chapter="Force", type=QuestionType.SHORT,
-        text="What is the SI unit of force?", answer="Newton",
+        grade=8, text="What is the SI unit of force?", answer="Newton",
         marks=1, difficulty=Difficulty.MEDIUM,
     )
     assert flag_difficulty_mismatch(q) is None
@@ -117,7 +118,7 @@ def test_every_subject_has_prompt_guidance(subject):
 @pytest.mark.parametrize("qtype,marks", supported_combinations())
 def test_prompt_builds_for_every_subject_and_combination(subject, qtype, marks):
     req = GenerationRequest(
-        subject=subject, chapter="Test Chapter", type=qtype,
+        subject=subject, chapter="Test Chapter", type=qtype, grade=8,
         marks=marks, difficulty=Difficulty.MEDIUM, count=2,
     )
     system, user = build_prompt(req)

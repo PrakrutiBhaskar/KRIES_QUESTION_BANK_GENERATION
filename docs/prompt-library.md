@@ -17,8 +17,7 @@ Track finalized prompts here as they're built and tuned. Update this doc wheneve
 **Prompt template:**
 ```
 Generate {count} multiple-choice questions for {subject}, chapter "{chapter}",
-topic "{topic}", difficulty {difficulty}, suitable for a Karnataka State Board
-grade 7-9 student.
+topic "{topic}", difficulty {difficulty}.
 
 For each question return:
 - question text
@@ -28,6 +27,8 @@ For each question return:
 
 Return as a JSON array matching this shape: [...]
 ```
+
+**Grade:** every prompt now carries a `Target grade: Karnataka State Board Class {grade}.` line, appended once in the shared footer (`prompts.py::_footer`) rather than per-template, so it's consistent across all five (type, marks) combinations. `grade` is a required field on `GenerationRequest`/`Question` (`grade: int`, one of `7 | 8 | 9`) — see spec.md Section 4 and api-contract.md.
 
 **Known issues:** model occasionally returns 3 or 5 options, or duplicate distractors — both are rejected by the `Question` schema rather than repaired. `response_format: json_object` is set on the Groq call, which means the array often arrives nested under a key; `GroqClient._parse_json_array` unwraps it.
 
@@ -40,8 +41,7 @@ Return as a JSON array matching this shape: [...]
 **Prompt template:**
 ```
 Generate {count} one-mark questions for {subject}, chapter "{chapter}",
-difficulty {difficulty}, suitable for a Karnataka State Board grade 7-9
-student.
+difficulty {difficulty}.
 
 Each answer must be a single word, a short phrase, or one direct factual
 line — the kind of answer a 1-mark question is awarded full marks for

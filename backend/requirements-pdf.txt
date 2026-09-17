@@ -1,0 +1,9 @@
+# Optional: the preferred PDF backend.
+#
+# Requires system libraries first:
+#   Debian/Ubuntu: apt-get install libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
+#                    libgdk-pixbuf-2.0-0 fonts-noto-core
+#   macOS:         brew install pango cairo gdk-pixbuf
+#
+# Without this, the backend falls back to ReportLab automatically.
+weasyprint>=62

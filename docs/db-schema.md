@@ -26,6 +26,7 @@ Database: **PostgreSQL**
 | subject_id | uuid (FK → subjects.id) | |
 | chapter_id | uuid (FK → chapters.id) | |
 | type | enum | `MCQ`, `Short`, `Long` |
+| grade | int | 7, 8, or 9 — the grade this specific question was generated for (see `subjects.grade_range` for the subject-wide span; this is per-question) |
 | text | text | question text |
 | options | jsonb (nullable) | array of strings, MCQ only |
 | answer | text | |
@@ -36,7 +37,7 @@ Database: **PostgreSQL**
 | tags | text[] | |
 | created_at | timestamptz | |
 
-**Indexes:** on `(subject_id, chapter_id, type, marks, difficulty)` for fast filtering.
+**Indexes:** on `(subject_id, chapter_id, type, grade, marks, difficulty)` for fast filtering.
 
 ### `papers`
 | Column | Type | Notes |

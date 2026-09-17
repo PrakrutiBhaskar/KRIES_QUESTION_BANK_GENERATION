@@ -19,15 +19,20 @@ Label tasks by module: `module:generation`, `module:backend`, `module:frontend`,
 - [ ] Manual factual spot-check per subject (test-plan.md Section 4) — needs a live Groq key
 
 ## Sprint 2 — Backend
-- [ ] Set up FastAPI project structure
-- [ ] Create PostgreSQL schema + migrations (see db-schema.md)
-- [ ] Implement `POST /generate`
-- [ ] Implement `GET /questions`, `PATCH /questions/{id}`, `DELETE /questions/{id}`
-- [ ] Implement `POST /papers`, `GET /papers/{id}`, `PATCH /papers/{id}`
-- [ ] Implement `POST /export/{paper_id}` (PDF generation)
-- [ ] Implement `POST /practice/sessions`, reveal endpoint
-- [ ] Implement `GET /subjects`, `GET /subjects/{subject}/chapters`
-- [ ] Add caching for repeated generation requests
+- [x] Set up FastAPI project structure
+- [x] Create PostgreSQL schema + migrations (see db-schema.md)
+- [x] Implement `POST /generate`
+- [x] Implement `GET /questions`, `PATCH /questions/{id}`, `DELETE /questions/{id}`
+- [x] Implement `POST /papers`, `GET /papers/{id}`, `PATCH /papers/{id}`
+- [x] Implement `POST /export/{paper_id}` (PDF generation)
+- [x] Implement `POST /practice/sessions`, reveal endpoint
+- [x] Implement `GET /subjects`, `GET /subjects/{subject}/chapters`
+- [x] Add caching for repeated generation requests
+- [x] Write backend API tests (see test-plan.md Section 2) — 79 tests
+- [ ] Run the backend suite against real PostgreSQL, not just the SQLite test DB
+- [ ] Install WeasyPrint + Noto fonts on the deploy target, or accept the
+      ReportLab fallback and drop Kannada PDF export from the MVP demo
+- [ ] Decide export file retention (local disk now; S3 if we go multi-instance on AWS)
 
 ## Sprint 3 — Frontend
 - [ ] Set up React Native project (web + Android targets)

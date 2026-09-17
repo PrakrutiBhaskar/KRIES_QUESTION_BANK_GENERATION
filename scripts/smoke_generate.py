@@ -34,6 +34,7 @@ from generation_engine import (  # noqa: E402
     InvalidRequestError,
     QuestionType,
     Subject,
+    VALID_GRADES,
     settings,
 )
 from generation_engine.prompts import supported_combinations  # noqa: E402
@@ -72,8 +73,8 @@ def print_question(i, q):
 async def run_one(engine, request, as_json):
     label = (
         f"{request.subject.value} / {request.chapter} / "
-        f"{request.type.value} / {request.marks}m / {request.difficulty.value} "
-        f"/ n={request.count}"
+        f"{request.type.value} / {request.marks}m / grade {request.grade} / "
+        f"{request.difficulty.value} / n={request.count}"
     )
     print(f"\n{'=' * 78}\n{label}\n{'=' * 78}")
 
@@ -138,6 +139,8 @@ async def main():
     parser.add_argument("--type", default="MCQ",
                         choices=[t.value for t in QuestionType])
     parser.add_argument("--marks", type=int, default=1)
+    parser.add_argument("--grade", type=int, default=8,
+                        help="target grade, 7-9 (default: 8)")
     parser.add_argument("--difficulty", default="medium",
                         choices=[d.value for d in Difficulty])
     parser.add_argument("--count", type=int, default=3)
@@ -149,6 +152,11 @@ async def main():
     parser.add_argument("--json", action="store_true",
                         help="dump raw Question JSON instead of formatted output")
     args = parser.parse_args()
+
+    if args.grade not in VALID_GRADES:
+        print(f"{RED}--grade must be one of {sorted(VALID_GRADES)}, got "
+              f"{args.grade}.{RESET}")
+        return 1
 
     if not settings.groq_api_key:
         print(f"{RED}GROQ_API_KEY is not set.{RESET} Add it to .env or export it.")
@@ -170,9 +178,9 @@ async def main():
         chapter = args.chapter or DEFAULT_CHAPTERS[subject]
         for qtype, marks in combos:
             request = GenerationRequest(
-                subject=subject, chapter=chapter, type=qtype, marks=marks,
-                difficulty=Difficulty(args.difficulty), count=args.count,
-                topic=args.topic,
+                subject=subject, chapter=chapter, type=qtype, grade=args.grade,
+                marks=marks, difficulty=Difficulty(args.difficulty),
+                count=args.count, topic=args.topic,
             )
             results.append(await run_one(engine, request, args.json))
 

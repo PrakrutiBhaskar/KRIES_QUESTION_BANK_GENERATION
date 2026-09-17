@@ -39,6 +39,26 @@ Short records of key technical decisions and why they were made. Useful for onbo
 **Reasoning:** Scales across 5 subjects × 3 grades without manual data entry for every chapter.
 **Trade-offs:** Parsing quality varies by PDF structure; some manual cleanup likely needed. [fill in specific tooling once chosen]
 
+## ADR 8: Soft-delete questions instead of hard delete
+**Decision:** `DELETE /questions/{id}` sets `is_active = false`; the row stays.
+**Reasoning:** Questions are referenced by `paper_questions` and `practice_session_questions`. A hard delete would either break those papers or need a cascade that silently rewrites a teacher's finished paper.
+**Trade-offs:** The table grows with discarded rows, and every read path must filter on `is_active`. A periodic purge of rows referenced by nothing can be added later.
+
+## ADR 9: Cache generation by reusing stored questions
+**Decision:** A repeated `/generate` with the same (subject, chapter, type, grade, marks, difficulty) is served from stored questions; only the shortfall goes to Groq. `{"refresh": true}` forces fresh generation.
+**Reasoning:** spec.md Module B asks for both "avoid regenerating identical requests" and "store generated questions for reuse" — one mechanism satisfies both, with no separate cache table to invalidate.
+**Trade-offs:** The cache never expires, so a prompt improvement won't reach users who hit a cached combination until they send `refresh`. The `generation_requests` log table in db-schema.md's design notes is still unbuilt; add it if we want hit-rate metrics.
+
+## ADR 10: Two PDF backends, WeasyPrint preferred
+**Decision:** Render via WeasyPrint when available, falling back to ReportLab.
+**Reasoning:** Kannada script needs glyph reordering and ligature substitution. WeasyPrint gets that from Pango/HarfBuzz; ReportLab does not, and its built-in fonts have no Kannada glyphs at all. But WeasyPrint needs system libraries that a bare Render container lacks, and a backend that won't boot is worse than one that renders English-only.
+**Trade-offs:** Two rendering paths to maintain. The ReportLab path refuses Kannada papers with a 503 rather than emitting empty boxes, so the limitation is explicit rather than silent.
+
+## ADR 11: Malformed requests are 400, not FastAPI's default 422
+**Decision:** Request-body validation errors return 400; 422 is reserved for generated output that failed validation.
+**Reasoning:** api-contract.md assigns those two codes distinct meanings on `POST /generate`. Leaving FastAPI's default in place would make "you sent bad JSON" and "the model produced an unusable answer" indistinguishable to the frontend.
+**Trade-offs:** Diverges from FastAPI convention, so it needs stating in the API docs — done in backend/README.md.
+
 ---
 
 *Add new ADRs as decisions are made — keep each one short: decision, reasoning, trade-offs.*

@@ -42,3 +42,8 @@ Thumbs.db
 
 # --- Local scratch output (e.g. smoke_generate.py --json dumps) ---
 *.local.json
+# Backend
+backend/.env
+backend/var/
+var/
+.pytest_cache/

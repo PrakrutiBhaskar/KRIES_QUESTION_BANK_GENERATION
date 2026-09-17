@@ -1,0 +1,24 @@
+# Backend (Module B) — FastAPI + PostgreSQL
+# Module A's own deps (pydantic, httpx, python-dotenv) come from the repo-root
+# requirements.txt; install that too, or `pip install -e ..` from here.
+
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy[asyncio]>=2.0.30
+alembic>=1.13
+asyncpg>=0.29          # PostgreSQL async driver (production)
+pydantic>=2.5
+pydantic-settings>=2.2
+python-dotenv>=1.0
+python-multipart>=0.0.9
+
+# PDF export. ReportLab is the zero-system-dependency fallback and always
+# installed. WeasyPrint is preferred (correct Kannada/Indic shaping) but needs
+# system libs — see backend/README.md — so it's an extra, not a hard dep.
+reportlab>=4.1
+
+# dev / test
+pytest>=8.0
+pytest-asyncio>=0.23
+httpx>=0.27            # also FastAPI's ASGI test transport
+aiosqlite>=0.20        # in-memory DB for the test suite

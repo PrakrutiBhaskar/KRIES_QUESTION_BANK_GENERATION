@@ -12,6 +12,7 @@ All endpoints return JSON. Base path: `/api/v1`
   "subject": "Math | Science | Social Science | English | Kannada",
   "chapter": "string",
   "type": "MCQ | Short | Long",
+  "grade": 8,
   "text": "string",
   "options": ["string"],
   "answer": "string",
@@ -36,6 +37,7 @@ Generate a batch of new questions for a subject/chapter.
   "subject": "Science",
   "chapter": "Photosynthesis",
   "type": "Short",
+  "grade": 8,
   "marks": 3,
   "difficulty": "medium",
   "count": 5
@@ -50,7 +52,7 @@ Generate a batch of new questions for a subject/chapter.
 ```
 
 **Errors**
-- `400` — invalid subject/chapter/type/marks combination
+- `400` — invalid subject/chapter/type/grade/marks combination
 - `502` — Groq API call failed
 - `422` — generated output failed validation (schema mismatch, marks/answer length mismatch)
 
@@ -61,7 +63,7 @@ Generate a batch of new questions for a subject/chapter.
 ### `GET /questions`
 Filter/search stored questions.
 
-**Query params:** `subject`, `chapter`, `type`, `marks`, `difficulty`, `topic`, `search`, `page`, `page_size`
+**Query params:** `subject`, `chapter`, `type`, `grade`, `marks`, `difficulty`, `topic`, `search`, `page`, `page_size`
 
 **Response `200`**
 ```json
@@ -134,6 +136,7 @@ Start a practice session for a subject/chapter.
   "subject": "Math",
   "chapter": "Algebra",
   "type": "MCQ",
+  "grade": 7,
   "difficulty": "easy",
   "count": 10
 }
@@ -168,3 +171,77 @@ No auth in MVP — all endpoints are open. When auth is added post-MVP, expect:
   "detail": "string"
 }
 ```
+
+---
+
+## Implementation notes (Module B)
+
+The backend in `/backend` implements everything above. Differences and
+additions the frontend should know about — all backwards-compatible:
+
+**Error codes on `POST /generate`.** A malformed request body returns `400`,
+not FastAPI's default `422`. `422` means only what this contract says it
+means: the *generated output* failed validation. One error parser handles
+every endpoint, since all errors use the `{error, detail}` shape above.
+
+**`POST /generate` extra request field.**
+
+| Field | Type | Default | Meaning |
+|---|---|---|---|
+| `refresh` | bool | `false` | Skip the cache and call Groq for the full count |
+
+By default a repeated identical request is served from stored questions
+instead of regenerating. Send `"refresh": true` for a "generate more" action.
+
+**`POST /generate` extra response fields.**
+
+```json
+{
+  "questions": [ /* Question objects */ ],
+  "cached": 2,        // how many came from storage
+  "generated": 3,     // how many were newly generated
+  "report": { }       // Module A's diagnostic counters, or null on a full cache hit
+}
+```
+
+**`GET /questions` params.** `page` defaults to 1, `page_size` to 20 (max 100).
+Discarded questions are excluded from every listing.
+
+**`POST /papers`.** `total_marks` is optional and server-computed from the
+selected questions. If you send a value that disagrees with the computed
+total, you get a `400` rather than a silent overwrite. All questions must
+belong to the paper's `subject`.
+
+**`PATCH /papers/{id}`.**
+
+```json
+{
+  "title": "optional new title",
+  "questions": [
+    {"question_id": "uuid", "order_index": 0, "marks_override": 5}
+  ]
+}
+```
+
+`questions`, when present, **replaces** the whole list — send the full
+ordered set currently displayed. Anything omitted is removed from the paper.
+`order_index` values are renumbered densely from 0, so a drag-and-drop UI can
+send whatever indexes it has. `total_marks` is recalculated.
+
+**`POST /export/{paper_id}`** also returns `filename` and `size_bytes`
+alongside `download_url`. The URL points at `GET /export/files/{filename}`.
+
+**Practice sessions.** Questions in a session response carry no `answer` or
+`explanation` field at all, plus a `revealed` boolean. Only the reveal
+endpoint returns an answer, and only for a question in that session.
+
+**Two endpoints added beyond this contract:**
+
+| Method | Path | Why |
+|---|---|---|
+| `GET` | `/papers` | The paper-list screen needs it |
+| `GET` | `/practice/sessions/{id}` | So a student can resume rather than restart |
+
+**`GET /subjects`** always returns all five subjects, even before any
+questions exist, so the picker is never empty. `GET /subjects/{subject}/chapters`
+can legitimately return `[]` until chapters are seeded or generated.
