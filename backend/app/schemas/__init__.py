@@ -11,6 +11,7 @@ from .requests import (
 )
 from .responses import (
     ChapterOut,
+    CombinationOut,
     ExportOut,
     GenerateOut,
     PaperOut,
@@ -32,6 +33,7 @@ __all__ = [
     "PracticeSessionIn",
     "QuestionPatch",
     "ChapterOut",
+    "CombinationOut",
     "ExportOut",
     "GenerateOut",
     "PaperOut",

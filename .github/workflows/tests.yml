@@ -1,0 +1,56 @@
+name: Tests
+
+# Runs both test suites automatically. Neither needs real secrets: the
+# generation-engine suite fakes every Groq HTTP call (tests/test_groq_client.py
+# monkeypatches httpx.AsyncClient) and the backend suite runs against an
+# in-memory SQLite DB with a stubbed Groq client (backend/tests/conftest.py) —
+# so no GROQ_API_KEY or DATABASE_URL is configured here, deliberately: if a
+# test ever starts requiring one, that's itself a regression worth CI
+# catching (a test suite that silently depends on live credentials will pass
+# locally for whoever has them configured and fail confusingly for everyone
+# else, including this pipeline).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  generation-engine:
+    name: Generation engine (Module A)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -v
+
+  backend:
+    name: Backend (Module B)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r backend/requirements.txt
+
+      - name: Run tests
+        working-directory: backend
+        run: pytest -v

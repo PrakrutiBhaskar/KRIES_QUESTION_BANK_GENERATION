@@ -2,6 +2,7 @@
 Generation and question-bank endpoints.
 
   POST   /generate            api-contract.md Section 1
+  GET    /generation/combinations   not in the contract; see docstring below
   GET    /questions           api-contract.md Section 2
   GET    /questions/{id}
   PATCH  /questions/{id}
@@ -14,10 +15,12 @@ import uuid
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from generation_engine.prompts import supported_combinations
 from generation_engine.schemas import Difficulty, QuestionType, Subject
 
 from ..db import get_session
 from ..schemas import (
+    CombinationOut,
     ErrorOut,
     GenerateIn,
     GenerateOut,
@@ -53,6 +56,27 @@ async def generate(
         generated=generated,
         report=report,
     )
+
+
+@router.get(
+    "/generation/combinations",
+    response_model=list[CombinationOut],
+    summary="List the (type, marks) combinations POST /generate accepts",
+)
+async def generation_combinations() -> list[CombinationOut]:
+    """Not in api-contract.md — added so the frontend's generation-request
+    screen can build its type/marks selectors from the same rule
+    generation_engine.prompts.supported_combinations() actually enforces,
+    instead of hardcoding a duplicate that can drift out of sync. Any
+    (type, marks) pair not listed here gets a 400 from POST /generate.
+    """
+    marks_by_type: dict[QuestionType, list[int]] = {}
+    for q_type, marks in supported_combinations():
+        marks_by_type.setdefault(q_type, []).append(marks)
+    return [
+        CombinationOut(type=q_type, marks=sorted(marks))
+        for q_type, marks in marks_by_type.items()
+    ]
 
 
 @router.get(

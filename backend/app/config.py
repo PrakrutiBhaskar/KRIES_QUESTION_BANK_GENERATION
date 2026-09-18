@@ -11,10 +11,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,7 +41,9 @@ class Settings(BaseSettings):
     db_echo: bool = Field(default=False, alias="DB_ECHO")
 
     # --- CORS (React Native web target hits this from a browser origin) ---
-    cors_origins: list[str] = Field(default=["*"], alias="CORS_ORIGINS")
+    cors_origins: Annotated[list[str], NoDecode] = Field(
+        default=["*"], alias="CORS_ORIGINS"
+    )
 
     # --- Generation caching (spec.md Module B: "avoid regenerating identical
     #     requests; store generated questions for reuse") ---

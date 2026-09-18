@@ -14,7 +14,7 @@ Label tasks by module: `module:generation`, `module:backend`, `module:frontend`,
 - [x] Implement output validation (schema, duplicate check, marks-length check)
 - [x] Implement batch generation logic (retry-to-fill, rejection reasons fed back into the retry prompt)
 - [x] Write test cases for generation output (see test-plan.md) — 100 tests
-- [ ] Syllabus ingestion: pick the PDF-parsing tool and produce chapter JSON. `SyllabusIndex.from_json` is the drop-in point; until then chapter validation is skipped and any non-blank chapter is accepted.
+- [x] Syllabus ingestion: `scripts/ingest_syllabus.py` (regex-based, over `pypdf` text extraction — see `generation_engine/syllabus_ingest.py`'s module docstring for why that approach over layout/ML/OCR). `backend/data/syllabus.json` currently holds a manually-curated interim chapter list (`backend/data/README.md`); re-run the CLI against real textbook PDFs to replace it with parsed data when those PDFs are available. `--dry-run` is the default — always review extracted chapters before `--write`.
 - [ ] Tune `NEAR_DUPLICATE_SIMILARITY_THRESHOLD` (currently 0.90) against real generated batches
 - [ ] Manual factual spot-check per subject (test-plan.md Section 4) — needs a live Groq key
 
@@ -45,7 +45,8 @@ Label tasks by module: `module:generation`, `module:backend`, `module:frontend`,
 - [ ] Connect all screens to backend API contract
 
 ## Cross-cutting (assign as needed)
-- [ ] Syllabus PDF parsing pipeline → structured chapter/topic data
+- [x] Syllabus PDF parsing pipeline → structured chapter/topic data — `scripts/ingest_syllabus.py`
+- [x] CI: run both test suites automatically on push/PR — `.github/workflows/tests.yml`
 - [ ] Deploy backend (AWS or Render)
 - [ ] Deploy frontend (web hosting + Android build)
 - [ ] Write final report / demo prep

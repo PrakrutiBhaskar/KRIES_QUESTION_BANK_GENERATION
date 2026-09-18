@@ -45,6 +45,11 @@ from .engine import GenerationEngine, GenerationReport
 from .difficulty import estimate_difficulty, flag_difficulty_mismatch
 from .prompts import build_prompt, supported_combinations
 from .syllabus import SyllabusIndex
+from .syllabus_ingest import (
+    extract_chapters_from_pdf,
+    extract_chapters_from_text,
+    merge_chapters,
+)
 from .subject_formats import (
     MarksRule,
     SubjectFormat,
@@ -87,6 +92,9 @@ __all__ = [
     "build_prompt",
     "supported_combinations",
     "SyllabusIndex",
+    "extract_chapters_from_pdf",
+    "extract_chapters_from_text",
+    "merge_chapters",
     # difficulty
     "estimate_difficulty",
     "flag_difficulty_mismatch",

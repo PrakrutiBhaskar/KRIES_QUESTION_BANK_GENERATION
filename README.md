@@ -17,18 +17,18 @@ into a self-check practice session with answers withheld until revealed.
 
 ## Locked project decisions
 
-| Area                   | Decision                                                                  |
-| ---------------------- | ------------------------------------------------------------------------- |
-| Board / Grades         | Karnataka State Board, grades 7–9                                         |
-| Subjects               | Math, Science, Social Science, English, Kannada                           |
-| Question types         | MCQ, Short answer, Long answer                                            |
-| LLM API for generation | Groq                                                                      |
-| Frontend               | React Native — single codebase for Web + Android                          |
-| Backend                | Python, FastAPI                                                           |
-| Database               | PostgreSQL                                                                |
-| Auth                   | Not in MVP — deferred; schema has nullable `user_id` columns ready for it |
-| Syllabus data source   | Parsed from textbook PDFs (not yet built)                                 |
-| Hosting                | AWS preferred, Render as fallback                                         |
+| Area | Decision |
+|---|---|
+| Board / Grades | Karnataka State Board, grades 7–9 |
+| Subjects | Math, Science, Social Science, English, Kannada |
+| Question types | MCQ, Short answer, Long answer |
+| LLM API for generation | Groq |
+| Frontend | React Native — single codebase for Web + Android |
+| Backend | Python, FastAPI |
+| Database | PostgreSQL |
+| Auth | Not in MVP — deferred; schema has nullable `user_id` columns ready for it |
+| Syllabus data source | Parsed from textbook PDFs (not yet built) |
+| Hosting | AWS preferred, Render as fallback |
 
 ## Architecture — three modules, one per team member
 
@@ -36,6 +36,8 @@ into a self-check practice session with answers withheld until revealed.
 generation_engine/   Module A — prompts → Groq → validated Question objects
 backend/              Module B — FastAPI + PostgreSQL, REST API, PDF export
 frontend/             Module C — React Native (web + Android) — not yet built
+scripts/              Standalone CLIs: live smoke test, syllabus PDF ingestion
+.github/workflows/    CI — runs both test suites on every push/PR
 ```
 
 They compose like this:
@@ -80,19 +82,19 @@ after the engine returns a validated batch.
 
 Syllabus hierarchy is `Subject → Chapter → Questions`. `topic` is a free-text
 tag on the question's answer key describing the sub-topic within the chapter —
-it is _not_ a separate hierarchy level.
+it is *not* a separate hierarchy level.
 
 ### The most important domain rule: marks-aware answers
 
 An answer's depth and format must match the marks it's worth, mirroring how a
 real Karnataka State Board exam is evaluated:
 
-| Marks | Expected answer format                                                  |
-| ----- | ----------------------------------------------------------------------- |
-| 1     | Single word/phrase, no explanation                                      |
-| 2     | 1–2 lines with one supporting point                                     |
-| 3     | Exactly 3 distinct points or steps                                      |
-| 5     | Detailed, multi-point/step answer, structured like a full exam response |
+| Marks | Expected answer format |
+|---|---|
+| 1 | Single word/phrase, no explanation |
+| 2 | 1–2 lines with one supporting point |
+| 3 | Exactly 3 distinct points or steps |
+| 5 | Detailed, multi-point/step answer, structured like a full exam response |
 
 This is subject-specific — Math's 5-mark answers need step-by-step
 derivations, Social Science's need labeled sections (causes/effects), Science
@@ -114,16 +116,16 @@ scripts/              Live smoke-test script (hits real Groq, not mocked)
 Start with `docs/project-context.md` for a condensed brief, or the individual
 docs below for full detail:
 
-| Doc                      | Contents                                                               |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `docs/spec.md`           | Full project specification                                             |
-| `docs/api-contract.md`   | Complete REST endpoint reference (request/response shapes)             |
-| `docs/db-schema.md`      | Complete database schema                                               |
-| `docs/prompt-library.md` | Finalized generation prompts per question type/marks                   |
-| `docs/adr.md`            | Architecture decisions and the reasoning behind each                   |
-| `docs/test-plan.md`      | Test case catalog                                                      |
-| `docs/ui-wireframes.md`  | Planned frontend screens and navigation flow                           |
-| `docs/task-tracker.md`   | Sprint-by-sprint task board (source of truth for what's done vs. open) |
+| Doc | Contents |
+|---|---|
+| `docs/spec.md` | Full project specification |
+| `docs/api-contract.md` | Complete REST endpoint reference (request/response shapes) |
+| `docs/db-schema.md` | Complete database schema |
+| `docs/prompt-library.md` | Finalized generation prompts per question type/marks |
+| `docs/adr.md` | Architecture decisions and the reasoning behind each |
+| `docs/test-plan.md` | Test case catalog |
+| `docs/ui-wireframes.md` | Planned frontend screens and navigation flow |
+| `docs/task-tracker.md` | Sprint-by-sprint task board (source of truth for what's done vs. open) |
 
 ## Getting started
 
@@ -133,15 +135,26 @@ docs below for full detail:
 cd generation_engine
 pip install -r requirements.txt
 cp .env.example .env        # add your GROQ_API_KEY
-pytest                      # 100+ tests, no network required — fully mocked
+pytest                      # 159 tests, no network required — fully mocked
 ```
 
 Sanity-check against the **real** Groq API (not mocked) before trusting it:
-
 ```bash
 python scripts/smoke_generate.py
 python scripts/smoke_generate.py --subject Math --chapter "Linear Equations" --type Short --marks 3 --count 5
 python scripts/smoke_generate.py --all-subjects --json
+```
+
+**Syllabus data:** `backend/data/syllabus.json` ships with a manually-curated
+interim chapter list (134 chapters, 5 subjects) so the chapter picker isn't
+empty on a fresh install — see `backend/data/README.md`. To ingest real
+chapter lists from actual textbook PDFs instead:
+```bash
+# Dry run first (the default) — find the real contents-page range, review output
+python scripts/ingest_syllabus.py textbook.pdf --subject Science --pages 1-10
+
+# Narrow to the real range, then write for real
+python scripts/ingest_syllabus.py textbook.pdf --subject Science --pages 4-5 --write
 ```
 
 ### 2. Backend (Module B)
@@ -173,6 +186,16 @@ set.
 
 Not built yet. See `docs/ui-wireframes.md` for the planned screens and
 `docs/api-contract.md` for what the backend already exposes.
+
+## CI
+
+`.github/workflows/tests.yml` runs both test suites (generation-engine and
+backend, as two parallel jobs) on every push and PR to `main`. No secrets
+are configured for it, deliberately — both suites are fully mocked (fake
+Groq HTTP responses) or run against in-memory SQLite, so a passing local run
+should mean a passing CI run and vice versa. If a test ever starts requiring
+a real `GROQ_API_KEY` or `DATABASE_URL` to pass, that's a regression, not a
+CI config gap to patch around.
 
 ## Known gotchas (already fixed / worth knowing about)
 
@@ -219,29 +242,41 @@ key and a live Supabase Postgres instance (not mocks):
 - ✅ Paper creation (`POST /papers`) — `total_marks` correctly server-computed
 - ✅ PDF export (`POST /export/{paper_id}`) — verified visually, including the
   character-encoding fix above
+- ✅ Syllabus seeding at startup — verified on a fresh, empty DB: `seed_from_index`
+  populated all 134 chapters/5 subjects with zero prior generation activity
+- ✅ Syllabus PDF-ingestion CLI — verified against a real synthetic PDF
+  (cover + contents + chapter-body pages), including that narrowing `--pages`
+  correctly avoids false positives from numbered lines in body text
+- ✅ CI — both jobs verified in completely fresh virtualenvs with zero
+  secrets configured (159 + 137 tests passing)
 
 Still open (see `docs/task-tracker.md` for the full board):
 
 - ⬜ Frontend (React Native) — not started
-- ⬜ Syllabus PDF-parsing pipeline — chapters are currently created on first
-  use from free-text input rather than validated against a fixed list
+- ⬜ `backend/data/syllabus.json`'s chapter list is still manually-curated,
+  not parsed from real textbook PDFs — the ingestion pipeline
+  (`scripts/ingest_syllabus.py`) is built and tested, just not yet pointed
+  at actual textbook files
 - ⬜ WeasyPrint not installed on the current dev machine — PDF export is
   running on the ReportLab fallback, which cannot render Kannada script at
   all (refuses with a 503 rather than emitting blank boxes). Needed before
   Kannada papers can be exported.
-- ⬜ Answer key is currently _always_ included in the exported PDF, with no
+- ⬜ Answer key is currently *always* included in the exported PDF, with no
   way to request a student-facing version without answers — worth deciding
   before the frontend's export flow assumes one or the other
 - ⬜ Backend test suite has never actually been run against a live PostgreSQL
   database (only in-memory SQLite) — worth doing once before considering the
   DB layer fully proven, since SQLite masks Postgres-only behavior (native
-  enums, `jsonb`, `text[]`)
+  enums, `jsonb`, `text[]`). CI runs the same in-memory suite, so this gap
+  applies there too.
 - ⬜ Production hosting target (AWS vs. Render) not yet decided
 - ⬜ Export files are never cleaned up — no retention policy yet
 
 ## Tech stack summary
 
 - **Generation:** Python, Groq API (`openai/gpt-oss-120b`), Pydantic schemas
+- **Syllabus ingestion:** `pypdf` (text extraction) + regex line-parsing,
+  `scripts/ingest_syllabus.py`
 - **Backend:** FastAPI, SQLAlchemy (async, `asyncpg`), Alembic, PostgreSQL
 - **PDF export:** WeasyPrint (preferred, Unicode/Kannada-capable) or ReportLab
   (no system dependencies, Latin scripts only)
@@ -249,3 +284,5 @@ Still open (see `docs/task-tracker.md` for the full board):
 - **Testing:** pytest, in-memory SQLite + stubbed Groq client for the backend
   suite (no network/DB required to run it); a separate live smoke-test script
   for real-API verification
+- **CI:** GitHub Actions, two jobs (generation-engine, backend), on every
+  push/PR to `main` — no secrets required

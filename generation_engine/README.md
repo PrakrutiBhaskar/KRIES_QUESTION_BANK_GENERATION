@@ -7,7 +7,7 @@ Turns a `(subject, chapter, type, marks, difficulty, count)` request into a batc
 ```bash
 pip install -r requirements.txt
 cp .env.example .env        # add your GROQ_API_KEY
-pytest                      # 100 tests, no network required
+pytest                      # 159 tests, no network required
 ```
 
 ## Usage
@@ -76,8 +76,30 @@ The 1-mark **Short** case is the non-MCQ 1-mark row of spec.md Section 7 ("What 
 
 Subject rules deliberately live in one registry. Previously the prompt asked for one thing and the validator checked another, and the two drifted apart — which is how correctly-formatted 3-mark answers ended up being rejected.
 
+## Syllabus ingestion
+
+`scripts/ingest_syllabus.py` extracts chapter titles from a textbook PDF's
+table of contents and merges them into `backend/data/syllabus.json`. Regex
+line-parsing over `pypdf` text extraction, not layout/ML/OCR — see
+`syllabus_ingest.py`'s module docstring for why. Always dry-run first
+(the default) and review the extracted list before `--write`; contents
+pages aren't uniform enough to trust blindly.
+
+```bash
+# Find the real contents page first — point this at a generous guess
+python scripts/ingest_syllabus.py textbook.pdf --subject Science --pages 1-10
+
+# Narrow down once you've found it, then write for real
+python scripts/ingest_syllabus.py textbook.pdf --subject Science --pages 4-5 --write
+```
+
+`backend/data/syllabus.json` currently holds a manually-curated interim
+chapter list (see `backend/data/README.md`) rather than output from this
+pipeline, since no real textbook PDFs were available to ingest yet —
+re-run the CLI against them when they are, with `--mode replace` to swap
+a subject's placeholder list out entirely.
+
 ## Still open
 
-- **Syllabus ingestion.** `SyllabusIndex.from_json` is the drop-in point; the PDF-parsing tool is still an open decision (spec.md Section 8). Without an index, any non-blank chapter is accepted.
 - **Factual correctness.** `check_answer_relevance` catches only structurally broken answers. `GenerationEngine.verify_relevance_llm` adds a second LLM pass for coherence (off by default, `ENABLE_LLM_RELEVANCE_CHECK=true`), but it checks coherence, not truth. The manual spot-check in test-plan.md Section 4 still stands.
 - **Threshold tuning.** Near-duplicate similarity (0.90) and the word-count bounds are first estimates, not calibrated against real Groq output.

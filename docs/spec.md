@@ -142,7 +142,7 @@ Most major decisions are locked. What's left, and who it affects:
 |---|---|---|
 | Backend language: Node.js/Express vs Python/FastAPI | Module B | Open — team skillset call |
 | Database: PostgreSQL vs MongoDB | Module B | Open |
-| PDF-parsing approach for syllabus ingestion (library/tool, manual cleanup needed) | Module A | Open |
+| PDF-parsing approach for syllabus ingestion (library/tool, manual cleanup needed) | Module A | Resolved — `pypdf` + regex line-parsing, `scripts/ingest_syllabus.py`. Manual cleanup handled by the CLI's dry-run-by-default review step, not automated (see the script's docstring). |
 | Final hosting confirmation — AWS feasibility vs Render fallback | Module B / DevOps | Open |
 
 ## 9. Suggested team split (rotating mini-sprint model)

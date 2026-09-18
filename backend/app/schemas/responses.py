@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from generation_engine.schemas import Subject
+from generation_engine.schemas import QuestionType, Subject
 
 from .common import MaskedQuestionOut, QuestionOut
 
@@ -126,3 +126,16 @@ class ChapterOut(BaseModel):
     name: str
     order_index: int
     question_count: int = 0
+
+
+class CombinationOut(BaseModel):
+    """GET /generation/combinations — one entry per question type, with the
+    marks values that type supports. Mirrors
+    generation_engine.prompts.supported_combinations() so the frontend's
+    generation-request screen can build its type/marks selectors from the
+    same rule the backend actually enforces, instead of hardcoding a copy
+    that can silently drift out of sync.
+    """
+
+    type: QuestionType
+    marks: list[int]
