@@ -1,0 +1,295 @@
+import type { QuestionBank, Question } from '../types';
+
+// Helper to generate a UUID-like string
+const uid = () => Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+
+// =============================================================
+// Science — Photosynthesis questions
+// =============================================================
+const scienceQuestions: Question[] = [
+  {
+    id: uid(),
+    questionNumber: 1,
+    text: 'Which organelle is responsible for photosynthesis in plant cells?',
+    type: 'MCQ',
+    difficulty: 'easy',
+    marks: 1,
+    topic: 'Photosynthesis',
+    bloomsLevel: 'Remember',
+    options: ['Mitochondria', 'Chloroplast', 'Nucleus', 'Ribosome'],
+    answer: 'Chloroplast',
+    explanation: 'Chloroplasts contain chlorophyll, the pigment that captures light energy for photosynthesis.',
+    tags: ['organelle', 'plant cell', 'grade-7'],
+  },
+  {
+    id: uid(),
+    questionNumber: 2,
+    text: 'Write the balanced chemical equation for photosynthesis.',
+    type: 'Short',
+    difficulty: 'medium',
+    marks: 2,
+    topic: 'Photosynthesis',
+    bloomsLevel: 'Understand',
+    answer: '6CO₂ + 6H₂O + light energy → C₆H₁₂O₆ + 6O₂',
+    explanation: 'Carbon dioxide and water are converted to glucose and oxygen using light energy in the chloroplasts.',
+    tags: ['equation', 'photosynthesis'],
+  },
+  {
+    id: uid(),
+    questionNumber: 3,
+    text: 'Explain three factors that affect the rate of photosynthesis.',
+    type: 'Long',
+    difficulty: 'hard',
+    marks: 3,
+    topic: 'Photosynthesis',
+    bloomsLevel: 'Analyse',
+    answer:
+      '1. Light intensity: Higher light intensity increases the rate up to a saturation point. 2. Carbon dioxide concentration: More CO₂ increases photosynthesis rate. 3. Temperature: Enzymes work optimally at 25–35°C; extreme temperatures denature them.',
+    explanation: 'These are the three primary limiting factors that can restrict the rate of photosynthesis in plants.',
+    tags: ['factors', 'limiting factors'],
+  },
+  {
+    id: uid(),
+    questionNumber: 4,
+    text: 'What is chlorophyll?',
+    type: 'MCQ',
+    difficulty: 'easy',
+    marks: 1,
+    topic: 'Photosynthesis',
+    bloomsLevel: 'Remember',
+    options: [
+      'A type of sugar produced during photosynthesis',
+      'A green pigment that absorbs light',
+      'An enzyme that breaks down glucose',
+      'A gas released during respiration',
+    ],
+    answer: 'A green pigment that absorbs light',
+    explanation: 'Chlorophyll is the green pigment found in chloroplasts that absorbs sunlight (mainly red and blue wavelengths) to power photosynthesis.',
+    tags: ['chlorophyll', 'pigment'],
+  },
+  {
+    id: uid(),
+    questionNumber: 5,
+    text: 'Describe the light-dependent and light-independent reactions of photosynthesis.',
+    type: 'Long',
+    difficulty: 'hard',
+    marks: 5,
+    topic: 'Photosynthesis',
+    bloomsLevel: 'Understand',
+    answer:
+      'Light-dependent reactions occur in the thylakoid membrane:\n• Water is split (photolysis), releasing oxygen as a by-product.\n• ATP and NADPH are produced using light energy.\n\nLight-independent reactions (Calvin cycle) occur in the stroma:\n• CO₂ is fixed by the enzyme RuBisCO.\n• ATP and NADPH from light reactions are used to reduce CO₂ to G3P.\n• G3P is used to synthesise glucose.\n\nBoth stages together make up the complete process of photosynthesis.',
+    explanation: 'The two stages are tightly coupled — the products of the light-dependent stage directly fuel the Calvin cycle.',
+    tags: ['light reactions', 'calvin cycle', 'ATP'],
+  },
+];
+
+// =============================================================
+// Math — Linear Equations questions
+// =============================================================
+const mathQuestions: Question[] = [
+  {
+    id: uid(),
+    questionNumber: 1,
+    text: 'Solve for x: 3x + 7 = 22',
+    type: 'Short',
+    difficulty: 'easy',
+    marks: 2,
+    topic: 'Linear Equations',
+    bloomsLevel: 'Apply',
+    answer: 'x = 5\nStep 1: 3x = 22 − 7 = 15\nStep 2: x = 15 ÷ 3 = 5',
+    explanation: 'Isolate x by subtracting 7 from both sides, then divide by 3.',
+    tags: ['algebra', 'solve'],
+  },
+  {
+    id: uid(),
+    questionNumber: 2,
+    text: 'Which of the following is a linear equation in one variable?',
+    type: 'MCQ',
+    difficulty: 'easy',
+    marks: 1,
+    topic: 'Linear Equations',
+    bloomsLevel: 'Remember',
+    options: ['x² + 3 = 0', '2x + 5 = 11', 'xy = 4', '3x + 2y = 6'],
+    answer: '2x + 5 = 11',
+    explanation: 'A linear equation in one variable has exactly one variable raised to the power of 1.',
+    tags: ['definition', 'identify'],
+  },
+  {
+    id: uid(),
+    questionNumber: 3,
+    text: 'The sum of three consecutive integers is 48. Find the integers.',
+    type: 'Long',
+    difficulty: 'medium',
+    marks: 3,
+    topic: 'Linear Equations',
+    bloomsLevel: 'Apply',
+    answer:
+      'Let the integers be n, n+1, n+2.\nn + (n+1) + (n+2) = 48\n3n + 3 = 48\n3n = 45\nn = 15\nThe integers are 15, 16, and 17.',
+    explanation: 'Setting up and solving the linear equation gives three consecutive integers.',
+    tags: ['word problem', 'consecutive integers'],
+  },
+  {
+    id: uid(),
+    questionNumber: 4,
+    text: 'What is the solution to 2(x − 3) = 10?',
+    type: 'MCQ',
+    difficulty: 'medium',
+    marks: 1,
+    topic: 'Linear Equations',
+    bloomsLevel: 'Apply',
+    options: ['x = 4', 'x = 8', 'x = 6', 'x = 2'],
+    answer: 'x = 8',
+    explanation: '2(x − 3) = 10 → x − 3 = 5 → x = 8.',
+    tags: ['solve', 'brackets'],
+  },
+];
+
+// =============================================================
+// Social Science — 1857 Revolt
+// =============================================================
+const socialScienceQuestions: Question[] = [
+  {
+    id: uid(),
+    questionNumber: 1,
+    text: 'Who was known as the "Rani of Jhansi" and played a key role in the revolt of 1857?',
+    type: 'MCQ',
+    difficulty: 'easy',
+    marks: 1,
+    topic: '1857 Revolt',
+    bloomsLevel: 'Remember',
+    options: ['Sarojini Naidu', 'Rani Lakshmibai', 'Begum Hazrat Mahal', 'Rani Chennamma'],
+    answer: 'Rani Lakshmibai',
+    explanation: 'Rani Lakshmibai of Jhansi became one of the most celebrated leaders of the 1857 revolt against British rule.',
+    tags: ['leaders', 'revolt 1857'],
+  },
+  {
+    id: uid(),
+    questionNumber: 2,
+    text: 'State any three causes of the Revolt of 1857.',
+    type: 'Long',
+    difficulty: 'medium',
+    marks: 3,
+    topic: '1857 Revolt',
+    bloomsLevel: 'Understand',
+    answer:
+      '1. Military grievances: Indian sepoys were angered by the introduction of the Enfield rifle cartridge, which was believed to be greased with cow and pig fat.\n2. Political causes: The Doctrine of Lapse by Lord Dalhousie annexed several Indian states, angering Indian rulers.\n3. Economic causes: British economic policies ruined Indian handicrafts and created heavy taxation, leading to widespread poverty.',
+    explanation: 'The revolt had multiple interrelated causes spanning military, political, social, and economic domains.',
+    tags: ['causes', 'sepoy mutiny'],
+  },
+];
+
+// =============================================================
+// English — Questions
+// =============================================================
+const englishQuestions: Question[] = [
+  {
+    id: uid(),
+    questionNumber: 1,
+    text: 'In the story "A Triumph of Surgery", why was Tricki taken to the hospital?',
+    type: 'Short',
+    difficulty: 'easy',
+    marks: 2,
+    topic: 'A Triumph of Surgery',
+    bloomsLevel: 'Understand',
+    answer:
+      "Tricki was taken to the hospital because he had become very fat due to overfeeding. He was lethargic, had no energy, and his owner Mrs Pumphrey was overfeeding him with rich food. The vet, Mr Herriot, advised hospitalisation.",
+    explanation: 'The story highlights how excessive care and overfeeding can harm a pet.',
+    tags: ['comprehension', 'summary'],
+  },
+];
+
+// =============================================================
+// Initial mock question banks
+// =============================================================
+export const INITIAL_QUESTION_BANKS: QuestionBank[] = [
+  {
+    id: 'qb-001',
+    name: 'Photosynthesis — Grade 8 Comprehensive',
+    subject: 'Science',
+    chapter: 'Nutrition in Plants',
+    description: 'A comprehensive question bank covering all aspects of photosynthesis for Grade 8 Karnataka State Board.',
+    grade: 8,
+    questionCount: scienceQuestions.length,
+    difficulty: 'mixed',
+    status: 'published',
+    createdAt: '2026-09-20T09:00:00Z',
+    updatedAt: '2026-09-22T14:30:00Z',
+    totalMarks: scienceQuestions.reduce((s, q) => s + q.marks, 0),
+    questions: scienceQuestions,
+  },
+  {
+    id: 'qb-002',
+    name: 'Linear Equations Practice Set',
+    subject: 'Math',
+    chapter: 'Linear Equations in One Variable',
+    description: 'Practice questions on linear equations for Grade 8 students — includes MCQ, short, and long answer types.',
+    grade: 8,
+    questionCount: mathQuestions.length,
+    difficulty: 'mixed',
+    status: 'published',
+    createdAt: '2026-09-18T11:00:00Z',
+    updatedAt: '2026-09-21T10:15:00Z',
+    totalMarks: mathQuestions.reduce((s, q) => s + q.marks, 0),
+    questions: mathQuestions,
+  },
+  {
+    id: 'qb-003',
+    name: 'Revolt of 1857 — Key Concepts',
+    subject: 'Social Science',
+    chapter: 'When People Rebel: 1857 and After',
+    description: 'Focused question bank on the Revolt of 1857, its causes, key figures, and consequences.',
+    grade: 8,
+    questionCount: socialScienceQuestions.length,
+    difficulty: 'medium',
+    status: 'draft',
+    createdAt: '2026-09-15T08:00:00Z',
+    updatedAt: '2026-09-15T08:00:00Z',
+    totalMarks: socialScienceQuestions.reduce((s, q) => s + q.marks, 0),
+    questions: socialScienceQuestions,
+  },
+  {
+    id: 'qb-004',
+    name: 'Metals and Non-metals — Mixed',
+    subject: 'Science',
+    chapter: 'Metals and Non-metals',
+    description: 'Medium difficulty question bank covering physical and chemical properties of metals and non-metals.',
+    grade: 9,
+    questionCount: 6,
+    difficulty: 'medium',
+    status: 'published',
+    createdAt: '2026-09-10T13:00:00Z',
+    updatedAt: '2026-09-12T16:45:00Z',
+    totalMarks: 15,
+    questions: [],
+  },
+  {
+    id: 'qb-005',
+    name: 'A Triumph of Surgery — Comprehension',
+    subject: 'English',
+    chapter: 'Beehive: A Triumph of Surgery',
+    description: 'Reading comprehension and character analysis questions for the story "A Triumph of Surgery".',
+    grade: 9,
+    questionCount: englishQuestions.length,
+    difficulty: 'easy',
+    status: 'published',
+    createdAt: '2026-09-05T07:30:00Z',
+    updatedAt: '2026-09-06T09:00:00Z',
+    totalMarks: englishQuestions.reduce((s, q) => s + q.marks, 0),
+    questions: englishQuestions,
+  },
+  {
+    id: 'qb-006',
+    name: 'Gravitation — Hard Problems',
+    subject: 'Science',
+    chapter: 'Gravitation',
+    description: 'Challenging questions on Newton\'s law of gravitation, free fall, and weight/mass distinction.',
+    grade: 9,
+    questionCount: 8,
+    difficulty: 'hard',
+    status: 'archived',
+    createdAt: '2026-09-01T10:00:00Z',
+    updatedAt: '2026-09-03T12:00:00Z',
+    totalMarks: 25,
+    questions: [],
+  },
+];
