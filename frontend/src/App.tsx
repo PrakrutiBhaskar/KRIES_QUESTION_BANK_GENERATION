@@ -6,7 +6,6 @@ import DashboardPage from './pages/DashboardPage';
 import GeneratePage from './pages/GeneratePage';
 import QuestionBanksPage from './pages/QuestionBanksPage';
 import QuestionBankDetailPage from './pages/QuestionBankDetailPage';
-import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
@@ -23,7 +22,6 @@ export default function App() {
             <Route path="/generate" element={<GeneratePage />} />
             <Route path="/question-banks" element={<QuestionBanksPage />} />
             <Route path="/question-banks/:id" element={<QuestionBankDetailPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
 

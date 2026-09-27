@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, Bell, Search } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 const PAGE_TITLES: Record<string, { title: string; description: string }> = {
@@ -36,17 +36,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <div className="flex-1 min-w-0">
         <h1 className="text-base font-semibold text-slate-900 truncate">{page.title}</h1>
         <p className="text-xs text-slate-500 hidden sm:block truncate">{page.description}</p>
-      </div>
-
-      {/* Search (desktop only) */}
-      <div className="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-56">
-        <Search className="w-4 h-4 text-slate-400 shrink-0" />
-        <input
-          type="search"
-          placeholder="Search..."
-          className="bg-transparent text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none w-full"
-          aria-label="Global search"
-        />
       </div>
 
       {/* Notifications */}
