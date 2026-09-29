@@ -17,6 +17,42 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+BACKEND_DIR = REPO_ROOT / "backend"
+
+# Export every value from both .env files into os.environ as well.
+# pydantic-settings only reads them into `Settings` below; Module A
+# (generation_engine.config) reads GROQ_API_KEY etc. straight from os.environ
+# and would otherwise only find a key that sits in a .env next to *its own*
+# package. backend/.env is loaded first so it wins over the repo-root .env
+# (override=False keeps real environment variables on top of both).
+try:  # python-dotenv is a hard dependency, but never crash config over it
+    from dotenv import load_dotenv
+
+    for _env_file in (BACKEND_DIR / ".env", REPO_ROOT / ".env"):
+        load_dotenv(_env_file, override=False)
+except ImportError:  # pragma: no cover
+    pass
+
+
+def _anchor(path: Path) -> Path:
+    """
+    Make a relative path from .env independent of the working directory.
+
+    backend/.env.example uses paths like ./data/syllabus.json, written as if
+    uvicorn is started from backend/. The frontend README starts it from the
+    repo root instead (uvicorn backend.app.main:app), where that path does not
+    exist: the syllabus silently failed to load, no chapters were seeded, the
+    chapter dropdown stayed empty and the Generate button stayed disabled.
+    Try the CWD first (keeps existing setups working), then backend/, then the
+    repo root.
+    """
+    if path.is_absolute():
+        return path
+    for base in (Path.cwd(), BACKEND_DIR, REPO_ROOT):
+        candidate = (base / path).resolve()
+        if candidate.exists():
+            return candidate
+    return (BACKEND_DIR / path).resolve()
 
 
 class Settings(BaseSettings):
@@ -39,6 +75,10 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",
     )
     db_echo: bool = Field(default=False, alias="DB_ECHO")
+    # Create missing tables at startup. Always on for SQLite (there is no
+    # separate migration step for a local dev database). For PostgreSQL, leave
+    # it off and run `alembic upgrade head`, or set this to true for a quick start.
+    auto_create_tables: bool = Field(default=False, alias="AUTO_CREATE_TABLES")
 
     # --- CORS (React Native web target hits this from a browser origin) ---
     cors_origins: Annotated[list[str], NoDecode] = Field(
@@ -64,7 +104,12 @@ class Settings(BaseSettings):
     )
 
     # --- Syllabus seed data (optional; Module A's SyllabusIndex JSON shape) ---
-    syllabus_json_path: Path | None = Field(default=None, alias="SYLLABUS_JSON_PATH")
+    # Defaults to the bundled chapter list so the chapter dropdown is populated
+    # even when SYLLABUS_JSON_PATH isn't set in .env. Set it to an empty value
+    # (SYLLABUS_JSON_PATH=) to run without a syllabus.
+    syllabus_json_path: Path | None = Field(
+        default=BACKEND_DIR / "data" / "syllabus.json", alias="SYLLABUS_JSON_PATH"
+    )
 
     # --- Practice mode ---
     # If a practice session can't be filled from stored questions, generate the
@@ -73,12 +118,28 @@ class Settings(BaseSettings):
         default=True, alias="PRACTICE_GENERATE_SHORTFALL"
     )
 
+    @field_validator("syllabus_json_path", "export_dir", mode="after")
+    @classmethod
+    def anchor_relative_paths(cls, v: Path | None) -> Path | None:
+        return _anchor(v) if v is not None else None
+
+    @field_validator("syllabus_json_path", mode="before")
+    @classmethod
+    def blank_syllabus_path_means_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def split_origins(cls, v):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @property
+    def should_create_tables(self) -> bool:
+        return self.auto_create_tables or self.is_sqlite
 
     @property
     def is_sqlite(self) -> bool:

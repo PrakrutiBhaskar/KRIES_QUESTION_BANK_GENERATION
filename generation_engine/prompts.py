@@ -48,7 +48,7 @@ def _base_system_prompt() -> str:
         "calibrated to whichever grade you're told to target for a given "
         "request. You always follow the requested JSON output shape "
         "exactly, with no markdown fences, no commentary, and no text "
-        "outside the JSON array."
+        "outside the JSON object."
     )
 
 
@@ -81,14 +81,14 @@ def _footer(
     return f"""
 {subject_note}{grade_line}{topic_line}{feedback_block}
 
-Return ONLY a JSON array of exactly {request.count} objects, each matching this shape:
-[{json_shape}, ...]
+Return ONLY a JSON object with a single key "questions", whose value is a JSON array of exactly {request.count} objects (one object per question, even when the count is 1), each matching this shape:
+{{"questions": [{json_shape}, ...]}}
 
 Every question in the array must be distinct — do not rephrase the same
 question twice. Do not include the "id", "subject", "chapter", "type",
 "grade", "marks", or "difficulty" fields in your output — those are filled
-in by the caller. Do not wrap the array in markdown code fences. Do not
-include any text before or after the JSON array."""
+in by the caller. Do not wrap the JSON in markdown code fences. Do not
+include any text before or after the JSON object."""
 
 
 # ---------------------------------------------------------------------------

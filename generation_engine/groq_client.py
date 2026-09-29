@@ -235,6 +235,34 @@ class GroqClient:
         return self.retry_backoff * (2 ** (attempt - 1))
 
     @staticmethod
+    def _unwrap_questions(parsed: Any) -> Any:
+        """
+        json_object response mode always returns an object, so the questions
+        arrive as {"questions": [...]}, or — for a batch of one — sometimes as
+        the bare question object itself.
+
+        The bare-question case must be recognised *before* looking for a list
+        value: a question object carries list fields of its own ("options",
+        "tags"), and unwrapping the first list found would hand back
+        ["Sun", "Moon", ...] — bare strings that every downstream schema check
+        then rejects ("9 schema-invalid" for a single requested question).
+        """
+        if not isinstance(parsed, dict):
+            return parsed
+
+        if "text" in parsed or "answer" in parsed:
+            return [parsed]
+
+        lists = [v for v in parsed.values() if isinstance(v, list)]
+        # Prefer a list of question objects over any other list in the wrapper.
+        for value in lists:
+            if value and all(isinstance(item, dict) for item in value):
+                return value
+        if lists:
+            return lists[0]
+        return parsed
+
+    @staticmethod
     def _parse_json_array(content: str) -> list[dict[str, Any]]:
         cleaned = _strip_markdown_fence(content)
         parsed: Any
@@ -251,17 +279,7 @@ class GroqClient:
             except json.JSONDecodeError as e:
                 raise GroqAPIError(f"Groq response was not valid JSON: {e}") from e
 
-        # json_object response mode returns an object, so the array is often
-        # nested under a single key ({"questions": [...]}). Unwrap it.
-        if isinstance(parsed, dict):
-            for value in parsed.values():
-                if isinstance(value, list):
-                    parsed = value
-                    break
-            else:
-                # A single question object returned bare, not in an array.
-                if "text" in parsed:
-                    parsed = [parsed]
+        parsed = GroqClient._unwrap_questions(parsed)
 
         if not isinstance(parsed, list):
             raise GroqAPIError("Groq response JSON was not an array")

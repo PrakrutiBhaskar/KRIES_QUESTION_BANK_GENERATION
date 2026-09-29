@@ -153,3 +153,14 @@ async def list_papers(session: AsyncSession, *, limit: int = 50) -> list[Paper]:
         select(Paper).order_by(Paper.created_at.desc()).limit(limit)
     )
     return list(rows.all())
+
+
+async def delete_paper(session: AsyncSession, paper_id: uuid.UUID) -> None:
+    """Hard-delete a paper and its question links (cascade).
+
+    The questions themselves are untouched — they stay in the question pool
+    and can be reused in another paper.
+    """
+    paper = await _load(session, paper_id)  # 404 if missing
+    await session.delete(paper)
+    await session.flush()

@@ -20,7 +20,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultQuestionCount: 10,
   defaultDifficulty: 'mixed',
   defaultQuestionType: 'Mixed',
-  defaultBloomsLevel: 'Mixed',
   defaultMarks: 2,
 };
 

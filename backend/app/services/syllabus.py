@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import noload
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -145,6 +146,8 @@ async def list_subjects(session: AsyncSession) -> list[tuple[Subject, int]]:
     """Subjects with their chapter counts (GET /subjects)."""
     stmt = (
         select(Subject, func.count(Chapter.id))
+        # Don't pull every chapter row via the selectin relationship just to count them.
+        .options(noload(Subject.chapters))
         .outerjoin(Chapter, Chapter.subject_id == Subject.id)
         .group_by(Subject.id)
         .order_by(Subject.name)
@@ -163,6 +166,11 @@ async def list_chapters(
         return []
     stmt = (
         select(Chapter, func.count(Question.id))
+        # Chapter.subject is lazy="joined" on the model. Left in place it adds
+        # the subjects columns to a query that only GROUPs BY chapters.id, which
+        # PostgreSQL rejects (500) although SQLite tolerates it. The caller only
+        # needs chapter columns + the count, so switch the eager load off here.
+        .options(noload(Chapter.subject))
         .outerjoin(
             Question,
             (Question.chapter_id == Chapter.id) & (Question.is_active.is_(True)),

@@ -11,28 +11,29 @@ import {
   Trash2,
   Download,
   BookOpen,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
-import type { Subject, Difficulty, QuestionBankStatus } from '../types';
-import { DifficultyBadge, StatusBadge, SubjectDot, EmptyState, ConfirmModal } from '../components/ui';
-import { formatDate, generateId } from '../lib/utils';
+import type { Subject, Difficulty } from '../types';
+import { DifficultyBadge, SubjectDot, EmptyState, ConfirmModal } from '../components/ui';
+import { formatDate } from '../lib/utils';
+import { createBank, errorMessage, exportBank } from '../lib/api';
 
 const SUBJECTS: Array<Subject | 'All'> = ['All', 'Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const DIFFICULTIES: Array<Difficulty | 'All'> = ['All', 'easy', 'medium', 'hard', 'mixed'];
-const STATUSES: Array<QuestionBankStatus | 'All'> = ['All', 'published', 'draft', 'archived'];
 
 export default function QuestionBanksPage() {
-  const { questionBanks, deleteQuestionBank, addQuestionBank, showToast } = useApp();
+  const { questionBanks, banksLoading, banksError, refreshBanks, deleteQuestionBank, upsertBank, showToast } = useApp();
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<Subject | 'All'>('All');
   const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | 'All'>('All');
-  const [statusFilter, setStatusFilter] = useState<QuestionBankStatus | 'All'>('All');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'questions'>('newest');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [exportingId, setExportingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     let banks = [...questionBanks];
@@ -48,7 +49,6 @@ export default function QuestionBanksPage() {
     }
     if (subjectFilter !== 'All') banks = banks.filter((b) => b.subject === subjectFilter);
     if (difficultyFilter !== 'All') banks = banks.filter((b) => b.difficulty === difficultyFilter);
-    if (statusFilter !== 'All') banks = banks.filter((b) => b.status === statusFilter);
 
     banks.sort((a, b) => {
       if (sortBy === 'newest') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -59,30 +59,41 @@ export default function QuestionBanksPage() {
     });
 
     return banks;
-  }, [questionBanks, search, subjectFilter, difficultyFilter, statusFilter, sortBy]);
+  }, [questionBanks, search, subjectFilter, difficultyFilter, sortBy]);
 
-  const handleDelete = (id: string) => {
-    deleteQuestionBank(id);
+  const handleDelete = async (id: string) => {
     setDeleteId(null);
-    showToast('Question bank deleted.', 'info');
+    try {
+      await deleteQuestionBank(id);
+      showToast('Question bank deleted.', 'info');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    }
   };
 
-  const handleDuplicate = (id: string) => {
+  const handleDuplicate = async (id: string) => {
     const bank = questionBanks.find((b) => b.id === id);
     if (!bank) return;
-    addQuestionBank({
-      ...bank,
-      id: generateId(),
-      name: `${bank.name} (Copy)`,
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    showToast('Question bank duplicated.', 'success');
+    try {
+      const copy = await createBank(`${bank.name} (Copy)`, bank.subject, bank.questions.map((q) => q.id));
+      upsertBank(copy);
+      showToast('Question bank duplicated.', 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    }
   };
 
-  const handleExport = (name: string) => {
-    showToast(`Exporting "${name}" as PDF… (demo only)`, 'info');
+  const handleExport = async (id: string, name: string) => {
+    setExportingId(id);
+    try {
+      const res = await exportBank(id);
+      window.open(res.downloadUrl, '_blank', 'noopener');
+      showToast(`"${name}" exported as PDF.`, 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setExportingId(null);
+    }
   };
 
   return (
@@ -138,7 +149,7 @@ export default function QuestionBanksPage() {
           >
             <Filter className="w-4 h-4" />
             Filters
-            {(subjectFilter !== 'All' || difficultyFilter !== 'All' || statusFilter !== 'All') && (
+            {(subjectFilter !== 'All' || difficultyFilter !== 'All') && (
               <span className="w-2 h-2 bg-indigo-500 rounded-full" />
             )}
           </button>
@@ -193,26 +204,31 @@ export default function QuestionBanksPage() {
                 ))}
               </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500 mb-1 block">Status</label>
-              <div className="flex flex-wrap gap-1.5">
-                {STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStatusFilter(s as QuestionBankStatus | 'All')}
-                    className={`px-2.5 py-1 text-xs rounded-full border font-medium capitalize transition-colors ${statusFilter === s ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300'}`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         )}
       </div>
 
       {/* Results */}
-      {filtered.length === 0 ? (
+      {banksLoading && questionBanks.length === 0 ? (
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading question banks…
+        </div>
+      ) : banksError ? (
+        <EmptyState
+          icon={<BookOpen className="w-7 h-7" />}
+          title="Couldn't load question banks"
+          description={banksError}
+          action={
+            <button
+              onClick={() => void refreshBanks()}
+              className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Try again
+            </button>
+          }
+        />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={<BookOpen className="w-7 h-7" />}
           title="No question banks found"
@@ -240,7 +256,6 @@ export default function QuestionBanksPage() {
                   </div>
                   <h3 className="text-sm font-semibold text-slate-900 leading-snug line-clamp-2">{bank.name}</h3>
                 </div>
-                <StatusBadge status={bank.status} />
               </div>
 
               <p className="text-xs text-slate-500 line-clamp-1">{bank.chapter}</p>
@@ -271,7 +286,7 @@ export default function QuestionBanksPage() {
                   View
                 </button>
                 <button
-                  onClick={() => handleDuplicate(bank.id)}
+                  onClick={() => void handleDuplicate(bank.id)}
                   className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                   aria-label="Duplicate"
                   title="Duplicate"
@@ -279,12 +294,13 @@ export default function QuestionBanksPage() {
                   <Copy className="w-3.5 h-3.5" />
                 </button>
                 <button
-                  onClick={() => handleExport(bank.name)}
-                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                  onClick={() => void handleExport(bank.id, bank.name)}
+                  disabled={exportingId === bank.id}
+                  className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded-lg transition-colors"
                   aria-label="Export PDF"
                   title="Export PDF"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  {exportingId === bank.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 </button>
                 <button
                   onClick={() => setDeleteId(bank.id)}
@@ -310,7 +326,6 @@ export default function QuestionBanksPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500">Grade</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500">Questions</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500">Difficulty</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500">Created</th>
                   <th className="px-4 py-3 text-xs font-semibold text-slate-500">Actions</th>
                 </tr>
@@ -331,13 +346,12 @@ export default function QuestionBanksPage() {
                     <td className="px-4 py-3 text-slate-600">Grade {bank.grade}</td>
                     <td className="px-4 py-3 text-slate-600">{bank.questionCount}</td>
                     <td className="px-4 py-3"><DifficultyBadge difficulty={bank.difficulty} /></td>
-                    <td className="px-4 py-3"><StatusBadge status={bank.status} /></td>
                     <td className="px-4 py-3 text-slate-500 whitespace-nowrap text-xs">{formatDate(bank.createdAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => navigate(`/question-banks/${bank.id}`)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => handleDuplicate(bank.id)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Duplicate"><Copy className="w-4 h-4" /></button>
-                        <button onClick={() => handleExport(bank.name)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors" title="Export"><Download className="w-4 h-4" /></button>
+                        <button onClick={() => void handleDuplicate(bank.id)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Duplicate"><Copy className="w-4 h-4" /></button>
+                        <button onClick={() => void handleExport(bank.id, bank.name)} disabled={exportingId === bank.id} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded transition-colors" title="Export"><Download className="w-4 h-4" /></button>
                         <button onClick={() => setDeleteId(bank.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
@@ -352,10 +366,10 @@ export default function QuestionBanksPage() {
       <ConfirmModal
         open={deleteId !== null}
         title="Delete Question Bank"
-        message="Are you sure you want to delete this question bank? All associated questions will be removed."
+        message="Are you sure you want to delete this question bank? The questions themselves stay in the question pool."
         confirmLabel="Delete"
         danger
-        onConfirm={() => deleteId && handleDelete(deleteId)}
+        onConfirm={() => deleteId && void handleDelete(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

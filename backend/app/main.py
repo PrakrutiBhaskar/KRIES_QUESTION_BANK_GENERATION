@@ -13,7 +13,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .db import SessionLocal
+from .db import Base, SessionLocal
+from .db import engine as db_engine
 from .errors import register_exception_handlers
 from .routers import export, papers, practice, questions, syllabus
 from .services.export import active_renderer
@@ -35,6 +36,27 @@ async def lifespan(app: FastAPI):
     set_engine(None)
     get_engine()
 
+    # Fail early, with a readable message, if the database is unreachable —
+    # instead of a wall of asyncio/socket traceback.
+    try:
+        async with db_engine.begin() as conn:
+            if settings.should_create_tables:
+                from . import models  # noqa: F401  (registers the tables on Base)
+
+                await conn.run_sync(Base.metadata.create_all)
+            else:
+                await conn.run_sync(lambda c: None)
+    except Exception as exc:
+        logger.error(
+            "Cannot connect to the database at %s: %s\n"
+            "  -> Check DATABASE_URL in backend/.env (it overrides the repo-root .env).\n"
+            "  -> For local development without PostgreSQL use:\n"
+            "       DATABASE_URL=sqlite+aiosqlite:///./question_bank.db",
+            _redact(settings.database_url),
+            exc,
+        )
+        raise
+
     # Pre-create subjects/chapters from the loaded index, if any, so
     # GET /subjects/{subject}/chapters isn't empty on a fresh install —
     # otherwise chapters only appear lazily, after someone generates a
@@ -54,9 +76,7 @@ async def lifespan(app: FastAPI):
         "on" if settings.enable_generation_cache else "off",
     )
     yield
-    from .db import engine
-
-    await engine.dispose()
+    await db_engine.dispose()
 
 
 app = FastAPI(

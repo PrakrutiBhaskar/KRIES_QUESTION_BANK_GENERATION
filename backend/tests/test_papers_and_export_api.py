@@ -295,3 +295,24 @@ async def test_export_unknown_paper_returns_404(client):
 async def test_download_rejects_path_traversal(client):
     response = await client.get("/export/files/..%2F..%2Fetc%2Fpasswd")
     assert response.status_code == 404
+
+
+# --- deletion --------------------------------------------------------------
+
+
+async def test_delete_paper_removes_it_but_keeps_questions(client):
+    paper, questions = await _paper(client, count=2)
+
+    response = await client.delete(f"/papers/{paper['id']}")
+    assert response.status_code == 204
+
+    assert (await client.get(f"/papers/{paper['id']}")).status_code == 404
+    # The questions survive and can go into another paper.
+    for q in questions:
+        assert (await client.get(f"/questions/{q['id']}")).status_code == 200
+
+
+async def test_delete_unknown_paper_is_404(client):
+    response = await client.delete(f"/papers/{uuid.uuid4()}")
+    assert response.status_code == 404
+    assert response.json()["error"]

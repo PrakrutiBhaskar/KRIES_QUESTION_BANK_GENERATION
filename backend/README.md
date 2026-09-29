@@ -171,3 +171,17 @@ DATABASE_URL=postgresql+asyncpg://... pytest
   rules.
 - Rate limiting and `user_id` scoping arrive with auth (ADR 5); the nullable
   columns are already in place.
+
+## Troubleshooting
+
+**`socket.gaierror: [Errno 11001] getaddrinfo failed` at startup, and the frontend's chapter list never loads.**
+The backend can't resolve the host in `DATABASE_URL`. Note that `backend/.env` overrides the repo-root `.env`.
+For local development you don't need PostgreSQL. Set this in `backend/.env` and restart:
+
+```
+DATABASE_URL=sqlite+aiosqlite:///./question_bank.db
+```
+
+The file and tables are created automatically on startup. (`pip install aiosqlite` if it isn't installed.)
+For PostgreSQL, use the `postgresql+asyncpg://` form, make sure the server is running, and run `alembic upgrade head`
+(or set `AUTO_CREATE_TABLES=true`).

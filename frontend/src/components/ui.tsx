@@ -1,4 +1,4 @@
-import type { Difficulty, QuestionBankStatus, QuestionType, BloomsLevel } from '../types';
+import type { Difficulty, QuestionType } from '../types';
 
 // ============================================================
 // Difficulty badge
@@ -21,25 +21,6 @@ export function DifficultyBadge({ difficulty }: { difficulty: Difficulty | strin
 }
 
 // ============================================================
-// Status badge
-// ============================================================
-const STATUS_STYLES: Record<QuestionBankStatus, string> = {
-  published: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  draft: 'bg-slate-100 text-slate-600 border-slate-200',
-  archived: 'bg-zinc-100 text-zinc-500 border-zinc-200',
-};
-
-export function StatusBadge({ status }: { status: QuestionBankStatus }) {
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border capitalize ${STATUS_STYLES[status]}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-// ============================================================
 // Question type badge
 // ============================================================
 const TYPE_STYLES: Record<string, string> = {
@@ -56,28 +37,6 @@ export function TypeBadge({ type }: { type: QuestionType | 'Mixed' | string }) {
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${TYPE_STYLES[type] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}
     >
       {label}
-    </span>
-  );
-}
-
-// ============================================================
-// Bloom's level badge
-// ============================================================
-const BLOOMS_COLORS: Record<string, string> = {
-  Remember: 'bg-sky-100 text-sky-700',
-  Understand: 'bg-teal-100 text-teal-700',
-  Apply: 'bg-lime-100 text-lime-700',
-  Analyse: 'bg-orange-100 text-orange-700',
-  Evaluate: 'bg-rose-100 text-rose-700',
-  Create: 'bg-fuchsia-100 text-fuchsia-700',
-};
-
-export function BloomsBadge({ level }: { level: BloomsLevel | string }) {
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${BLOOMS_COLORS[level] ?? 'bg-slate-100 text-slate-600'}`}
-    >
-      {level}
     </span>
   );
 }

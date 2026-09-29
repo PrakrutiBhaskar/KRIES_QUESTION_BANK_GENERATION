@@ -35,7 +35,7 @@ into a self-check practice session with answers withheld until revealed.
 ```
 generation_engine/   Module A — prompts → Groq → validated Question objects
 backend/              Module B — FastAPI + PostgreSQL, REST API, PDF export
-frontend/             Module C — React Native (web + Android) — not yet built
+frontend/             Module C — React + Vite web app, wired to the backend (see frontend/README.md)
 scripts/              Standalone CLIs: live smoke test, syllabus PDF ingestion
 .github/workflows/    CI — runs both test suites on every push/PR
 ```

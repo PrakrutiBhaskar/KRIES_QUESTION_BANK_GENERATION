@@ -6,7 +6,6 @@ const PAGE_TITLES: Record<string, { title: string; description: string }> = {
   '/dashboard': { title: 'Dashboard', description: 'Overview of your question bank activity' },
   '/generate': { title: 'Generate', description: 'Create new question banks using AI' },
   '/question-banks': { title: 'Question Banks', description: 'Browse and manage your question banks' },
-  '/analytics': { title: 'Analytics', description: 'Insights into your question bank usage' },
   '/settings': { title: 'Settings', description: 'Configure your preferences' },
 };
 

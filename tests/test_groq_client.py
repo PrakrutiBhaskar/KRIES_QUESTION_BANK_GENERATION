@@ -92,6 +92,25 @@ def test_wraps_single_bare_object():
     assert isinstance(out, list) and len(out) == 1
 
 
+def test_single_question_with_list_fields_is_not_mistaken_for_a_wrapper():
+    """Regression: a batch of one comes back as a bare question object whose own
+    "tags"/"options" lists must not be unwrapped as if they were the questions
+    (that produced bare strings -> "N schema-invalid" for a single question)."""
+    out = GroqClient._parse_json_array(
+        '{"text": "Q1", "answer": "A", "explanation": "", "topic": "t", "tags": ["x", "y", "z"]}'
+    )
+    assert out == [
+        {"text": "Q1", "answer": "A", "explanation": "", "topic": "t", "tags": ["x", "y", "z"]}
+    ]
+
+
+def test_wrapper_prefers_list_of_objects_over_other_lists():
+    out = GroqClient._parse_json_array(
+        '{"notes": ["a", "b"], "questions": [{"text": "Q1", "answer": "A"}]}'
+    )
+    assert out == [{"text": "Q1", "answer": "A"}]
+
+
 def test_recovers_array_from_surrounding_commentary():
     out = GroqClient._parse_json_array('Sure! [{"text": "Q1"}] Hope that helps.')
     assert out[0]["text"] == "Q1"

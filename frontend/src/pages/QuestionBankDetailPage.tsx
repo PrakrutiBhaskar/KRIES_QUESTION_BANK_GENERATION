@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,25 +10,35 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
-import type { Question } from '../types';
+import type { ChapterInfo, Marks, MarksByType, Question, QuestionBank, QuestionDifficulty, QuestionType } from '../types';
 import {
   DifficultyBadge,
   TypeBadge,
-  BloomsBadge,
-  StatusBadge,
   EmptyState,
   ConfirmModal,
 } from '../components/ui';
-import { formatDate, generateId } from '../lib/utils';
+import { formatDate } from '../lib/utils';
+import {
+  errorMessage,
+  exportBank,
+  fetchBank,
+  fetchChapters,
+  fetchCombinations,
+  generateQuestions,
+  renumber,
+  setBankQuestions,
+  updateQuestion,
+} from '../lib/api';
 
 // ============================================================
 // Edit Question Modal (inline)
 // ============================================================
 interface EditModalProps {
   question: Question | null;
-  onSave: (q: Question) => void;
+  onSave: (q: Question) => Promise<void>;
   onClose: () => void;
 }
 
@@ -36,11 +46,19 @@ function EditModal({ question, onSave, onClose }: EditModalProps) {
   const [text, setText] = useState(question?.text ?? '');
   const [answer, setAnswer] = useState(question?.answer ?? '');
   const [explanation, setExplanation] = useState(question?.explanation ?? '');
+  const [saving, setSaving] = useState(false);
 
   if (!question) return null;
 
-  const handleSave = () => {
-    onSave({ ...question, text, answer, explanation });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave({ ...question, text, answer, explanation });
+    } catch {
+      // Parent already showed the server's message; keep the modal open.
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -94,9 +112,10 @@ function EditModal({ question, onSave, onClose }: EditModalProps) {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+            disabled={saving || !text.trim() || !answer.trim()}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
           >
-            Save Changes
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -129,7 +148,6 @@ function QuestionRow({ question, onEdit, onDelete }: QuestionRowProps) {
           <div className="flex flex-wrap gap-1.5 mb-2">
             <TypeBadge type={question.type} />
             <DifficultyBadge difficulty={question.difficulty} />
-            <BloomsBadge level={question.bloomsLevel} />
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
               {question.marks} mark{question.marks > 1 ? 's' : ''}
             </span>
@@ -187,7 +205,7 @@ function QuestionRow({ question, onEdit, onDelete }: QuestionRowProps) {
             </div>
           )}
 
-          <p className="text-xs text-slate-400 mt-2">Topic: {question.topic}</p>
+          {question.topic && <p className="text-xs text-slate-400 mt-2">Topic: {question.topic}</p>}
         </div>
 
         {/* Actions */}
@@ -202,7 +220,8 @@ function QuestionRow({ question, onEdit, onDelete }: QuestionRowProps) {
           <button
             onClick={() => onDelete(question.id)}
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            aria-label="Delete"
+            aria-label="Remove from bank"
+            title="Remove from bank"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -213,124 +232,151 @@ function QuestionRow({ question, onEdit, onDelete }: QuestionRowProps) {
 }
 
 // ============================================================
-// Add Question Modal
+// Add Question Modal — generates one more question with the AI and adds it
 // ============================================================
 interface AddQuestionModalProps {
-  open: boolean;
-  onAdd: (q: Question) => void;
+  bank: QuestionBank;
+  marksByType: MarksByType;
+  onAdd: (q: Question) => Promise<void>;
   onClose: () => void;
-  nextNumber: number;
 }
 
-function AddQuestionModal({ open, onAdd, onClose, nextNumber }: AddQuestionModalProps) {
-  const [text, setText] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [explanation, setExplanation] = useState('');
-  const [type, setType] = useState<Question['type']>('Short');
-  const [difficulty, setDifficulty] = useState<Question['difficulty']>('medium');
-  const [marks, setMarks] = useState<Question['marks']>(2);
+function AddQuestionModal({ bank, marksByType, onAdd, onClose }: AddQuestionModalProps) {
+  const { showToast } = useApp();
+  const [chapters, setChapters] = useState<ChapterInfo[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(true);
+  const [chaptersError, setChaptersError] = useState<string | null>(null);
+  const [chaptersReload, setChaptersReload] = useState(0);
+  const [chapter, setChapter] = useState(bank.chapter);
+  const [type, setType] = useState<QuestionType>('Short');
+  const [marks, setMarks] = useState<Marks>(2);
+  const [difficulty, setDifficulty] = useState<QuestionDifficulty>('medium');
+  const [busy, setBusy] = useState(false);
 
-  if (!open) return null;
+  useEffect(() => {
+    let cancelled = false;
+    setChaptersLoading(true);
+    setChaptersError(null);
+    fetchChapters(bank.subject)
+      .then((rows) => {
+        if (cancelled) return;
+        setChapters(rows);
+        setChapter((c) => (rows.some((r) => r.name === c) ? c : rows[0]?.name ?? ''));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setChapters([]);
+        setChapter('');
+        setChaptersError(errorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setChaptersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bank.subject, chaptersReload]);
 
-  const handleAdd = () => {
-    if (!text.trim() || !answer.trim()) return;
-    onAdd({
-      id: generateId(),
-      questionNumber: nextNumber,
-      text,
-      answer,
-      explanation,
-      type,
-      difficulty,
-      marks,
-      topic: 'General',
-      bloomsLevel: 'Understand',
-      tags: [],
-    });
-    setText('');
-    setAnswer('');
-    setExplanation('');
-    onClose();
+  const handleType = (t: QuestionType) => {
+    setType(t);
+    const allowed = marksByType[t];
+    if (!allowed.includes(marks)) setMarks((allowed.includes(2) ? 2 : allowed[0]) as Marks);
   };
+
+  const handleAdd = async () => {
+    if (!chapter) return;
+    setBusy(true);
+    try {
+      const res = await generateQuestions({
+        subject: bank.subject,
+        chapter,
+        grade: bank.grade,
+        type,
+        marks,
+        difficulty,
+        count: 1,
+        // Force a new question rather than one that may already be in this bank.
+        refresh: true,
+      });
+      const [q] = res.questions;
+      if (!q) throw new Error('No question was returned.');
+      await onAdd(q);
+      onClose();
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selectClass =
+    'w-full px-2.5 py-2 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-y-auto max-h-[90vh]">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[90vh]">
         <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Add Question {nextNumber}</h3>
+          <h3 className="text-base font-semibold text-slate-900">Generate &amp; Add a Question</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            The AI writes one new {bank.subject} question for Grade {bank.grade} and adds it to this bank.
+          </p>
         </div>
         <div className="px-6 py-4 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 mb-1">Chapter</label>
+            <select
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              disabled={chaptersLoading || chapters.length === 0}
+              className={`${selectClass} disabled:bg-slate-50 disabled:text-slate-400`}
+            >
+              {chaptersLoading && <option value="">Loading chapters…</option>}
+              {!chaptersLoading && chapters.length === 0 && (
+                <option value="">{chaptersError ? 'Could not load chapters' : 'No chapters available'}</option>
+              )}
+              {chapters.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+            {!chaptersLoading && chaptersError && (
+              <p className="mt-1.5 text-xs text-red-600">
+                {chaptersError}{' '}
+                <button type="button" onClick={() => setChaptersReload((n) => n + 1)} className="font-medium underline">
+                  Retry
+                </button>
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Type</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value as Question['type'])}
-                className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              <select value={type} onChange={(e) => handleType(e.target.value as QuestionType)} className={selectClass}>
                 <option value="MCQ">MCQ</option>
                 <option value="Short">Short</option>
                 <option value="Long">Long</option>
               </select>
             </div>
             <div>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Marks</label>
+              <select value={marks} onChange={(e) => setMarks(parseInt(e.target.value) as Marks)} className={selectClass}>
+                {marksByType[type].map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Difficulty</label>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as Question['difficulty'])}
-                className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
+              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as QuestionDifficulty)} className={selectClass}>
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Marks</label>
-              <select
-                value={marks}
-                onChange={(e) => setMarks(parseInt(e.target.value) as Question['marks'])}
-                className="w-full px-2.5 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {[1, 2, 3, 5].map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Text *</label>
-            <textarea
-              rows={3}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder="Enter the question..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Answer *</label>
-            <textarea
-              rows={4}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder="Enter the model answer..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Explanation (optional)</label>
-            <textarea
-              rows={2}
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              placeholder="Enter an explanation..."
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
           </div>
         </div>
         <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-          <button onClick={handleAdd} disabled={!text.trim() || !answer.trim()} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">Add Question</button>
+          <button onClick={onClose} disabled={busy} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-60 transition-colors">Cancel</button>
+          <button onClick={handleAdd} disabled={busy || chaptersLoading || !chapter} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors">
+            {busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            {busy ? 'Generating…' : 'Generate & Add'}
+          </button>
         </div>
       </div>
     </div>
@@ -342,20 +388,48 @@ function AddQuestionModal({ open, onAdd, onClose, nextNumber }: AddQuestionModal
 // ============================================================
 export default function QuestionBankDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { getQuestionBank, updateQuestionBank, showToast } = useApp();
+  const { upsertBank, showToast } = useApp();
   const navigate = useNavigate();
 
-  const bank = getQuestionBank(id ?? '');
+  const [bank, setBank] = useState<QuestionBank | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [marksByType, setMarksByType] = useState<MarksByType>({ MCQ: [1], Short: [1, 2, 3], Long: [5] });
 
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addingQuestion, setAddingQuestion] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    fetchBank(id ?? '')
+      .then((b) => { if (!cancelled) setBank(b); })
+      .catch((err) => { if (!cancelled) setLoadError(errorMessage(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  useEffect(() => {
+    fetchCombinations().then(setMarksByType).catch(() => undefined);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading question bank…
+      </div>
+    );
+  }
 
   if (!bank) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <BookOpen className="w-12 h-12 text-slate-300" />
-        <p className="text-slate-500 font-medium">Question bank not found.</p>
+        <p className="text-slate-500 font-medium">{loadError ?? 'Question bank not found.'}</p>
         <Link to="/question-banks" className="text-indigo-600 text-sm hover:underline">
           Back to Question Banks
         </Link>
@@ -363,43 +437,59 @@ export default function QuestionBankDetailPage() {
     );
   }
 
-  const handleSaveEdit = (updated: Question) => {
-    const newBank = {
-      ...bank,
-      questions: bank.questions.map((q) => (q.id === updated.id ? updated : q)),
-      updatedAt: new Date().toISOString(),
-    };
-    updateQuestionBank(newBank);
-    setEditingQuestion(null);
-    showToast('Question updated.', 'success');
+  const commit = (next: QuestionBank) => {
+    setBank(next);
+    upsertBank(next);
   };
 
-  const handleDelete = (qId: string) => {
-    const newQuestions = bank.questions
-      .filter((q) => q.id !== qId)
-      .map((q, i) => ({ ...q, questionNumber: i + 1 }));
-    updateQuestionBank({
-      ...bank,
-      questions: newQuestions,
-      questionCount: newQuestions.length,
-      totalMarks: newQuestions.reduce((s, q) => s + q.marks, 0),
-      updatedAt: new Date().toISOString(),
-    });
+  const handleSaveEdit = async (updated: Question) => {
+    try {
+      const saved = await updateQuestion(updated.id, {
+        text: updated.text,
+        answer: updated.answer,
+        explanation: updated.explanation,
+      });
+      commit({
+        ...bank,
+        questions: bank.questions.map((q) =>
+          q.id === updated.id ? { ...q, ...saved, questionNumber: q.questionNumber, marks: q.marks, baseMarks: q.baseMarks } : q,
+        ),
+      });
+      setEditingQuestion(null);
+      showToast('Question updated.', 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+      throw err;
+    }
+  };
+
+  const handleRemove = async (qId: string) => {
     setDeleteId(null);
-    showToast('Question deleted.', 'info');
+    try {
+      // Removing from the bank replaces the paper's list; the question stays in the pool.
+      commit(await setBankQuestions(bank.id, bank.questions.filter((q) => q.id !== qId)));
+      showToast('Question removed from bank.', 'info');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    }
   };
 
-  const handleAddQuestion = (q: Question) => {
-    const newQuestions = [...bank.questions, q];
-    updateQuestionBank({
-      ...bank,
-      questions: newQuestions,
-      questionCount: newQuestions.length,
-      totalMarks: newQuestions.reduce((s, qq) => s + qq.marks, 0),
-      updatedAt: new Date().toISOString(),
-    });
-    setAddingQuestion(false);
+  const handleAddQuestion = async (q: Question) => {
+    commit(await setBankQuestions(bank.id, renumber([...bank.questions, q])));
     showToast('Question added.', 'success');
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await exportBank(bank.id);
+      window.open(res.downloadUrl, '_blank', 'noopener');
+      showToast('PDF exported.', 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -418,34 +508,30 @@ export default function QuestionBankDetailPage() {
         <div className="flex flex-col sm:flex-row sm:items-start gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <StatusBadge status={bank.status} />
               <DifficultyBadge difficulty={bank.difficulty} />
               <span className="text-xs text-slate-400">Grade {bank.grade}</span>
             </div>
             <h2 className="text-xl font-bold text-slate-900 leading-tight">{bank.name}</h2>
             <p className="text-sm text-slate-500 mt-1">{bank.subject} — {bank.chapter}</p>
-            {bank.description && (
-              <p className="text-sm text-slate-600 mt-2 leading-relaxed">{bank.description}</p>
-            )}
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => showToast(`Exporting "${bank.name}" as PDF… (demo only)`, 'info')}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+              onClick={() => void handleExport()}
+              disabled={exporting || bank.questions.length === 0}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-60 transition-colors"
             >
-              <Download className="w-4 h-4" />
-              Export
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Export PDF
             </button>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-slate-100">
+        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-slate-100">
           {[
             { label: 'Questions', value: bank.questionCount },
             { label: 'Total Marks', value: bank.totalMarks },
             { label: 'Created', value: formatDate(bank.createdAt) },
-            { label: 'Updated', value: formatDate(bank.updatedAt) },
           ].map(({ label, value }) => (
             <div key={label}>
               <p className="text-xs text-slate-500 font-medium">{label}</p>
@@ -466,7 +552,7 @@ export default function QuestionBankDetailPage() {
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Add Question
+            Generate Question
           </button>
         </div>
 
@@ -474,14 +560,14 @@ export default function QuestionBankDetailPage() {
           <EmptyState
             icon={<BookOpen className="w-7 h-7" />}
             title="No questions yet"
-            description="Add questions to this bank manually or go back and generate more."
+            description="Generate a question to add to this bank."
             action={
               <button
                 onClick={() => setAddingQuestion(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Add Question
+                Generate Question
               </button>
             }
           />
@@ -508,20 +594,22 @@ export default function QuestionBankDetailPage() {
         />
       )}
 
-      <AddQuestionModal
-        open={addingQuestion}
-        onAdd={handleAddQuestion}
-        onClose={() => setAddingQuestion(false)}
-        nextNumber={bank.questions.length + 1}
-      />
+      {addingQuestion && (
+        <AddQuestionModal
+          bank={bank}
+          marksByType={marksByType}
+          onAdd={handleAddQuestion}
+          onClose={() => setAddingQuestion(false)}
+        />
+      )}
 
       <ConfirmModal
         open={deleteId !== null}
-        title="Delete Question"
-        message="Are you sure you want to delete this question?"
-        confirmLabel="Delete"
+        title="Remove Question"
+        message="Remove this question from the bank? It stays in the question pool and can be reused."
+        confirmLabel="Remove"
         danger
-        onConfirm={() => deleteId && handleDelete(deleteId)}
+        onConfirm={() => deleteId && void handleRemove(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>

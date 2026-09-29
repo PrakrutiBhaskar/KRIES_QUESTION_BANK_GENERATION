@@ -1,25 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { QuestionBank, User, AppSettings } from '../types';
 import { getUser, login as authLogin, logout as authLogout, getSettings, saveSettings } from '../lib/auth';
-import { loadQuestionBanks, saveQuestionBanks } from '../lib/storage';
+import { fetchBanks, deleteBank as apiDeleteBank, errorMessage } from '../lib/api';
 
 // ============================================================
 // Context shape
 // ============================================================
 
 interface AppContextValue {
-  // Auth
+  // Auth (mock — the backend has no auth in the MVP)
   user: User | null;
   isLoggedIn: boolean;
   login: (email: string, password: string) => void;
   logout: () => void;
 
-  // Question banks
+  // Question banks (server state: papers from the backend)
   questionBanks: QuestionBank[];
-  addQuestionBank: (bank: QuestionBank) => void;
-  updateQuestionBank: (bank: QuestionBank) => void;
-  deleteQuestionBank: (id: string) => void;
-  getQuestionBank: (id: string) => QuestionBank | undefined;
+  banksLoading: boolean;
+  banksError: string | null;
+  refreshBanks: () => Promise<void>;
+  upsertBank: (bank: QuestionBank) => void;
+  deleteQuestionBank: (id: string) => Promise<void>;
 
   // Settings
   settings: AppSettings;
@@ -44,14 +45,29 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => getUser());
-  const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>(() => loadQuestionBanks());
+  const [questionBanks, setQuestionBanks] = useState<QuestionBank[]>([]);
+  const [banksLoading, setBanksLoading] = useState(false);
+  const [banksError, setBanksError] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>(() => getSettings());
   const [toast, setToast] = useState<Toast | null>(null);
 
-  // Persist question banks whenever they change
+  const refreshBanks = useCallback(async () => {
+    setBanksLoading(true);
+    try {
+      setQuestionBanks(await fetchBanks());
+      setBanksError(null);
+    } catch (err) {
+      setBanksError(errorMessage(err));
+    } finally {
+      setBanksLoading(false);
+    }
+  }, []);
+
+  // Load banks from the backend once the user is signed in.
+  const isLoggedIn = user !== null;
   useEffect(() => {
-    saveQuestionBanks(questionBanks);
-  }, [questionBanks]);
+    if (isLoggedIn) void refreshBanks();
+  }, [isLoggedIn, refreshBanks]);
 
   const login = useCallback((email: string, password: string) => {
     const loggedInUser = authLogin(email, password);
@@ -61,24 +77,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     authLogout();
     setUser(null);
+    setQuestionBanks([]);
   }, []);
 
-  const addQuestionBank = useCallback((bank: QuestionBank) => {
-    setQuestionBanks((prev) => [bank, ...prev]);
+  /** Insert a new bank, or replace an existing one with the same id. */
+  const upsertBank = useCallback((bank: QuestionBank) => {
+    setQuestionBanks((prev) =>
+      prev.some((b) => b.id === bank.id)
+        ? prev.map((b) => (b.id === bank.id ? bank : b))
+        : [bank, ...prev],
+    );
   }, []);
 
-  const updateQuestionBank = useCallback((updated: QuestionBank) => {
-    setQuestionBanks((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-  }, []);
-
-  const deleteQuestionBank = useCallback((id: string) => {
+  const deleteQuestionBank = useCallback(async (id: string) => {
+    await apiDeleteBank(id);
     setQuestionBanks((prev) => prev.filter((b) => b.id !== id));
   }, []);
-
-  const getQuestionBank = useCallback(
-    (id: string) => questionBanks.find((b) => b.id === id),
-    [questionBanks],
-  );
 
   const updateSettings = useCallback((s: AppSettings) => {
     setSettings(s);
@@ -93,14 +107,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value: AppContextValue = {
     user,
-    isLoggedIn: user !== null,
+    isLoggedIn,
     login,
     logout,
     questionBanks,
-    addQuestionBank,
-    updateQuestionBank,
+    banksLoading,
+    banksError,
+    refreshBanks,
+    upsertBank,
     deleteQuestionBank,
-    getQuestionBank,
     settings,
     updateSettings,
     toast,
@@ -114,6 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 // Hook
 // ============================================================
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used inside AppProvider');

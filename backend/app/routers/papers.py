@@ -5,12 +5,13 @@ Paper builder endpoints (api-contract.md Section 3).
   GET   /papers
   GET   /papers/{id}
   PATCH /papers/{id}
+  DELETE /papers/{id}     (not in the original contract; added for the frontend)
 """
 from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
@@ -66,3 +67,16 @@ async def patch_paper(
 ) -> PaperOut:
     paper = await paper_service.update_paper(session, paper_id, payload)
     return PaperOut.from_model(paper)
+
+
+@router.delete(
+    "/{paper_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a paper (its questions stay in the question pool)",
+    responses={404: {"model": ErrorOut}},
+)
+async def delete_paper(
+    paper_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+) -> Response:
+    await paper_service.delete_paper(session, paper_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

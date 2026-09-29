@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Bell, Sliders, Wand2, LogOut, Save, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
-import type { AppSettings, Difficulty, BloomsLevel } from '../types';
+import type { AppSettings, Difficulty } from '../types';
 
 type Tab = 'profile' | 'preferences' | 'generation' | 'account';
 
@@ -237,19 +237,6 @@ export default function SettingsPage() {
                   AI Generation Defaults
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Default Bloom's Level</label>
-                    <select
-                      value={localSettings.defaultBloomsLevel}
-                      onChange={(e) => setSettingField('defaultBloomsLevel', e.target.value as BloomsLevel | 'Mixed')}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {['Remember', 'Understand', 'Apply', 'Analyse', 'Evaluate', 'Create', 'Mixed'].map((b) => (
-                        <option key={b}>{b}</option>
-                      ))}
-                    </select>
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Default Marks per Question</label>
                     <div className="flex gap-2">

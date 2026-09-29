@@ -1,97 +1,43 @@
 # KRIES Frontend
 
-A polished, production-quality frontend for the **KRIES Question Bank Generation System** — built with React, TypeScript, Vite, and Tailwind CSS.
+React + TypeScript + Vite + Tailwind, talking to the FastAPI backend in `../backend`.
 
-> **Note:** This is a standalone frontend demo that uses local mock data only. No backend connection is required.
-
----
-
-## Tech Stack
-
-| Layer | Choice |
-|---|---|
-| Framework | React 19 + TypeScript |
-| Build tool | Vite 8 |
-| Styling | Tailwind CSS v4 |
-| Routing | React Router v7 |
-| Charts | Recharts |
-| Icons | Lucide React |
-| State | React Context + localStorage |
-
----
-
-## Getting Started
+## Run it
 
 ```bash
+# 1. Backend (from the repo root) — needs GROQ_API_KEY in .env for real generation
+pip install -r backend/requirements.txt
+uvicorn backend.app.main:app --reload          # http://localhost:8000
+
+# 2. Frontend
 cd frontend
+cp .env.example .env
 npm install
-npm run dev
+npm run dev                                    # http://localhost:5173
 ```
 
-Opens at **http://localhost:5173/**
+In dev, Vite proxies `/api` to `VITE_BACKEND_URL` (default `http://localhost:8000`), so no CORS
+setup is needed. For a production build served from another origin, set `VITE_API_BASE_URL` to the
+full API URL and add the site to `CORS_ORIGINS` in the backend `.env`.
 
-### Login Credentials
+## How the UI maps to the API
 
-> Any email + password works (demo mode).
-
-Pre-filled credentials:
-- **Email:** `priya.sharma@school.edu.in`
-- **Password:** `password123`
-
----
-
-## Routes
-
-| Route | Description |
+| UI | Backend |
 |---|---|
-| `/login` | Login page |
-| `/dashboard` | Overview, stats, recent activity |
-| `/generate` | AI-powered question generation form |
-| `/question-banks` | List, search, filter, and manage banks |
-| `/question-banks/:id` | Detail view with all questions |
-| `/analytics` | Charts and usage insights |
-| `/settings` | Profile, preferences, generation defaults |
+| Subject / chapter pickers | `GET /subjects/{subject}/chapters` |
+| Type → marks options | `GET /generation/combinations` |
+| Generate | `POST /generate` (one call per type × difficulty when "Mixed") |
+| Edit / delete a generated question | `PATCH` / `DELETE /questions/{id}` |
+| Save Bank | `POST /papers` — a **question bank is a saved paper** |
+| Bank list / detail | `GET /papers`, `GET /papers/{id}` |
+| Duplicate bank | `POST /papers` with the same question ids |
+| Remove question / add generated question | `PATCH /papers/{id}` (replaces the question list) |
+| Delete bank | `DELETE /papers/{id}` |
+| Export PDF | `POST /export/{id}` → opens `download_url` |
 
----
+All calls live in `src/lib/api.ts`. Login is still a local mock — the backend has no auth in the MVP.
 
-## Project Structure
+## Not in the backend yet (removed from the UI)
 
-```
-src/
-  components/     Shared UI components (badges, modals, sidebar, header)
-  data/           Mock data (syllabus, question banks, analytics)
-  hooks/          App context (auth, question banks, settings, toast)
-  layouts/        AppLayout with responsive sidebar
-  lib/            Auth, storage, generator, utils
-  pages/          One file per route
-  types/          TypeScript domain types
-```
-
----
-
-## Features
-
-- ✅ Mock login/logout (localStorage)
-- ✅ Dashboard with stats, charts, recent activity
-- ✅ Generate page — configurable form + mock AI generation
-- ✅ Edit / Delete / Reorder / Add questions
-- ✅ Question Banks — grid & list view, search, filters, sort
-- ✅ Question Bank Detail — full question list with CRUD
-- ✅ Analytics — area, bar, pie, radar charts
-- ✅ Settings — profile, preferences, generation defaults, theme
-- ✅ Persistent state via localStorage (survives refresh)
-- ✅ Toast notifications
-- ✅ Confirmation modals
-- ✅ Responsive layout (mobile sidebar, scrollable tables)
-- ✅ No backend calls — completely standalone
-
----
-
-## Domain
-
-- **Board:** Karnataka State Board
-- **Grades:** 7 · 8 · 9
-- **Subjects:** Math · Science · Social Science · English · Kannada
-- **Question Types:** MCQ · Short Answer · Long Answer
-- **Bloom's Taxonomy:** Remember · Understand · Apply · Analyse · Evaluate · Create
-- **Marks:** 1 · 2 · 3 · 5 (marks-aware answer formatting)
+Bloom's taxonomy level, bank description, and draft/published/archived status have no backend
+field, so those controls were removed rather than faked.

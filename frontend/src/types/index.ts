@@ -1,34 +1,31 @@
 // ============================================================
 // Core domain types for KRIES Question Bank Generation System
+// These mirror the backend's shared Question contract
+// (docs/api-contract.md) plus a few UI-only view models.
 // ============================================================
 
 export type Subject = 'Math' | 'Science' | 'Social Science' | 'English' | 'Kannada';
 export type Grade = 7 | 8 | 9;
 export type QuestionType = 'MCQ' | 'Short' | 'Long';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
+export type QuestionDifficulty = Exclude<Difficulty, 'mixed'>;
 export type Marks = 1 | 2 | 3 | 5;
-export type BloomsLevel =
-  | 'Remember'
-  | 'Understand'
-  | 'Apply'
-  | 'Analyse'
-  | 'Evaluate'
-  | 'Create';
-
-export type QuestionBankStatus = 'draft' | 'published' | 'archived';
 
 // ============================================================
-// Question
+// Question (UI view of the backend's QuestionOut)
 // ============================================================
 export interface Question {
   id: string;
-  questionNumber: number;
+  questionNumber: number;   // 1-based position within the list being shown
+  subject: Subject;
+  chapter: string;
+  grade: Grade;
   text: string;
   type: QuestionType;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: QuestionDifficulty;
   marks: Marks;
+  baseMarks?: Marks;        // the question's own marks when a paper overrides them
   topic: string;
-  bloomsLevel: BloomsLevel;
   options?: string[];       // Only for MCQ
   answer: string;
   explanation: string;
@@ -37,19 +34,19 @@ export interface Question {
 
 // ============================================================
 // Question Bank
+// A "question bank" is a saved Paper on the backend: a titled, ordered set of
+// stored questions for one subject. Chapter / grade / difficulty are derived
+// from the questions it contains.
 // ============================================================
 export interface QuestionBank {
   id: string;
   name: string;
   subject: Subject;
-  chapter: string;
-  description: string;
+  chapter: string;          // the chapter, or "Multiple chapters"
   grade: Grade;
   questionCount: number;
-  difficulty: Difficulty;
-  status: QuestionBankStatus;
+  difficulty: Difficulty;   // 'mixed' when the questions differ
   createdAt: string;
-  updatedAt: string;
   totalMarks: number;
   questions: Question[];
 }
@@ -61,42 +58,13 @@ export interface GenerateFormData {
   name: string;
   subject: Subject;
   chapter: string;
-  description: string;
   grade: Grade;
   questionCount: number;
   questionType: QuestionType | 'Mixed';
   difficulty: Difficulty;
-  bloomsLevel: BloomsLevel | 'Mixed';
   marksPerQuestion: Marks;
-  learningOutcome: string;
-}
-
-// ============================================================
-// Analytics
-// ============================================================
-export interface AnalyticsData {
-  totalQuestions: number;
-  totalQuestionBanks: number;
-  totalSubjects: number;
-  recentGenerations: number;
-  questionsOverTime: { date: string; count: number }[];
-  bySubject: { subject: string; count: number }[];
-  byDifficulty: { difficulty: string; count: number }[];
-  byType: { type: string; count: number }[];
-  byBlooms: { level: string; count: number }[];
-  byGrade: { grade: string; count: number }[];
-}
-
-// ============================================================
-// Activity
-// ============================================================
-export interface Activity {
-  id: string;
-  type: 'generate' | 'edit' | 'delete' | 'export' | 'create';
-  description: string;
-  timestamp: string;
-  subject?: Subject;
-  questionBankName?: string;
+  topic: string;
+  fresh: boolean;           // skip stored questions and force new generation
 }
 
 // ============================================================
@@ -119,14 +87,18 @@ export interface AppSettings {
   defaultQuestionCount: number;
   defaultDifficulty: Difficulty;
   defaultQuestionType: QuestionType | 'Mixed';
-  defaultBloomsLevel: BloomsLevel | 'Mixed';
   defaultMarks: Marks;
 }
 
 // ============================================================
 // Syllabus
 // ============================================================
-export interface SyllabusSubject {
-  name: Subject;
-  chapters: string[];
+export interface ChapterInfo {
+  id: string;
+  name: string;
+  orderIndex: number;
+  questionCount: number;
 }
+
+// (type -> allowed marks), from GET /generation/combinations
+export type MarksByType = Record<QuestionType, Marks[]>;

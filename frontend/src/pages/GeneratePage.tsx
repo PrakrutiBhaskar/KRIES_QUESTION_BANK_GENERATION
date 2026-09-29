@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Wand2,
@@ -12,31 +12,37 @@ import {
   GripVertical,
   ChevronUp,
 } from 'lucide-react';
-import { SYLLABUS } from '../data/syllabus';
-import { generateMockQuestions } from '../lib/generator';
-import { generateId } from '../lib/utils';
 import { useApp } from '../hooks/useApp';
+import {
+  createBank,
+  discardQuestion,
+  errorMessage,
+  fetchChapters,
+  fetchCombinations,
+  generateQuestions,
+  planBatches,
+  renumber,
+  updateQuestion,
+} from '../lib/api';
 import type {
   Subject,
   Grade,
   QuestionType,
   Difficulty,
-  BloomsLevel,
   Marks,
+  MarksByType,
   GenerateFormData,
   Question,
-  QuestionBank,
+  ChapterInfo,
 } from '../types';
-import { DifficultyBadge, TypeBadge, BloomsBadge, ConfirmModal } from '../components/ui';
+import { DifficultyBadge, TypeBadge, ConfirmModal } from '../components/ui';
 
 const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const GRADES: Grade[] = [7, 8, 9];
 const TYPES: Array<QuestionType | 'Mixed'> = ['MCQ', 'Short', 'Long', 'Mixed'];
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
-const BLOOMS: Array<BloomsLevel | 'Mixed'> = [
-  'Remember', 'Understand', 'Apply', 'Analyse', 'Evaluate', 'Create', 'Mixed',
-];
-const MARKS_OPTIONS: Marks[] = [1, 2, 3, 5];
+// Fallback used only if GET /generation/combinations can't be reached.
+const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5] };
 
 // ============================================================
 // Question Card (editable)
@@ -46,13 +52,14 @@ interface QuestionCardProps {
   onEdit: (q: Question) => void;
   onDelete: (id: string) => void;
   onRegenerate: (id: string) => void;
+  busy?: boolean;
   onMoveUp: (id: string) => void;
   onMoveDown: (id: string) => void;
   isFirst: boolean;
   isLast: boolean;
 }
 
-function QuestionCard({ question, onEdit, onDelete, onRegenerate, onMoveUp, onMoveDown, isFirst, isLast }: QuestionCardProps) {
+function QuestionCard({ question, onEdit, onDelete, onRegenerate, busy, onMoveUp, onMoveDown, isFirst, isLast }: QuestionCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -69,7 +76,6 @@ function QuestionCard({ question, onEdit, onDelete, onRegenerate, onMoveUp, onMo
           <div className="flex flex-wrap gap-1.5 mb-2">
             <TypeBadge type={question.type} />
             <DifficultyBadge difficulty={question.difficulty} />
-            <BloomsBadge level={question.bloomsLevel} />
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
               {question.marks} mark{question.marks > 1 ? 's' : ''}
             </span>
@@ -116,7 +122,7 @@ function QuestionCard({ question, onEdit, onDelete, onRegenerate, onMoveUp, onMo
           )}
 
           {/* Topic tag */}
-          <p className="text-xs text-slate-400 mt-2">Topic: {question.topic}</p>
+          {question.topic && <p className="text-xs text-slate-400 mt-2">Topic: {question.topic}</p>}
         </div>
 
         {/* Actions */}
@@ -149,11 +155,12 @@ function QuestionCard({ question, onEdit, onDelete, onRegenerate, onMoveUp, onMo
           </button>
           <button
             onClick={() => onRegenerate(question.id)}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+            disabled={busy}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 transition-colors"
             aria-label="Regenerate question"
             title="Regenerate"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => onDelete(question.id)}
@@ -174,7 +181,7 @@ function QuestionCard({ question, onEdit, onDelete, onRegenerate, onMoveUp, onMo
 // ============================================================
 interface EditQuestionModalProps {
   question: Question | null;
-  onSave: (q: Question) => void;
+  onSave: (q: Question) => Promise<void>;
   onClose: () => void;
 }
 
@@ -182,12 +189,20 @@ function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps
   const [text, setText] = useState(question?.text ?? '');
   const [answer, setAnswer] = useState(question?.answer ?? '');
   const [explanation, setExplanation] = useState(question?.explanation ?? '');
+  const [saving, setSaving] = useState(false);
 
   if (!question) return null;
 
-  const handleSave = () => {
-    onSave({ ...question, text, answer, explanation });
-    onClose();
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave({ ...question, text, answer, explanation });
+      onClose();
+    } catch {
+      // The parent shows the server's error; keep the modal open so edits aren't lost.
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -230,8 +245,12 @@ function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps
           <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
             Cancel
           </button>
-          <button onClick={handleSave} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
-            Save Changes
+          <button
+            onClick={handleSave}
+            disabled={saving || !text.trim() || !answer.trim()}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -243,39 +262,115 @@ function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps
 // Generate Page
 // ============================================================
 export default function GeneratePage() {
-  const { addQuestionBank, showToast, settings } = useApp();
+  const { upsertBank, showToast, settings } = useApp();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<GenerateFormData>({
     name: '',
     subject: 'Science',
-    chapter: SYLLABUS.find((s) => s.name === 'Science')?.chapters[0] ?? '',
-    description: '',
+    chapter: '',
     grade: 8,
-    questionCount: settings.defaultQuestionCount,
+    questionCount: Math.min(settings.defaultQuestionCount, 25),
     questionType: settings.defaultQuestionType as QuestionType | 'Mixed',
     difficulty: settings.defaultDifficulty,
-    bloomsLevel: settings.defaultBloomsLevel as BloomsLevel | 'Mixed',
     marksPerQuestion: settings.defaultMarks,
-    learningOutcome: '',
+    topic: '',
+    fresh: false,
   });
 
+  const [chapters, setChapters] = useState<ChapterInfo[]>([]);
+  const [chaptersLoading, setChaptersLoading] = useState(false);
+  const [chaptersError, setChaptersError] = useState<string | null>(null);
+  const [chaptersReload, setChaptersReload] = useState(0);
+  const [marksByType, setMarksByType] = useState<MarksByType>(DEFAULT_MARKS_BY_TYPE);
+
   const [loading, setLoading] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [generated, setGenerated] = useState<Question[]>([]);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const chapters = SYLLABUS.find((s) => s.name === form.subject)?.chapters ?? [];
+  // Which (type, marks) pairs the backend accepts.
+  useEffect(() => {
+    fetchCombinations()
+      .then(setMarksByType)
+      .catch(() => setMarksByType(DEFAULT_MARKS_BY_TYPE));
+  }, []);
+
+  // Chapters come from the backend syllabus, so names always match what POST /generate accepts.
+  useEffect(() => {
+    let cancelled = false;
+    setChaptersLoading(true);
+    setChaptersError(null);
+    fetchChapters(form.subject)
+      .then((rows) => {
+        if (cancelled) return;
+        setChapters(rows);
+        setForm((p) => ({ ...p, chapter: rows.some((r) => r.name === p.chapter) ? p.chapter : rows[0]?.name ?? '' }));
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setChapters([]);
+        setChaptersError(errorMessage(err));
+      })
+      .finally(() => {
+        if (!cancelled) setChaptersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.subject, chaptersReload]);
 
   const setField = <K extends keyof GenerateFormData>(key: K, val: GenerateFormData[K]) =>
     setForm((p) => ({ ...p, [key]: val }));
 
   const handleSubjectChange = (subject: Subject) => {
-    const chaps = SYLLABUS.find((s) => s.name === subject)?.chapters ?? [];
-    setForm((p) => ({ ...p, subject, chapter: chaps[0] ?? '' }));
+    setForm((p) => ({ ...p, subject, chapter: '' }));
     setGenerated([]);
     setSaved(false);
+  };
+
+  const handleTypeChange = (t: QuestionType | 'Mixed') => {
+    setForm((p) => {
+      if (t === 'Mixed') return { ...p, questionType: t };
+      const allowed = marksByType[t];
+      const marks = allowed.includes(p.marksPerQuestion)
+        ? p.marksPerQuestion
+        : ((allowed.includes(2) ? 2 : allowed[0]) as Marks);
+      return { ...p, questionType: t, marksPerQuestion: marks };
+    });
+  };
+
+  const marksOptions: Marks[] = form.questionType === 'Mixed' ? [] : marksByType[form.questionType];
+
+  /** Generate `count` more questions using the current form settings. */
+  const generateBatches = async (count: number, refresh: boolean) => {
+    const batches = planBatches({ ...form, questionCount: count }, marksByType);
+    const out: Question[] = [];
+    try {
+      // Sequential: each call hits the LLM and stores into the shared question pool.
+      for (const b of batches) {
+        const res = await generateQuestions({
+          subject: form.subject,
+          chapter: form.chapter,
+          grade: form.grade,
+          type: b.type,
+          marks: b.marks,
+          difficulty: b.difficulty,
+          count: b.count,
+          topic: form.topic,
+          refresh,
+        });
+        out.push(...res.questions);
+      }
+    } catch (err) {
+      if (out.length === 0) throw err;
+      showToast(`Only ${out.length} of ${count} questions were generated: ${errorMessage(err)}`, 'warning');
+    }
+    return out;
   };
 
   const handleGenerate = async (e: FormEvent) => {
@@ -285,49 +380,85 @@ export default function GeneratePage() {
 
     setLoading(true);
     setSaved(false);
-    // Simulate AI generation delay
-    await new Promise((r) => setTimeout(r, 1500));
-    const questions = generateMockQuestions(form);
-    setGenerated(questions);
-    setLoading(false);
-    showToast(`Successfully generated ${questions.length} questions!`, 'success');
+    try {
+      const questions = await generateBatches(form.questionCount, form.fresh);
+      setGenerated(renumber(questions));
+      showToast(`Generated ${questions.length} questions.`, 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleEdit = (updated: Question) => {
-    setGenerated((prev) => prev.map((q) => (q.id === updated.id ? updated : q)));
-    showToast('Question updated.', 'success');
+  const handleEdit = async (updated: Question) => {
+    try {
+      const result = await updateQuestion(updated.id, {
+        text: updated.text,
+        answer: updated.answer,
+        explanation: updated.explanation,
+      });
+      setGenerated((prev) =>
+        prev.map((q) => (q.id === updated.id ? { ...result, questionNumber: q.questionNumber } : q)),
+      );
+      showToast('Question updated.', 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+      throw err;
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setGenerated((prev) => {
-      const next = prev.filter((q) => q.id !== id);
-      return next.map((q, i) => ({ ...q, questionNumber: i + 1 }));
-    });
+  const handleDelete = async (id: string) => {
     setDeleteId(null);
-    showToast('Question deleted.', 'info');
+    try {
+      await discardQuestion(id);
+      setGenerated((prev) => renumber(prev.filter((q) => q.id !== id)));
+      showToast('Question deleted.', 'info');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    }
   };
 
-  const handleRegenerate = (id: string) => {
+  const handleRegenerate = async (id: string) => {
     const old = generated.find((q) => q.id === id);
     if (!old) return;
-    const [newQ] = generateMockQuestions({ ...form, questionCount: 1 });
-    const updated = {
-      ...newQ,
-      id: old.id,
-      questionNumber: old.questionNumber,
-      type: old.type,
-      difficulty: old.difficulty,
-      marks: old.marks,
-    };
-    setGenerated((prev) => prev.map((q) => (q.id === id ? updated : q)));
-    showToast('Question regenerated.', 'success');
+    setBusyId(id);
+    try {
+      // Same type / marks / difficulty as the question being replaced.
+      const res = await generateQuestions({
+        subject: old.subject,
+        chapter: old.chapter,
+        grade: old.grade,
+        type: old.type,
+        marks: old.marks,
+        difficulty: old.difficulty,
+        count: 1,
+        topic: form.topic,
+        refresh: true,
+      });
+      const [fresh] = res.questions;
+      if (!fresh) throw new Error('No question was returned.');
+      await discardQuestion(old.id).catch(() => undefined);
+      setGenerated((prev) => prev.map((q) => (q.id === id ? { ...fresh, questionNumber: old.questionNumber } : q)));
+      showToast('Question regenerated.', 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setBusyId(null);
+    }
   };
 
-  const handleAddQuestion = () => {
-    const [newQ] = generateMockQuestions({ ...form, questionCount: 1 });
-    newQ.questionNumber = generated.length + 1;
-    setGenerated((prev) => [...prev, newQ]);
-    showToast('New question added.', 'success');
+  const handleAddQuestion = async () => {
+    setLoading(true);
+    try {
+      const added = await generateBatches(1, true);
+      setGenerated((prev) => renumber([...prev, ...added]));
+      showToast('New question added.', 'success');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMoveUp = (id: string) => {
@@ -336,41 +467,34 @@ export default function GeneratePage() {
       if (idx <= 0) return prev;
       const next = [...prev];
       [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-      return next.map((q, i) => ({ ...q, questionNumber: i + 1 }));
+      return renumber(next);
     });
   };
 
   const handleMoveDown = (id: string) => {
     setGenerated((prev) => {
       const idx = prev.findIndex((q) => q.id === id);
-      if (idx >= prev.length - 1) return prev;
+      if (idx < 0 || idx >= prev.length - 1) return prev;
       const next = [...prev];
       [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-      return next.map((q, i) => ({ ...q, questionNumber: i + 1 }));
+      return renumber(next);
     });
   };
 
-  const handleSaveBank = () => {
-    if (generated.length === 0) return;
-    const bank: QuestionBank = {
-      id: generateId(),
-      name: form.name,
-      subject: form.subject,
-      chapter: form.chapter,
-      description: form.description,
-      grade: form.grade,
-      questionCount: generated.length,
-      difficulty: form.difficulty,
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      totalMarks: generated.reduce((s, q) => s + q.marks, 0),
-      questions: generated,
-    };
-    addQuestionBank(bank);
-    setSaved(true);
-    showToast('Question bank saved!', 'success');
-    navigate('/question-banks');
+  const handleSaveBank = async () => {
+    if (generated.length === 0 || saving) return;
+    setSaving(true);
+    try {
+      const bank = await createBank(form.name.trim(), form.subject, generated.map((q) => q.id));
+      upsertBank(bank);
+      setSaved(true);
+      showToast('Question bank saved!', 'success');
+      navigate('/question-banks');
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const totalMarks = generated.reduce((s, q) => s + q.marks, 0);
@@ -419,13 +543,38 @@ export default function GeneratePage() {
 
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">Chapter *</label>
+                {/* Always a dropdown: POST /generate only accepts chapter names from the
+                    backend syllabus, so free text just produces "unknown chapter" errors. */}
                 <select
                   value={form.chapter}
                   onChange={(e) => setField('chapter', e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  disabled={chaptersLoading || chapters.length === 0}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50 disabled:text-slate-400"
                 >
-                  {chapters.map((c) => <option key={c}>{c}</option>)}
+                  {chaptersLoading && <option value="">Loading chapters…</option>}
+                  {!chaptersLoading && chapters.length === 0 && (
+                    <option value="">{chaptersError ? 'Could not load chapters' : 'No chapters available'}</option>
+                  )}
+                  {chapters.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
+                {!chaptersLoading && chaptersError && (
+                  <p className="mt-1.5 text-xs text-red-600">
+                    {chaptersError}{' '}
+                    <button
+                      type="button"
+                      onClick={() => setChaptersReload((n) => n + 1)}
+                      className="font-medium underline"
+                    >
+                      Retry
+                    </button>
+                  </p>
+                )}
+                {!chaptersLoading && !chaptersError && chapters.length === 0 && (
+                  <p className="mt-1.5 text-xs text-slate-500">
+                    The backend has no chapters for {form.subject}. Check that SYLLABUS_JSON_PATH points at a
+                    syllabus file and restart the backend.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -445,13 +594,13 @@ export default function GeneratePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Description</label>
-                <textarea
-                  rows={2}
-                  value={form.description}
-                  onChange={(e) => setField('description', e.target.value)}
-                  placeholder="Optional description..."
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">Topic (optional)</label>
+                <input
+                  type="text"
+                  value={form.topic}
+                  onChange={(e) => setField('topic', e.target.value)}
+                  placeholder="Narrow to a sub-topic within the chapter"
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
             </div>
@@ -469,14 +618,14 @@ export default function GeneratePage() {
                 </label>
                 <input
                   type="range"
-                  min={3}
-                  max={30}
+                  min={1}
+                  max={25}
                   value={form.questionCount}
                   onChange={(e) => setField('questionCount', parseInt(e.target.value))}
                   className="w-full accent-indigo-600"
                 />
                 <div className="flex justify-between text-xs text-slate-400">
-                  <span>3</span><span>30</span>
+                  <span>1</span><span>25</span>
                 </div>
               </div>
 
@@ -487,7 +636,7 @@ export default function GeneratePage() {
                     <button
                       key={t}
                       type="button"
-                      onClick={() => setField('questionType', t)}
+                      onClick={() => handleTypeChange(t)}
                       className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${form.questionType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
                     >
                       {t === 'Short' ? 'Short Answer' : t === 'Long' ? 'Long Answer' : t}
@@ -514,56 +663,55 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* Academic Configuration */}
+          {/* Marks & generation options */}
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 mb-4 pb-2 border-b border-slate-100">
-              Academic Configuration
+              Marks &amp; Options
             </h3>
             <div className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Bloom's Taxonomy Level</label>
-                <select
-                  value={form.bloomsLevel}
-                  onChange={(e) => setField('bloomsLevel', e.target.value as BloomsLevel | 'Mixed')}
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  {BLOOMS.map((b) => <option key={b}>{b}</option>)}
-                </select>
-              </div>
-
-              <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">Marks per Question</label>
-                <div className="flex gap-2">
-                  {MARKS_OPTIONS.map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setField('marksPerQuestion', m)}
-                      className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${form.marksPerQuestion === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
+                {form.questionType === 'Mixed' ? (
+                  <p className="text-xs text-slate-500">
+                    Set automatically for each type (MCQ 1, Short 2, Long 5).
+                  </p>
+                ) : (
+                  <div className="flex gap-2">
+                    {marksOptions.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setField('marksPerQuestion', m)}
+                        className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${form.marksPerQuestion === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Learning Outcome</label>
+              <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
                 <input
-                  type="text"
-                  value={form.learningOutcome}
-                  onChange={(e) => setField('learningOutcome', e.target.value)}
-                  placeholder="e.g. Students will understand photosynthesis"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  type="checkbox"
+                  checked={form.fresh}
+                  onChange={(e) => setField('fresh', e.target.checked)}
+                  className="mt-0.5 accent-indigo-600"
                 />
-              </div>
+                <span>
+                  Always generate new questions
+                  <span className="block text-slate-400">
+                    Off: reuse matching questions already stored, and only generate the shortfall.
+                  </span>
+                </span>
+              </label>
             </div>
           </div>
 
           {/* Generate button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || chaptersLoading || !form.chapter.trim()}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
           >
             {loading ? (
@@ -578,6 +726,11 @@ export default function GeneratePage() {
               </>
             )}
           </button>
+          {!loading && !chaptersLoading && !form.chapter.trim() && (
+            <p className="text-xs text-center text-amber-600">
+              Choose a chapter to enable generation.
+            </p>
+          )}
         </form>
 
         {/* Generated questions panel */}
@@ -630,11 +783,11 @@ export default function GeneratePage() {
                   </button>
                   <button
                     onClick={handleSaveBank}
-                    disabled={saved}
+                    disabled={saved || saving}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    {saved ? 'Saved!' : 'Save Bank'}
+                    {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Bank'}
                   </button>
                 </div>
               </div>
@@ -648,6 +801,7 @@ export default function GeneratePage() {
                     onEdit={setEditingQuestion}
                     onDelete={(id) => setDeleteId(id)}
                     onRegenerate={handleRegenerate}
+                    busy={busyId === q.id}
                     onMoveUp={handleMoveUp}
                     onMoveDown={handleMoveDown}
                     isFirst={i === 0}
@@ -659,11 +813,11 @@ export default function GeneratePage() {
               {/* Save again at bottom */}
               <button
                 onClick={handleSaveBank}
-                disabled={saved}
+                disabled={saved || saving}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                {saved ? 'Saved to Question Banks' : 'Save Question Bank'}
+                {saved ? 'Saved to Question Banks' : saving ? 'Saving…' : 'Save Question Bank'}
               </button>
             </>
           )}
@@ -686,7 +840,7 @@ export default function GeneratePage() {
         message="Are you sure you want to delete this question? This cannot be undone."
         confirmLabel="Delete"
         danger
-        onConfirm={() => deleteId && handleDelete(deleteId)}
+        onConfirm={() => deleteId && void handleDelete(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
     </div>
