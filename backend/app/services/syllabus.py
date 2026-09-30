@@ -34,7 +34,7 @@ logger = logging.getLogger("backend.syllabus")
 
 _syllabus_index: SyllabusIndex | None = None
 # subject name -> grade -> normalised chapter names. Optional "grades" block in
-# the syllabus JSON; subjects without one (English, Kannada) aren't grade-filtered.
+# the syllabus JSON; subjects without one (English) aren't grade-filtered.
 _grade_chapters: dict[str, dict[int, set[str]]] = {}
 
 
