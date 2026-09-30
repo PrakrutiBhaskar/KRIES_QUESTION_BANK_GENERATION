@@ -14,7 +14,9 @@ list before anything has been generated.
 """
 from __future__ import annotations
 
+import json
 import logging
+import re
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import noload
@@ -31,6 +33,27 @@ from ..models import Chapter, Question, Subject
 logger = logging.getLogger("backend.syllabus")
 
 _syllabus_index: SyllabusIndex | None = None
+# subject name -> grade -> normalised chapter names. Optional "grades" block in
+# the syllabus JSON; subjects without one (English, Kannada) aren't grade-filtered.
+_grade_chapters: dict[str, dict[int, set[str]]] = {}
+
+
+def _norm(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", name.lower()).strip()
+
+
+def _load_grade_map(path) -> dict[str, dict[int, set[str]]]:
+    with open(path, "r", encoding="utf-8") as fh:
+        raw = json.load(fh)
+    out: dict[str, dict[int, set[str]]] = {}
+    for subject, entry in raw.items():
+        grades = entry.get("grades") if isinstance(entry, dict) else None
+        if not isinstance(grades, dict):
+            continue
+        out[subject] = {
+            int(g): {_norm(str(c)) for c in chapters} for g, chapters in grades.items()
+        }
+    return out
 
 
 def get_syllabus_index() -> SyllabusIndex | None:
@@ -40,13 +63,15 @@ def get_syllabus_index() -> SyllabusIndex | None:
 
 def load_syllabus_index() -> SyllabusIndex | None:
     """Load SYLLABUS_JSON_PATH once at startup. Missing file is not fatal."""
-    global _syllabus_index
+    global _syllabus_index, _grade_chapters
     path = settings.syllabus_json_path
     if not path:
         logger.info("No SYLLABUS_JSON_PATH set — chapter names accepted as given.")
+        _grade_chapters = {}
         return None
     try:
         _syllabus_index = SyllabusIndex.from_json(path)
+        _grade_chapters = _load_grade_map(path)
         logger.info("Loaded syllabus index (%d chapters) from %s", len(_syllabus_index), path)
     except (OSError, ValueError) as exc:
         logger.warning("Could not load syllabus from %s: %s", path, exc)
@@ -156,9 +181,15 @@ async def list_subjects(session: AsyncSession) -> list[tuple[Subject, int]]:
 
 
 async def list_chapters(
-    session: AsyncSession, subject: SubjectEnum
+    session: AsyncSession, subject: SubjectEnum, grade: int | None = None
 ) -> list[tuple[Chapter, int]]:
-    """Chapters with their (active) question counts."""
+    """
+    Chapters with their (active) question counts.
+
+    With ``grade`` set, only that grade's chapters are returned — provided the
+    syllabus file has a "grades" block for the subject. Otherwise (no block, or
+    no syllabus loaded) every chapter is returned, as before.
+    """
     subject_row = await session.scalar(
         select(Subject).where(Subject.name == subject.value)
     )
@@ -179,7 +210,11 @@ async def list_chapters(
         .group_by(Chapter.id)
         .order_by(Chapter.order_index, Chapter.name)
     )
-    return list((await session.execute(stmt)).all())
+    rows = list((await session.execute(stmt)).all())
+    allowed = _grade_chapters.get(subject.value, {}).get(grade) if grade else None
+    if allowed is not None:
+        rows = [(c, n) for c, n in rows if _norm(c.name) in allowed]
+    return rows
 
 
 async def seed_from_index(session: AsyncSession, index: SyllabusIndex) -> int:

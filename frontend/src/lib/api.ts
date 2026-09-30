@@ -164,9 +164,10 @@ function toBank(p: PaperWire): QuestionBank {
 // ------------------------------------------------------------
 // Syllabus
 // ------------------------------------------------------------
-export async function fetchChapters(subject: Subject): Promise<ChapterInfo[]> {
+export async function fetchChapters(subject: Subject, grade?: number): Promise<ChapterInfo[]> {
+  const query = grade ? `?grade=${grade}` : '';
   const rows = await request<{ id: string; name: string; order_index: number; question_count: number }[]>(
-    `/subjects/${encodeURIComponent(subject)}/chapters`,
+    `/subjects/${encodeURIComponent(subject)}/chapters${query}`,
     {},
     15000,
   );

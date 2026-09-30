@@ -103,7 +103,7 @@ disagrees, that's a 400 rather than a silent overwrite.
 
 ## PDF export
 
-Two backends, selected by `PDF_RENDERER` (`auto` | `weasyprint` | `reportlab`):
+Three backends, selected by `PDF_RENDERER` (`auto` | `weasyprint` | `reportlab` | `fpdf`):
 
 - **WeasyPrint** — preferred. Renders the HTML in `services/export/html.py`
   and shapes complex scripts correctly via Pango/HarfBuzz. This matters
@@ -119,6 +119,11 @@ Two backends, selected by `PDF_RENDERER` (`auto` | `weasyprint` | `reportlab`):
   bare Render/AWS container. Fine for the Latin-script subjects. If a Kannada
   paper hits this backend with no Kannada font registered, it returns a 503
   explaining what to install rather than emitting a PDF of empty boxes.
+- **fpdf** — pure-pip (`fpdf2` + `uharfbuzz`, in `requirements.txt`), with Noto Sans
+  and Noto Sans Kannada bundled in `backend/assets/fonts`. It shapes Kannada
+  correctly without any system libraries, so it is what Kannada papers use on
+  Windows or any host without WeasyPrint. In `auto` mode, Kannada papers go to
+  WeasyPrint if present, otherwise to fpdf; ReportLab is never used for Kannada.
 
 `auto` uses WeasyPrint when importable and falls back to ReportLab. `/health`
 reports which one is live.

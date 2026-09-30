@@ -257,7 +257,7 @@ function AddQuestionModal({ bank, marksByType, onAdd, onClose }: AddQuestionModa
     let cancelled = false;
     setChaptersLoading(true);
     setChaptersError(null);
-    fetchChapters(bank.subject)
+    fetchChapters(bank.subject, bank.grade)
       .then((rows) => {
         if (cancelled) return;
         setChapters(rows);
@@ -275,7 +275,7 @@ function AddQuestionModal({ bank, marksByType, onAdd, onClose }: AddQuestionModa
     return () => {
       cancelled = true;
     };
-  }, [bank.subject, chaptersReload]);
+  }, [bank.subject, bank.grade, chaptersReload]);
 
   const handleType = (t: QuestionType) => {
     setType(t);

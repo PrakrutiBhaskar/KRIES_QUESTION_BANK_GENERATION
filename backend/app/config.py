@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     )
     # auto -> WeasyPrint if installed (correct Kannada/Indic shaping via
     # HarfBuzz), else ReportLab. See services/export/renderer.py.
-    pdf_renderer: Literal["auto", "weasyprint", "reportlab"] = Field(
+    pdf_renderer: Literal["auto", "weasyprint", "reportlab", "fpdf"] = Field(
         default="auto", alias="PDF_RENDERER"
     )
 

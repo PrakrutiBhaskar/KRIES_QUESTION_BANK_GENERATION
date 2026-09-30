@@ -16,6 +16,11 @@ python-multipart>=0.0.9
 # installed. WeasyPrint is preferred (correct Kannada/Indic shaping) but needs
 # system libs — see backend/README.md — so it's an extra, not a hard dep.
 reportlab>=4.1
+# fpdf2 + uharfbuzz: pure-pip renderer with proper Kannada shaping (fonts are
+# bundled in backend/assets/fonts). Used for Kannada papers when WeasyPrint
+# isn't installed, e.g. on Windows.
+fpdf2>=2.8
+uharfbuzz>=0.39
 
 # dev / test
 pytest>=8.0

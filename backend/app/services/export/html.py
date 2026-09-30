@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from html import escape
 
+from .answer_format import format_answer, split_label
+
 _STYLE = """
 @page { size: A4; margin: 18mm 16mm 20mm 16mm;
         @bottom-center { content: "Page " counter(page) " of " counter(pages);
@@ -36,6 +38,12 @@ body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
 .key .a { margin: 0 0 10px 30px; }
 .key .a .label { font-weight: 600; }
 .key .expl { color: #444; font-size: 10pt; }
+.key .lead { font-weight: 600; margin: 2px 0; }
+.key ol.pts { margin: 2px 0 4px 18px; padding-left: 14px; }
+.key ol.pts li { margin: 2px 0; }
+.key .ref { color: #444; font-size: 10pt; font-style: italic; margin: 2px 0; }
+.key .split { display: inline-block; margin-top: 3px; padding: 2px 8px; font-size: 9.5pt;
+              font-weight: 600; background: #eef0f6; border-radius: 4px; }
 .footer-note { margin-top: 18px; font-size: 9pt; color: #777; text-align: center; }
 """
 
@@ -94,11 +102,28 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
         for n, item in enumerate(ordered, start=1):
             q = item.question
             parts.append("<div class='a'>")
-            parts.append(
-                f"<div><span class='label'>{n}.</span> {escape(q.answer)}</div>"
-            )
-            if q.explanation:
-                parts.append(f"<div class='expl'>{escape(q.explanation)}</div>")
+            if q.type.value == "MCQ":
+                parts.append(
+                    f"<div><span class='label'>{n}.</span> {escape(q.answer)}</div>"
+                )
+                if q.explanation:
+                    parts.append(f"<div class='expl'>{escape(q.explanation)}</div>")
+            else:
+                fa = format_answer(q.answer, item.effective_marks, q.type.value)
+                parts.append(f"<div><span class='label'>{n}.</span>")
+                if len(fa.points) > 1:
+                    lead = fa.lead or f"[{item.effective_marks} marks]"
+                    parts.append(f" <span class='lead'>{escape(lead)}</span>")
+                if len(fa.points) > 1:
+                    parts.append("</div><ol class='pts'>")
+                    parts.extend(f"<li>{escape(p)}</li>" for p in fa.points)
+                    parts.append("</ol>")
+                else:
+                    parts.append(f" {escape(fa.points[0] if fa.points else q.answer)}</div>")
+                if fa.reference:
+                    parts.append(f"<div class='ref'>{escape(fa.reference)}</div>")
+                if fa.split:
+                    parts.append(f"<div class='split'>{escape(split_label(fa.split))}</div>")
             parts.append("</div>")
         parts.append("</div>")
 

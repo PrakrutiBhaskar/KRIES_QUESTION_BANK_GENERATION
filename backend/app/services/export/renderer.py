@@ -26,6 +26,8 @@ from pathlib import Path
 
 from ...config import settings
 from ...errors import ServiceUnavailableError
+from .answer_format import format_answer, split_label
+from .fpdf_renderer import fpdf_available, render_fpdf
 from .html import render_paper_html
 
 logger = logging.getLogger("backend.export")
@@ -151,6 +153,18 @@ def _render_reportlab(paper) -> bytes:
             "qb-h2", parent=base["Heading2"], fontName=bold_font, fontSize=13,
             spaceAfter=6,
         ),
+        "pt": ParagraphStyle(
+            "qb-pt", parent=base["Normal"], fontName=body_font, fontSize=10.5, leading=14,
+            leftIndent=36, firstLineIndent=-14, spaceAfter=1.5,
+        ),
+        "lead": ParagraphStyle(
+            "qb-lead", parent=base["Normal"], fontName=bold_font, fontSize=10.5, leading=14,
+            leftIndent=22,
+        ),
+        "split": ParagraphStyle(
+            "qb-split", parent=base["Normal"], fontName=bold_font, fontSize=9.5,
+            leftIndent=22, spaceBefore=2, textColor="#2b3a67",
+        ),
         "expl": ParagraphStyle(
             "qb-expl", parent=base["Normal"], fontName=body_font, fontSize=9.5,
             textColor="#444444", leftIndent=22,
@@ -223,10 +237,25 @@ def _render_reportlab(paper) -> bytes:
     flow.append(Paragraph("Answer Key", styles["h2"]))
     for n, item in enumerate(ordered, start=1):
         q = item.question
-        flow.append(Paragraph(f"{n}. {_esc(q.answer)}", styles["q"]))
-        if q.explanation:
-            flow.append(Paragraph(_esc(q.explanation), styles["expl"]))
-        flow.append(Spacer(1, 5))
+        if q.type.value == "MCQ":
+            flow.append(Paragraph(f"{n}. {_esc(q.answer)}", styles["q"]))
+            if q.explanation:
+                flow.append(Paragraph(_esc(q.explanation), styles["expl"]))
+        else:
+            fa = format_answer(q.answer, item.effective_marks, q.type.value)
+            if len(fa.points) > 1:
+                head = f"{n}. {_esc(fa.lead)}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
+                flow.append(Paragraph(head, styles["q"]))
+                for i, point in enumerate(fa.points, start=1):
+                    flow.append(Paragraph(f"{i}.&nbsp;&nbsp;{_esc(point)}", styles["pt"]))
+            else:
+                text = fa.points[0] if fa.points else q.answer
+                flow.append(Paragraph(f"{n}. {_esc(text)}", styles["q"]))
+            if fa.reference:
+                flow.append(Paragraph(f"<i>{_esc(fa.reference)}</i>", styles["expl"]))
+            if fa.split:
+                flow.append(Paragraph(_esc(split_label(fa.split)), styles["split"]))
+        flow.append(Spacer(1, 6))
 
     doc.build(flow)
     return buf.getvalue()
@@ -242,14 +271,34 @@ def render_pdf(paper) -> bytes:
                 "Install it and its system libraries, or set PDF_RENDERER=auto."
             )
         return _render_weasyprint(paper)
+    if choice == "fpdf":
+        if not fpdf_available():
+            raise ServiceUnavailableError(_FPDF_HELP)
+        return render_fpdf(paper)
     if choice == "reportlab":
-        return _render_reportlab(paper)
+        return _render_reportlab_or_fpdf(paper)
 
     if weasyprint_available():
         try:
             return _render_weasyprint(paper)
         except Exception as exc:  # pragma: no cover - runtime-specific
-            logger.warning("WeasyPrint failed, falling back to ReportLab: %s", exc)
+            logger.warning("WeasyPrint failed, falling back: %s", exc)
+    return _render_reportlab_or_fpdf(paper)
+
+
+_FPDF_HELP = (
+    "Kannada PDF export needs either WeasyPrint or the pure-pip fpdf2 renderer. "
+    "Run: pip install fpdf2 uharfbuzz  (the fonts are bundled in backend/assets/fonts), "
+    "then restart the backend."
+)
+
+
+def _render_reportlab_or_fpdf(paper) -> bytes:
+    """ReportLab can't shape Kannada, so Kannada papers go to fpdf2 instead."""
+    if _needs_kannada(paper):
+        if not fpdf_available():
+            raise ServiceUnavailableError(_FPDF_HELP)
+        return render_fpdf(paper)
     return _render_reportlab(paper)
 
 

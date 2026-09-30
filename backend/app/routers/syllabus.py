@@ -12,7 +12,7 @@ generation request, so that list can legitimately come back empty.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from generation_engine.schemas import Subject
@@ -66,9 +66,13 @@ async def list_subjects(
     responses={400: {"model": ErrorOut}},
 )
 async def list_chapters(
-    subject: Subject, session: AsyncSession = Depends(get_session)
+    subject: Subject,
+    grade: int | None = Query(
+        None, ge=7, le=9, description="Only chapters taught in this grade (7-9)."
+    ),
+    session: AsyncSession = Depends(get_session),
 ) -> list[ChapterOut]:
-    rows = await syllabus_service.list_chapters(session, subject)
+    rows = await syllabus_service.list_chapters(session, subject, grade)
     return [
         ChapterOut(
             id=chapter.id,

@@ -202,3 +202,38 @@ async def test_health_endpoint(client):
     response = await client.get("http://test/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+async def test_chapters_can_be_filtered_by_grade(client, db_session, monkeypatch):
+    from generation_engine.schemas import Subject as SubjectEnum
+
+    from app.config import settings
+    from app.services import syllabus as syllabus_service
+
+    monkeypatch.setattr(syllabus_service, "_grade_chapters", {})
+    monkeypatch.setattr(syllabus_service, "_syllabus_index", None)
+    index = syllabus_service.SyllabusIndex.from_json(settings.syllabus_json_path)
+    monkeypatch.setattr(
+        syllabus_service,
+        "_grade_chapters",
+        syllabus_service._load_grade_map(settings.syllabus_json_path),
+    )
+    await syllabus_service.seed_from_index(db_session, index)
+    await db_session.commit()
+
+    subject = SubjectEnum.SOCIAL_SCIENCE
+    every = await syllabus_service.list_chapters(db_session, subject)
+    grade9 = {c.name for c, _ in await syllabus_service.list_chapters(db_session, subject, 9)}
+    assert "The French Revolution" in grade9
+    assert "Tracing Changes Through a Thousand Years" not in grade9  # Grade 7
+    assert 0 < len(grade9) < len(every)
+
+    # Subjects with no "grades" block are returned whole for any grade.
+    english = SubjectEnum.ENGLISH
+    assert len(await syllabus_service.list_chapters(db_session, english, 8)) == len(
+        await syllabus_service.list_chapters(db_session, english)
+    )
+
+
+async def test_grade_filter_rejects_out_of_range(client):
+    assert (await client.get("/subjects/Math/chapters?grade=12")).status_code in (400, 422)

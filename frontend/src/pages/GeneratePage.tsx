@@ -304,7 +304,7 @@ export default function GeneratePage() {
     let cancelled = false;
     setChaptersLoading(true);
     setChaptersError(null);
-    fetchChapters(form.subject)
+    fetchChapters(form.subject, form.grade)
       .then((rows) => {
         if (cancelled) return;
         setChapters(rows);
@@ -322,7 +322,7 @@ export default function GeneratePage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.subject, chaptersReload]);
+  }, [form.subject, form.grade, chaptersReload]);
 
   const setField = <K extends keyof GenerateFormData>(key: K, val: GenerateFormData[K]) =>
     setForm((p) => ({ ...p, [key]: val }));
