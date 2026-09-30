@@ -249,3 +249,22 @@ class PracticeSessionQuestion(Base):
 
     session: Mapped[PracticeSession] = relationship(back_populates="items")
     question: Mapped[Question] = relationship(lazy="joined")
+
+
+class User(TimestampMixin, Base):
+    """An account that can sign in. Not part of the original db-schema.md."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Always stored lower-cased and stripped (see services/auth.normalise_email),
+    # so the plain unique constraint is case-insensitive in practice.
+    email: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    # "Teacher" | "Student" — "Admin" exists in the frontend's type but can
+    # never be self-assigned through sign-up.
+    role: Mapped[str] = mapped_column(Text, nullable=False, default="Teacher")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=func.true()
+    )

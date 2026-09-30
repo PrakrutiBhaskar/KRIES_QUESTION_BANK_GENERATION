@@ -1,5 +1,6 @@
 """Pydantic request/response models for the public API."""
 
+from .auth import LoginIn, SignUpIn, TokenOut, UserOut
 from .common import ErrorOut, MaskedQuestionOut, Page, QuestionOut
 from .requests import (
     GenerateIn,
@@ -22,6 +23,10 @@ from .responses import (
 )
 
 __all__ = [
+    "LoginIn",
+    "SignUpIn",
+    "TokenOut",
+    "UserOut",
     "ErrorOut",
     "MaskedQuestionOut",
     "Page",

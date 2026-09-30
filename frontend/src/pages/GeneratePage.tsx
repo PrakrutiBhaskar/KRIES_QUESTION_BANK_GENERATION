@@ -5,7 +5,6 @@ import {
   Loader2,
   ChevronDown,
   CheckCircle2,
-  Pencil,
   Trash2,
   Plus,
   RefreshCw,
@@ -22,7 +21,6 @@ import {
   generateQuestions,
   planBatches,
   renumber,
-  updateQuestion,
 } from '../lib/api';
 import type {
   Subject,
@@ -45,11 +43,10 @@ const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5] };
 
 // ============================================================
-// Question Card (editable)
+// Question Card
 // ============================================================
 interface QuestionCardProps {
   question: Question;
-  onEdit: (q: Question) => void;
   onDelete: (id: string) => void;
   onRegenerate: (id: string) => void;
   busy?: boolean;
@@ -59,7 +56,7 @@ interface QuestionCardProps {
   isLast: boolean;
 }
 
-function QuestionCard({ question, onEdit, onDelete, onRegenerate, busy, onMoveUp, onMoveDown, isFirst, isLast }: QuestionCardProps) {
+function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMoveDown, isFirst, isLast }: QuestionCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -146,14 +143,6 @@ function QuestionCard({ question, onEdit, onDelete, onRegenerate, busy, onMoveUp
             <ChevronDown className="w-4 h-4" />
           </button>
           <button
-            onClick={() => onEdit(question)}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-            aria-label="Edit question"
-            title="Edit"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
             onClick={() => onRegenerate(question.id)}
             disabled={busy}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 transition-colors"
@@ -177,88 +166,6 @@ function QuestionCard({ question, onEdit, onDelete, onRegenerate, busy, onMoveUp
 }
 
 // ============================================================
-// Edit Question Modal
-// ============================================================
-interface EditQuestionModalProps {
-  question: Question | null;
-  onSave: (q: Question) => Promise<void>;
-  onClose: () => void;
-}
-
-function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps) {
-  const [text, setText] = useState(question?.text ?? '');
-  const [answer, setAnswer] = useState(question?.answer ?? '');
-  const [explanation, setExplanation] = useState(question?.explanation ?? '');
-  const [saving, setSaving] = useState(false);
-
-  if (!question) return null;
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSave({ ...question, text, answer, explanation });
-      onClose();
-    } catch {
-      // The parent shows the server's error; keep the modal open so edits aren't lost.
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Edit Question {question.questionNumber}</h3>
-        </div>
-        <div className="px-6 py-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Text</label>
-            <textarea
-              rows={3}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Answer</label>
-            <textarea
-              rows={4}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Explanation</label>
-            <textarea
-              rows={2}
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-        </div>
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !text.trim() || !answer.trim()}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
 // Generate Page
 // ============================================================
 export default function GeneratePage() {
@@ -266,7 +173,6 @@ export default function GeneratePage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState<GenerateFormData>({
-    name: '',
     subject: 'Science',
     chapter: '',
     grade: 8,
@@ -274,7 +180,6 @@ export default function GeneratePage() {
     questionType: settings.defaultQuestionType as QuestionType | 'Mixed',
     difficulty: settings.defaultDifficulty,
     marksPerQuestion: settings.defaultMarks,
-    topic: '',
     fresh: false,
   });
 
@@ -288,7 +193,6 @@ export default function GeneratePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [generated, setGenerated] = useState<Question[]>([]);
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -361,7 +265,6 @@ export default function GeneratePage() {
           marks: b.marks,
           difficulty: b.difficulty,
           count: b.count,
-          topic: form.topic,
           refresh,
         });
         out.push(...res.questions);
@@ -376,7 +279,6 @@ export default function GeneratePage() {
   const handleGenerate = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.chapter) { showToast('Please select a chapter.', 'error'); return; }
-    if (!form.name.trim()) { showToast('Please enter a question bank name.', 'error'); return; }
 
     setLoading(true);
     setSaved(false);
@@ -388,23 +290,6 @@ export default function GeneratePage() {
       showToast(errorMessage(err), 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleEdit = async (updated: Question) => {
-    try {
-      const result = await updateQuestion(updated.id, {
-        text: updated.text,
-        answer: updated.answer,
-        explanation: updated.explanation,
-      });
-      setGenerated((prev) =>
-        prev.map((q) => (q.id === updated.id ? { ...result, questionNumber: q.questionNumber } : q)),
-      );
-      showToast('Question updated.', 'success');
-    } catch (err) {
-      showToast(errorMessage(err), 'error');
-      throw err;
     }
   };
 
@@ -433,7 +318,6 @@ export default function GeneratePage() {
         marks: old.marks,
         difficulty: old.difficulty,
         count: 1,
-        topic: form.topic,
         refresh: true,
       });
       const [fresh] = res.questions;
@@ -485,7 +369,7 @@ export default function GeneratePage() {
     if (generated.length === 0 || saving) return;
     setSaving(true);
     try {
-      const bank = await createBank(form.name.trim(), form.subject, generated.map((q) => q.id));
+      const bank = await createBank(`${form.subject} – ${form.chapter} (Grade ${form.grade})`, form.subject, generated.map((q) => q.id));
       upsertBank(bank);
       setSaved(true);
       showToast('Question bank saved!', 'success');
@@ -518,18 +402,6 @@ export default function GeneratePage() {
               Basic Information
             </h3>
             <div className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Bank Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setField('name', e.target.value)}
-                  placeholder="e.g. Photosynthesis Practice Set"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">Subject *</label>
                 <select
@@ -591,17 +463,6 @@ export default function GeneratePage() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Topic (optional)</label>
-                <input
-                  type="text"
-                  value={form.topic}
-                  onChange={(e) => setField('topic', e.target.value)}
-                  placeholder="Narrow to a sub-topic within the chapter"
-                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
               </div>
             </div>
           </div>
@@ -798,7 +659,6 @@ export default function GeneratePage() {
                   <QuestionCard
                     key={q.id}
                     question={q}
-                    onEdit={setEditingQuestion}
                     onDelete={(id) => setDeleteId(id)}
                     onRegenerate={handleRegenerate}
                     busy={busyId === q.id}
@@ -823,15 +683,6 @@ export default function GeneratePage() {
           )}
         </div>
       </div>
-
-      {/* Edit modal */}
-      {editingQuestion && (
-        <EditQuestionModal
-          question={editingQuestion}
-          onSave={handleEdit}
-          onClose={() => setEditingQuestion(null)}
-        />
-      )}
 
       {/* Delete confirm */}
       <ConfirmModal

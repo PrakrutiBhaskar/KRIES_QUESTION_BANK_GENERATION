@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './hooks/useApp';
 import AppLayout from './layouts/AppLayout';
 import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
 import DashboardPage from './pages/DashboardPage';
 import GeneratePage from './pages/GeneratePage';
 import QuestionBanksPage from './pages/QuestionBanksPage';
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
 
           {/* Protected — wrapped in AppLayout */}
           <Route element={<AppLayout />}>

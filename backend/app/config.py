@@ -118,6 +118,17 @@ class Settings(BaseSettings):
         default=True, alias="PRACTICE_GENERATE_SHORTFALL"
     )
 
+    # --- Auth (JWT bearer tokens) ---
+    # HS256 signing key. Generate one with:  python -c "import secrets; print(secrets.token_urlsafe(48))"
+    # If left empty, a random per-process key is used: fine for local
+    # development, but every restart signs everyone out and multiple workers
+    # would disagree — so set JWT_SECRET in any real deployment.
+    jwt_secret: str = Field(default="", alias="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(
+        default=60 * 24 * 7, alias="ACCESS_TOKEN_EXPIRE_MINUTES", ge=1
+    )
+
     @field_validator("syllabus_json_path", "export_dir", mode="after")
     @classmethod
     def anchor_relative_paths(cls, v: Path | None) -> Path | None:
@@ -136,6 +147,10 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @property
+    def jwt_secret_is_ephemeral(self) -> bool:
+        return not self.jwt_secret.strip()
 
     @property
     def should_create_tables(self) -> bool:

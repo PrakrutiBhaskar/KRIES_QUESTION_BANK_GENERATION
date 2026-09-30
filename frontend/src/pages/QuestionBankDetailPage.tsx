@@ -5,7 +5,6 @@ import {
   BookOpen,
   Plus,
   Download,
-  Pencil,
   Trash2,
   ChevronDown,
   ChevronUp,
@@ -30,109 +29,17 @@ import {
   generateQuestions,
   renumber,
   setBankQuestions,
-  updateQuestion,
 } from '../lib/api';
-
-// ============================================================
-// Edit Question Modal (inline)
-// ============================================================
-interface EditModalProps {
-  question: Question | null;
-  onSave: (q: Question) => Promise<void>;
-  onClose: () => void;
-}
-
-function EditModal({ question, onSave, onClose }: EditModalProps) {
-  const [text, setText] = useState(question?.text ?? '');
-  const [answer, setAnswer] = useState(question?.answer ?? '');
-  const [explanation, setExplanation] = useState(question?.explanation ?? '');
-  const [saving, setSaving] = useState(false);
-
-  if (!question) return null;
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSave({ ...question, text, answer, explanation });
-    } catch {
-      // Parent already showed the server's message; keep the modal open.
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-y-auto max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-slate-900">
-            Edit Question {question.questionNumber}
-          </h3>
-          <div className="flex gap-1.5">
-            <TypeBadge type={question.type} />
-            <DifficultyBadge difficulty={question.difficulty} />
-          </div>
-        </div>
-        <div className="px-6 py-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Question Text</label>
-            <textarea
-              rows={3}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Answer / Model Answer</label>
-            <textarea
-              rows={5}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Explanation</label>
-            <textarea
-              rows={2}
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-            />
-          </div>
-        </div>
-        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !text.trim() || !answer.trim()}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================
 // Question Row
 // ============================================================
 interface QuestionRowProps {
   question: Question;
-  onEdit: (q: Question) => void;
   onDelete: (id: string) => void;
 }
 
-function QuestionRow({ question, onEdit, onDelete }: QuestionRowProps) {
+function QuestionRow({ question, onDelete }: QuestionRowProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -210,13 +117,6 @@ function QuestionRow({ question, onEdit, onDelete }: QuestionRowProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => onEdit(question)}
-            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-            aria-label="Edit"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
           <button
             onClick={() => onDelete(question.id)}
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -396,7 +296,6 @@ export default function QuestionBankDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [marksByType, setMarksByType] = useState<MarksByType>({ MCQ: [1], Short: [1, 2, 3], Long: [5] });
 
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addingQuestion, setAddingQuestion] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -440,27 +339,6 @@ export default function QuestionBankDetailPage() {
   const commit = (next: QuestionBank) => {
     setBank(next);
     upsertBank(next);
-  };
-
-  const handleSaveEdit = async (updated: Question) => {
-    try {
-      const saved = await updateQuestion(updated.id, {
-        text: updated.text,
-        answer: updated.answer,
-        explanation: updated.explanation,
-      });
-      commit({
-        ...bank,
-        questions: bank.questions.map((q) =>
-          q.id === updated.id ? { ...q, ...saved, questionNumber: q.questionNumber, marks: q.marks, baseMarks: q.baseMarks } : q,
-        ),
-      });
-      setEditingQuestion(null);
-      showToast('Question updated.', 'success');
-    } catch (err) {
-      showToast(errorMessage(err), 'error');
-      throw err;
-    }
   };
 
   const handleRemove = async (qId: string) => {
@@ -577,7 +455,6 @@ export default function QuestionBankDetailPage() {
               <QuestionRow
                 key={q.id}
                 question={q}
-                onEdit={setEditingQuestion}
                 onDelete={(qId) => setDeleteId(qId)}
               />
             ))}
@@ -586,14 +463,6 @@ export default function QuestionBankDetailPage() {
       </div>
 
       {/* Modals */}
-      {editingQuestion && (
-        <EditModal
-          question={editingQuestion}
-          onSave={handleSaveEdit}
-          onClose={() => setEditingQuestion(null)}
-        />
-      )}
-
       {addingQuestion && (
         <AddQuestionModal
           bank={bank}

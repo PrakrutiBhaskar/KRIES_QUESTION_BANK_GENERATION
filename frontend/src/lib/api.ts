@@ -2,6 +2,7 @@
 // Typed client for the FastAPI backend (docs/api-contract.md).
 // Every endpoint returns errors as {"error": string, "detail": string}.
 // ============================================================
+import { UNAUTHORIZED_EVENT, clearSession, getToken } from './auth';
 import type {
   ChapterInfo,
   Difficulty,
@@ -13,6 +14,7 @@ import type {
   QuestionDifficulty,
   QuestionType,
   Subject,
+  User,
 } from '../types';
 
 export const API_BASE: string = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1').replace(/\/$/, '');
@@ -38,13 +40,20 @@ export function errorMessage(err: unknown): string {
     }
     return err.message;
   }
-  if (err instanceof TypeError) return 'Cannot reach the server. Is the backend running?';
+  if (err instanceof TypeError) return 'Cannot reach the server. Please check your connection and try again.';
   return err instanceof Error ? err.message : 'Something went wrong.';
 }
 
-async function request<T>(path: string, init: RequestInit = {}, timeoutMs?: number): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs?: number,
+  { auth = true }: { auth?: boolean } = {},
+): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (init.body) headers['Content-Type'] = 'application/json';
+  const token = auth ? getToken() : null;
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   let res: Response;
   try {
@@ -55,7 +64,7 @@ async function request<T>(path: string, init: RequestInit = {}, timeoutMs?: numb
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'TimeoutError') {
-      throw new ApiError(0, 'timeout', 'The server took too long to respond. Is the backend running?');
+      throw new ApiError(0, 'timeout', 'The server took too long to respond. Please try again.');
     }
     throw err;
   }
@@ -72,6 +81,12 @@ async function request<T>(path: string, init: RequestInit = {}, timeoutMs?: numb
   if (!res.ok) {
     const b = (body ?? {}) as { error?: string; detail?: unknown };
     const detail = typeof b.detail === 'string' ? b.detail : res.statusText;
+    // A token we sent was rejected (expired / revoked): drop the session so the
+    // app returns to the sign-in page instead of failing every request.
+    if (res.status === 401 && token) {
+      clearSession();
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
     throw new ApiError(res.status, b.error ?? 'error', detail);
   }
   return body as T;
@@ -159,6 +174,51 @@ function toBank(p: PaperWire): QuestionBank {
     totalMarks: p.total_marks,
     questions,
   };
+}
+
+// ------------------------------------------------------------
+// Auth
+// ------------------------------------------------------------
+export interface SignUpInput {
+  name: string;
+  email: string;
+  password: string;
+  role: 'Teacher' | 'Student';
+}
+
+export interface AuthResult {
+  token: string;
+  user: User;
+}
+
+interface TokenWire {
+  access_token: string;
+  user: User;
+}
+
+export async function signUp(input: SignUpInput): Promise<AuthResult> {
+  const r = await request<TokenWire>(
+    '/auth/signup',
+    { method: 'POST', body: JSON.stringify(input) },
+    15000,
+    { auth: false },
+  );
+  return { token: r.access_token, user: r.user };
+}
+
+export async function signIn(email: string, password: string): Promise<AuthResult> {
+  const r = await request<TokenWire>(
+    '/auth/login',
+    { method: 'POST', body: JSON.stringify({ email, password }) },
+    15000,
+    { auth: false },
+  );
+  return { token: r.access_token, user: r.user };
+}
+
+/** The signed-in user; also how a stored token is validated on page load. */
+export async function fetchMe(): Promise<User> {
+  return request<User>('/auth/me', {}, 15000);
 }
 
 // ------------------------------------------------------------

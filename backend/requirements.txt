@@ -11,6 +11,7 @@ pydantic>=2.5
 pydantic-settings>=2.2
 python-dotenv>=1.0
 python-multipart>=0.0.9
+pyjwt>=2.8               # signed access tokens for /auth
 
 # PDF export. ReportLab is the zero-system-dependency fallback and always
 # installed. WeasyPrint is preferred (correct Kannada/Indic shaping) but needs

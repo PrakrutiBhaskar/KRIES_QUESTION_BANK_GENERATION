@@ -7,7 +7,6 @@ import {
   LayoutList,
   Plus,
   Eye,
-  Copy,
   Trash2,
   Download,
   BookOpen,
@@ -17,13 +16,13 @@ import { useApp } from '../hooks/useApp';
 import type { Subject, Difficulty } from '../types';
 import { DifficultyBadge, SubjectDot, EmptyState, ConfirmModal } from '../components/ui';
 import { formatDate } from '../lib/utils';
-import { createBank, errorMessage, exportBank } from '../lib/api';
+import { errorMessage, exportBank } from '../lib/api';
 
 const SUBJECTS: Array<Subject | 'All'> = ['All', 'Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const DIFFICULTIES: Array<Difficulty | 'All'> = ['All', 'easy', 'medium', 'hard', 'mixed'];
 
 export default function QuestionBanksPage() {
-  const { questionBanks, banksLoading, banksError, refreshBanks, deleteQuestionBank, upsertBank, showToast } = useApp();
+  const { questionBanks, banksLoading, banksError, refreshBanks, deleteQuestionBank, showToast } = useApp();
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
@@ -66,18 +65,6 @@ export default function QuestionBanksPage() {
     try {
       await deleteQuestionBank(id);
       showToast('Question bank deleted.', 'info');
-    } catch (err) {
-      showToast(errorMessage(err), 'error');
-    }
-  };
-
-  const handleDuplicate = async (id: string) => {
-    const bank = questionBanks.find((b) => b.id === id);
-    if (!bank) return;
-    try {
-      const copy = await createBank(`${bank.name} (Copy)`, bank.subject, bank.questions.map((q) => q.id));
-      upsertBank(copy);
-      showToast('Question bank duplicated.', 'success');
     } catch (err) {
       showToast(errorMessage(err), 'error');
     }
@@ -286,14 +273,6 @@ export default function QuestionBanksPage() {
                   View
                 </button>
                 <button
-                  onClick={() => void handleDuplicate(bank.id)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                  aria-label="Duplicate"
-                  title="Duplicate"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-                <button
                   onClick={() => void handleExport(bank.id, bank.name)}
                   disabled={exportingId === bank.id}
                   className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded-lg transition-colors"
@@ -350,7 +329,6 @@ export default function QuestionBanksPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => navigate(`/question-banks/${bank.id}`)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => void handleDuplicate(bank.id)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition-colors" title="Duplicate"><Copy className="w-4 h-4" /></button>
                         <button onClick={() => void handleExport(bank.id, bank.name)} disabled={exportingId === bank.id} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded transition-colors" title="Export"><Download className="w-4 h-4" /></button>
                         <button onClick={() => setDeleteId(bank.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>

@@ -16,7 +16,7 @@ from .config import settings
 from .db import Base, SessionLocal
 from .db import engine as db_engine
 from .errors import register_exception_handlers
-from .routers import export, papers, practice, questions, syllabus
+from .routers import auth, export, papers, practice, questions, syllabus
 from .services.export import active_renderer
 from .services.generation import get_engine, set_engine
 from .services.syllabus import load_syllabus_index, seed_from_index
@@ -67,6 +67,12 @@ async def lifespan(app: FastAPI):
             seeded = await seed_from_index(session, index)
             await session.commit()
 
+    if settings.jwt_secret_is_ephemeral:
+        logger.warning(
+            "JWT_SECRET is not set: using a random per-process key, so everyone "
+            "is signed out on every restart. Set JWT_SECRET for any real deployment."
+        )
+
     logger.info(
         "Started %s | db=%s | syllabus=%s | pdf=%s | cache=%s",
         settings.app_name,
@@ -102,7 +108,7 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
-for router in (questions.router, papers.router, export.router, practice.router, syllabus.router):
+for router in (auth.router, questions.router, papers.router, export.router, practice.router, syllabus.router):
     app.include_router(router, prefix=settings.api_prefix)
 
 

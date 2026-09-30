@@ -27,15 +27,14 @@ full API URL and add the site to `CORS_ORIGINS` in the backend `.env`.
 | Subject / chapter pickers | `GET /subjects/{subject}/chapters` |
 | Type → marks options | `GET /generation/combinations` |
 | Generate | `POST /generate` (one call per type × difficulty when "Mixed") |
-| Edit / delete a generated question | `PATCH` / `DELETE /questions/{id}` |
+| Delete a generated question | `DELETE /questions/{id}` |
 | Save Bank | `POST /papers` — a **question bank is a saved paper** |
 | Bank list / detail | `GET /papers`, `GET /papers/{id}` |
-| Duplicate bank | `POST /papers` with the same question ids |
 | Remove question / add generated question | `PATCH /papers/{id}` (replaces the question list) |
 | Delete bank | `DELETE /papers/{id}` |
 | Export PDF | `POST /export/{id}` → opens `download_url` |
 
-All calls live in `src/lib/api.ts`. Login is still a local mock — the backend has no auth in the MVP.
+All calls live in `src/lib/api.ts`. Sign up / sign in use `POST /auth/signup`, `POST /auth/login` and `GET /auth/me`; the JWT is sent as a bearer token on every request.
 
 ## Not in the backend yet (removed from the UI)
 

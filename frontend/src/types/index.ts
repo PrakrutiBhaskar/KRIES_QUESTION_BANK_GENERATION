@@ -55,7 +55,6 @@ export interface QuestionBank {
 // Generation form
 // ============================================================
 export interface GenerateFormData {
-  name: string;
   subject: Subject;
   chapter: string;
   grade: Grade;
@@ -63,7 +62,6 @@ export interface GenerateFormData {
   questionType: QuestionType | 'Mixed';
   difficulty: Difficulty;
   marksPerQuestion: Marks;
-  topic: string;
   fresh: boolean;           // skip stored questions and force new generation
 }
 

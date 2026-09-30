@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Bell, Sliders, Wand2, LogOut, Save, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
+import { DEFAULT_SETTINGS } from '../lib/auth';
 import type { AppSettings, Difficulty } from '../types';
 
 type Tab = 'profile' | 'preferences' | 'generation' | 'account';
@@ -119,10 +120,6 @@ export default function SettingsPage() {
                   </select>
                 </div>
               </div>
-
-              <p className="text-xs text-slate-400">
-                Profile changes are saved locally and reset on logout (demo mode).
-              </p>
             </div>
           )}
 
@@ -151,7 +148,6 @@ export default function SettingsPage() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-slate-400 mt-2">Dark/system themes are noted but apply on light mode in this demo.</p>
                 </div>
               </div>
 
@@ -296,17 +292,18 @@ export default function SettingsPage() {
               <div className="border border-slate-200 rounded-xl p-5">
                 <h4 className="text-sm font-semibold text-slate-900 mb-1">Reset to Defaults</h4>
                 <p className="text-sm text-slate-500 mb-4">
-                  Reset all settings and question banks to the original demo state.
+                  Reset all preferences to their default values.
                 </p>
                 <button
                   type="button"
                   onClick={() => {
-                    localStorage.clear();
-                    window.location.reload();
+                    updateSettings(DEFAULT_SETTINGS);
+                    setLocalSettings(DEFAULT_SETTINGS);
+                    showToast('Preferences reset to defaults.', 'success');
                   }}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
                 >
-                  Reset Demo Data
+                  Reset Preferences
                 </button>
               </div>
 
@@ -314,10 +311,9 @@ export default function SettingsPage() {
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">System Info</p>
                 <dl className="space-y-2">
                   {[
-                    { label: 'Version', value: '1.0.0 (Demo)' },
+                    { label: 'Version', value: '1.0.0' },
                     { label: 'Board', value: 'Karnataka State Board' },
                     { label: 'Grades', value: '7 · 8 · 9' },
-                    { label: 'Backend', value: 'Not connected (Frontend Demo)' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex items-center gap-3">
                       <dt className="text-xs text-slate-400 w-24 shrink-0">{label}</dt>

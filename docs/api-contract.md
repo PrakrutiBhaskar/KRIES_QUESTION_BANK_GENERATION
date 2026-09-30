@@ -247,3 +247,19 @@ endpoint returns an answer, and only for a question in that session.
 **`GET /subjects`** always returns all five subjects, even before any
 questions exist, so the picker is never empty. `GET /subjects/{subject}/chapters`
 can legitimately return `[]` until chapters are seeded or generated.
+
+---
+
+## Authentication
+
+Bearer-token auth. Errors use the standard `{"error", "detail"}` shape.
+
+| Method | Path | Body | Success | Errors |
+|---|---|---|---|---|
+| POST | `/auth/signup` | `{name, email, password, role?}` (`role`: `Teacher` \| `Student`, default `Teacher`; password ≥ 8 chars with a letter and a number) | `201` `{access_token, token_type: "bearer", expires_in, user}` | `400 invalid_request`, `409 email_taken` |
+| POST | `/auth/login` | `{email, password}` | `200` same as sign-up | `401 invalid_credentials` |
+| GET | `/auth/me` | none (header `Authorization: Bearer <token>`) | `200` `{id, name, email, role}` | `401 not_authenticated` / `invalid_token` |
+
+`user` is `{id, name, email, role}`. Set `JWT_SECRET` in production. Existing
+routes are not yet protected; add `Depends(get_current_user)` (`app/deps.py`)
+to any route that should require sign-in.

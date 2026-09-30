@@ -46,6 +46,11 @@ class BadRequestError(APIError):
     error = "invalid_request"
 
 
+class UnauthorizedError(APIError):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    error = "unauthorized"
+
+
 class NotFoundError(APIError):
     status_code = status.HTTP_404_NOT_FOUND
     error = "not_found"
@@ -131,6 +136,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 def _slug(status_code: int) -> str:
     return {
         400: "invalid_request",
+        401: "unauthorized",
+        403: "forbidden",
         404: "not_found",
         409: "conflict",
         422: "validation_failed",
