@@ -9,13 +9,15 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .db import Base, SessionLocal
+from .db import Base, SessionLocal, ensure_schema
+from .deps import get_current_user
 from .db import engine as db_engine
 from .errors import register_exception_handlers
+from .ratelimit import RateLimitMiddleware
 from .routers import auth, export, papers, practice, questions, syllabus
 from .services.export import active_renderer
 from .services.generation import get_engine, set_engine
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI):
                 from . import models  # noqa: F401  (registers the tables on Base)
 
                 await conn.run_sync(Base.metadata.create_all)
+                await conn.run_sync(ensure_schema)
             else:
                 await conn.run_sync(lambda c: None)
     except Exception as exc:
@@ -98,18 +101,31 @@ app = FastAPI(
     responses={},
 )
 
+# Order matters: middleware added last is outermost. The rate limiter goes in
+# first so CORS wraps it — otherwise a 429 would carry no CORS headers and the
+# browser would report a network error instead of "too many requests".
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Retry-After"],
 )
 
 register_exception_handlers(app)
 
-for router in (auth.router, questions.router, papers.router, export.router, practice.router, syllabus.router):
-    app.include_router(router, prefix=settings.api_prefix)
+# Public: sign-up / sign-in. Everything else needs a valid bearer token.
+# (The export router guards its own routes: its download link is opened in a
+# new browser tab, which can't send an Authorization header, so it uses a
+# signed short-lived token instead — see routers/export.py.)
+app.include_router(auth.router, prefix=settings.api_prefix)
+app.include_router(export.router, prefix=settings.api_prefix)
+for router in (questions.router, papers.router, practice.router, syllabus.router):
+    app.include_router(
+        router, prefix=settings.api_prefix, dependencies=[Depends(get_current_user)]
+    )
 
 
 @app.get("/health", tags=["meta"], summary="Liveness and configuration check")

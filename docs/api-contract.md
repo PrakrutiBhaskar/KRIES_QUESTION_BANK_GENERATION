@@ -260,6 +260,48 @@ Bearer-token auth. Errors use the standard `{"error", "detail"}` shape.
 | POST | `/auth/login` | `{email, password}` | `200` same as sign-up | `401 invalid_credentials` |
 | GET | `/auth/me` | none (header `Authorization: Bearer <token>`) | `200` `{id, name, email, role}` | `401 not_authenticated` / `invalid_token` |
 
-`user` is `{id, name, email, role}`. Set `JWT_SECRET` in production. Existing
-routes are not yet protected; add `Depends(get_current_user)` (`app/deps.py`)
-to any route that should require sign-in.
+`user` is `{id, name, email, role}`. Set `JWT_SECRET` in production.
+
+### Access and ownership
+
+Every endpoint except `POST /auth/signup`, `POST /auth/login`, `GET /health` and
+`GET /export/files/{filename}` needs `Authorization: Bearer <token>`; without
+one the response is `401 not_authenticated`, and an expired or invalid token is
+`401 invalid_token`.
+
+| Resource | Who can do what |
+|---|---|
+| **Papers** (`/papers`, `POST /export/{id}`) | Owner only. The owner is the signed-in user, taken from the token; sending `user_id` in a request body is a `400`. Someone else's paper is a `404`, identical to a paper that doesn't exist. `GET /papers` lists only your own. |
+| **Practice sessions** (`/practice/...`) | Owner only, same `404` rule. |
+| **Questions** (`GET /questions`, `GET /questions/{id}`) | Shared pool: any signed-in user can read and reuse stored questions (this is what the generation cache is for). |
+| `PATCH /questions/{id}` | Only the user who generated the question; anyone else gets `403 forbidden`. |
+| `DELETE /questions/{id}` | Only the creator removes it from the pool. For anyone else it returns `204` and changes nothing, so a teacher can drop a cached question from their own draft without affecting others. |
+| **PDF download** (`GET /export/files/{filename}?token=...`) | A browser tab can't send an Authorization header, so `POST /export/{id}` returns a `download_url` carrying a signed token valid for 10 minutes for that one file. No, invalid or expired token: `401 invalid_download_token`. |
+
+Papers, practice sessions and questions created before sign-in existed have no
+owner: papers and sessions stay hidden, and questions can't be edited or removed.
+Assign them to an account with (replace the email):
+
+```sql
+UPDATE papers            SET user_id    = (SELECT id FROM users WHERE email = 'you@example.com') WHERE user_id IS NULL;
+UPDATE practice_sessions SET user_id    = (SELECT id FROM users WHERE email = 'you@example.com') WHERE user_id IS NULL;
+UPDATE questions         SET created_by = (SELECT id FROM users WHERE email = 'you@example.com') WHERE created_by IS NULL;
+```
+
+### Rate limiting
+
+Exceeding a limit returns `429` with `{"error": "rate_limited", "detail": "Too many requests. Try again in N seconds."}`
+and a `Retry-After: N` header.
+
+| Bucket | Applies to | Default | Counted per |
+|---|---|---|---|
+| `global` | every request except `/health` | 120 / min | signed-in user, else IP |
+| `login` | `POST /auth/login` | 10 / min | IP |
+| `signup` | `POST /auth/signup` | 5 / hour | IP |
+| `generate` | `POST /generate`, `POST /practice/sessions` | 30 / min | user |
+| `export` | `POST /export/{id}` | 10 / min | user |
+| failed logins | wrong password | 5 per 15 min, then locked out for the rest of the window | IP + email |
+
+All are configurable (`RATE_LIMIT_*`, `LOGIN_MAX_FAILURES`; see `backend/.env.example`).
+Counters are in-process memory, so they reset on restart and are per worker; move
+them to Redis before running more than one worker or instance.

@@ -62,6 +62,32 @@ class LoginIn(BaseModel):
         return v.strip().lower()
 
 
+class ForgotPasswordIn(BaseModel):
+    email: str
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        return _clean_email(v)
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = Field(min_length=1, max_length=2048)
+    # Same strength rules as sign-up.
+    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+
+    @field_validator("password")
+    @classmethod
+    def _password_has_letter_and_digit(cls, v: str) -> str:
+        if not (re.search(r"[A-Za-z]", v) and re.search(r"\d", v)):
+            raise ValueError("password must contain at least one letter and one number")
+        return v
+
+
+class MessageOut(BaseModel):
+    message: str
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

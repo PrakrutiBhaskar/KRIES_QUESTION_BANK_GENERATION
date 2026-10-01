@@ -26,6 +26,7 @@ export interface Question {
   marks: Marks;
   baseMarks?: Marks;        // the question's own marks when a paper overrides them
   topic: string;
+  section?: string;         // "Section A" ... — only on blueprint papers
   options?: string[];       // Only for MCQ
   answer: string;
   explanation: string;
@@ -100,3 +101,49 @@ export interface ChapterInfo {
 
 // (type -> allowed marks), from GET /generation/combinations
 export type MarksByType = Record<QuestionType, Marks[]>;
+
+// ============================================================
+// Blueprint papers (Question Papers page)
+// ============================================================
+export interface BlueprintChapter {
+  name: string;
+  weightage: number;        // percent of the paper's total marks
+}
+
+export interface BlueprintSection {
+  name: string;
+  type: QuestionType;
+  marksPerQuestion: Marks;
+  totalMarks: number;       // what the whole section is worth
+  difficulty: Difficulty;
+}
+
+export interface BlueprintInput {
+  title: string;
+  subject: Subject;
+  grade: Grade;
+  chapters: BlueprintChapter[];
+  sections: BlueprintSection[];
+  refresh: boolean;
+}
+
+/** What a blueprint would produce, worked out by the server without generating. */
+export interface BlueprintPlan {
+  totalMarks: number;
+  totalQuestions: number;
+  sections: {
+    name: string;
+    type: QuestionType;
+    marksPerQuestion: number;
+    questions: number;
+    marks: number;
+    allocations: { chapter: string; questions: number; marks: number }[];
+  }[];
+  chapters: {
+    chapter: string;
+    weightage: number;
+    targetMarks: number;
+    plannedMarks: number;
+    plannedQuestions: number;
+  }[];
+}

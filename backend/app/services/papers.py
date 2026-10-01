@@ -8,6 +8,10 @@ Two rules carry most of the weight here:
     if it disagrees with the computed total that's a 400, so a stale frontend
     total is caught rather than silently stored.
 
+  * Every function takes the caller's `user_id` and only ever sees that user's
+    papers. Someone else's paper is reported as 404, exactly like a paper that
+    doesn't exist, so ids can't be probed for existence.
+
   * Order is dense and zero-based. Whatever `order_index` values the client
     sends on PATCH, they're sorted and renumbered 0..n-1 before storing, so a
     drag-and-drop UI can send whatever it likes without the gaps compounding.
@@ -30,14 +34,18 @@ def compute_total_marks(paper: Paper) -> int:
     return sum(item.effective_marks for item in paper.items)
 
 
-async def _load(session: AsyncSession, paper_id: uuid.UUID) -> Paper:
-    paper = await session.scalar(select(Paper).where(Paper.id == paper_id))
+async def _load(session: AsyncSession, paper_id: uuid.UUID, user_id: uuid.UUID) -> Paper:
+    paper = await session.scalar(
+        select(Paper).where(Paper.id == paper_id, Paper.user_id == user_id)
+    )
     if paper is None:
         raise NotFoundError(f"Paper {paper_id} not found.")
     return paper
 
 
-async def create_paper(session: AsyncSession, payload: PaperIn) -> Paper:
+async def create_paper(
+    session: AsyncSession, payload: PaperIn, user_id: uuid.UUID
+) -> Paper:
     found = await question_service.get_questions_by_ids(session, payload.question_ids)
 
     missing = [str(qid) for qid in payload.question_ids if qid not in found]
@@ -63,7 +71,7 @@ async def create_paper(session: AsyncSession, payload: PaperIn) -> Paper:
     paper = Paper(
         title=payload.title.strip(),
         subject_id=subject_row.id,
-        user_id=payload.user_id,
+        user_id=user_id,
         total_marks=0,
     )
     session.add(paper)
@@ -91,14 +99,19 @@ async def create_paper(session: AsyncSession, payload: PaperIn) -> Paper:
     return paper
 
 
-async def get_paper(session: AsyncSession, paper_id: uuid.UUID) -> Paper:
-    return await _load(session, paper_id)
+async def get_paper(
+    session: AsyncSession, paper_id: uuid.UUID, user_id: uuid.UUID
+) -> Paper:
+    return await _load(session, paper_id, user_id)
 
 
 async def update_paper(
-    session: AsyncSession, paper_id: uuid.UUID, payload: PaperPatch
+    session: AsyncSession,
+    paper_id: uuid.UUID,
+    payload: PaperPatch,
+    user_id: uuid.UUID,
 ) -> Paper:
-    paper = await _load(session, paper_id)
+    paper = await _load(session, paper_id, user_id)
 
     if payload.title is not None:
         paper.title = payload.title.strip()
@@ -148,19 +161,26 @@ async def update_paper(
     return paper
 
 
-async def list_papers(session: AsyncSession, *, limit: int = 50) -> list[Paper]:
+async def list_papers(
+    session: AsyncSession, user_id: uuid.UUID, *, limit: int = 50
+) -> list[Paper]:
     rows = await session.scalars(
-        select(Paper).order_by(Paper.created_at.desc()).limit(limit)
+        select(Paper)
+        .where(Paper.user_id == user_id)
+        .order_by(Paper.created_at.desc())
+        .limit(limit)
     )
     return list(rows.all())
 
 
-async def delete_paper(session: AsyncSession, paper_id: uuid.UUID) -> None:
+async def delete_paper(
+    session: AsyncSession, paper_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
     """Hard-delete a paper and its question links (cascade).
 
     The questions themselves are untouched — they stay in the question pool
     and can be reused in another paper.
     """
-    paper = await _load(session, paper_id)  # 404 if missing
+    paper = await _load(session, paper_id, user_id)  # 404 if missing or not yours
     await session.delete(paper)
     await session.flush()

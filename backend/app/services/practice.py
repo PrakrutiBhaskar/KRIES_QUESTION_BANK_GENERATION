@@ -50,7 +50,7 @@ async def _stored_pool(
 
 
 async def create_session(
-    session: AsyncSession, payload: PracticeSessionIn
+    session: AsyncSession, payload: PracticeSessionIn, user_id: uuid.UUID
 ) -> PracticeSession:
     chapter = await resolve_chapter(session, payload.subject, payload.chapter)
 
@@ -73,6 +73,7 @@ async def create_session(
                 count=shortfall,
                 refresh=True,  # the stored pool was already drained above
             ),
+            user_id=user_id,
         )
         chosen_ids = {row.id for row in chosen}
         chosen.extend(row for row in generated if row.id not in chosen_ids)
@@ -87,7 +88,7 @@ async def create_session(
     practice = PracticeSession(
         subject_id=chapter.subject_id,
         chapter_id=chapter.id,
-        user_id=payload.user_id,
+        user_id=user_id,
     )
     session.add(practice)
     await session.flush()
@@ -104,10 +105,13 @@ async def create_session(
 
 
 async def get_session(
-    session: AsyncSession, session_id: uuid.UUID
+    session: AsyncSession, session_id: uuid.UUID, user_id: uuid.UUID
 ) -> PracticeSession:
+    # Someone else's session is a 404, same as one that doesn't exist.
     row = await session.scalar(
-        select(PracticeSession).where(PracticeSession.id == session_id)
+        select(PracticeSession).where(
+            PracticeSession.id == session_id, PracticeSession.user_id == user_id
+        )
     )
     if row is None:
         raise NotFoundError(f"Practice session {session_id} not found.")
@@ -115,7 +119,10 @@ async def get_session(
 
 
 async def reveal(
-    session: AsyncSession, session_id: uuid.UUID, question_id: uuid.UUID
+    session: AsyncSession,
+    session_id: uuid.UUID,
+    question_id: uuid.UUID,
+    user_id: uuid.UUID,
 ) -> Question:
     """
     Reveal one answer.
@@ -124,7 +131,7 @@ async def reveal(
     question that isn't in this session 404s rather than returning an answer
     from somewhere else in the bank.
     """
-    await get_session(session, session_id)  # 404 for an unknown session
+    await get_session(session, session_id, user_id)  # 404 for an unknown / foreign session
 
     item = await session.scalar(
         select(PracticeSessionQuestion).where(

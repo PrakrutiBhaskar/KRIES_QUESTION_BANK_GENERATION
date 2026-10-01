@@ -32,6 +32,7 @@ class PaperQuestionOut(BaseModel):
     order_index: int
     marks: int  # effective marks: marks_override if set, else the question's
     marks_override: int | None = None
+    section: str | None = None
     question: QuestionOut
 
 
@@ -60,6 +61,7 @@ class PaperOut(BaseModel):
                     order_index=item.order_index,
                     marks=item.effective_marks,
                     marks_override=item.marks_override,
+                    section=item.section,
                     question=QuestionOut.from_model(item.question),
                 )
                 for item in sorted(paper.items, key=lambda i: i.order_index)
@@ -139,3 +141,39 @@ class CombinationOut(BaseModel):
 
     type: QuestionType
     marks: list[int]
+
+
+# --- blueprint papers -------------------------------------------------------
+
+
+class BlueprintAllocationOut(BaseModel):
+    chapter: str
+    questions: int
+    marks: int
+
+
+class BlueprintSectionPlanOut(BaseModel):
+    name: str
+    type: QuestionType
+    marks_per_question: int
+    difficulty: str
+    questions: int
+    marks: int
+    allocations: list[BlueprintAllocationOut]
+
+
+class BlueprintChapterPlanOut(BaseModel):
+    chapter: str
+    weightage: float
+    target_marks: float  # weightage % of the paper's total marks
+    planned_marks: int  # what the allocation actually achieves
+    planned_questions: int
+
+
+class BlueprintPlanOut(BaseModel):
+    """What a blueprint would produce, worked out without calling the LLM."""
+
+    total_marks: int
+    total_questions: int
+    sections: list[BlueprintSectionPlanOut]
+    chapters: list[BlueprintChapterPlanOut]

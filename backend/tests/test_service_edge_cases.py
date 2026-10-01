@@ -67,10 +67,11 @@ async def test_persist_batch_resurrects_a_previously_discarded_twin(db_session):
     chapter = await resolve_chapter(db_session, SubjectEnum.SCIENCE, "Photosynthesis")
     text = "Describe the role of stomata in gas exchange."
 
+    owner = uuid.uuid4()
     [first] = await question_service.persist_batch(
-        db_session, [_engine_question(text)], chapter=chapter
+        db_session, [_engine_question(text)], chapter=chapter, created_by=owner
     )
-    await question_service.delete_question(db_session, first.id)
+    await question_service.delete_question(db_session, first.id, user_id=owner)
     assert first.is_active is False
 
     [second] = await question_service.persist_batch(
@@ -357,7 +358,12 @@ async def test_list_questions_filters_by_topic(client):
 
 
 async def test_download_export_404s_for_a_valid_but_unknown_filename(client):
-    response = await client.get("/export/files/never-generated-abc123.pdf")
+    from app.security import create_download_token
+
+    name = "never-generated-abc123.pdf"
+    response = await client.get(
+        f"/export/files/{name}", params={"token": create_download_token(name)}
+    )
     assert response.status_code == 404
 
 

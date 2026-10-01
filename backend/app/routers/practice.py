@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
+from ..deps import get_current_user
+from ..models import User
 from ..schemas import ErrorOut, PracticeSessionIn, PracticeSessionOut, RevealOut
 from ..services import practice as practice_service
 
@@ -31,9 +33,11 @@ router = APIRouter(prefix="/practice", tags=["practice"])
     },
 )
 async def create_session(
-    payload: PracticeSessionIn, session: AsyncSession = Depends(get_session)
+    payload: PracticeSessionIn,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> PracticeSessionOut:
-    row = await practice_service.create_session(session, payload)
+    row = await practice_service.create_session(session, payload, user.id)
     return PracticeSessionOut.from_model(row)
 
 
@@ -44,9 +48,11 @@ async def create_session(
     responses={404: {"model": ErrorOut}},
 )
 async def get_session_detail(
-    session_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+    session_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> PracticeSessionOut:
-    row = await practice_service.get_session(session, session_id)
+    row = await practice_service.get_session(session, session_id, user.id)
     return PracticeSessionOut.from_model(row)
 
 
@@ -60,8 +66,9 @@ async def reveal(
     session_id: uuid.UUID,
     question_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> RevealOut:
-    question = await practice_service.reveal(session, session_id, question_id)
+    question = await practice_service.reveal(session, session_id, question_id, user.id)
     return RevealOut(
         question_id=question.id,
         answer=question.answer,

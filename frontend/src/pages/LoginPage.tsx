@@ -65,15 +65,26 @@ export default function LoginPage() {
           placeholder="you@school.edu.in"
         />
 
-        <PasswordField
-          id="password"
-          label="Password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-        />
+        <div>
+          <PasswordField
+            id="password"
+            label="Password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+          />
+          <div className="mt-2 text-right">
+            <Link
+              to="/forgot-password"
+              state={{ email: email.trim() }}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              Forgot password?
+            </Link>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2">
           <input

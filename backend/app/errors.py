@@ -33,6 +33,7 @@ class APIError(Exception):
 
     status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
     error: str = "internal_error"
+    headers: dict[str, str] | None = None
 
     def __init__(self, detail: str, *, error: str | None = None):
         self.detail = detail
@@ -49,6 +50,23 @@ class BadRequestError(APIError):
 class UnauthorizedError(APIError):
     status_code = status.HTTP_401_UNAUTHORIZED
     error = "unauthorized"
+
+
+class ForbiddenError(APIError):
+    status_code = status.HTTP_403_FORBIDDEN
+    error = "forbidden"
+
+
+class TooManyRequestsError(APIError):
+    status_code = 429
+    error = "rate_limited"
+
+    def __init__(self, retry_after: float, *, detail: str | None = None):
+        seconds = max(1, int(-(-retry_after // 1)))  # ceil, at least 1
+        self.retry_after = seconds
+        self.headers = {"Retry-After": str(seconds)}
+        unit = "second" if seconds == 1 else "seconds"
+        super().__init__(detail or f"Too many requests. Try again in {seconds} {unit}.")
 
 
 class NotFoundError(APIError):
@@ -78,9 +96,13 @@ class ServiceUnavailableError(APIError):
     error = "service_unavailable"
 
 
-def error_response(status_code: int, error: str, detail: str) -> JSONResponse:
+def error_response(
+    status_code: int, error: str, detail: str, headers: dict[str, str] | None = None
+) -> JSONResponse:
     return JSONResponse(
-        status_code=status_code, content={"error": error, "detail": detail}
+        status_code=status_code,
+        content={"error": error, "detail": detail},
+        headers=headers,
     )
 
 
@@ -98,7 +120,7 @@ def _flatten_validation_errors(exc: RequestValidationError) -> str:
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(APIError)
     async def _api_error(_: Request, exc: APIError):
-        return error_response(exc.status_code, exc.error, exc.detail)
+        return error_response(exc.status_code, exc.error, exc.detail, exc.headers)
 
     @app.exception_handler(RequestValidationError)
     async def _validation_error(_: Request, exc: RequestValidationError):
@@ -140,6 +162,7 @@ def _slug(status_code: int) -> str:
         403: "forbidden",
         404: "not_found",
         409: "conflict",
+        429: "rate_limited",
         422: "validation_failed",
         502: "upstream_error",
         503: "service_unavailable",

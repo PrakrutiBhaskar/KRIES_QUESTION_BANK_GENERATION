@@ -13,6 +13,7 @@ one transaction per test.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import sys
@@ -35,6 +36,9 @@ for _p in (str(REPO_ROOT), str(BACKEND_ROOT)):
 # Set before app.config is imported: exported PDFs go to a scratch directory
 # rather than the repo's var/exports.
 os.environ.setdefault("EXPORT_DIR", tempfile.mkdtemp(prefix="qb-test-exports-"))
+# Rate limits would trip over the many requests a test suite makes. The tests in
+# test_rate_limiting.py switch them back on explicitly.
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
 
 from app.db import Base, get_session  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
@@ -237,9 +241,32 @@ def groq_stub() -> FakeGroqClient:
     return FakeGroqClient()
 
 
-@pytest_asyncio.fixture
-async def client(session_factory, groq_stub):
-    generation_service.set_engine(GenerationEngine(groq_client=groq_stub))
+@pytest.fixture(autouse=True)
+def _fresh_rate_limiter():
+    """Rate limiting is off for the suite (see RATE_LIMIT_ENABLED above);
+    tests that exercise it turn it on, and start from empty counters."""
+    from app.ratelimit import limiter
+
+    limiter.reset()
+    yield
+    limiter.reset()
+
+
+async def sign_up(ac: AsyncClient, *, name: str = "Alice Teacher", email: str = "alice@school.test") -> dict:
+    """Create an account and make `ac` send its token from now on."""
+    response = await ac.post(
+        "/auth/signup", json={"name": name, "email": email, "password": "Passw0rd-test"}
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    ac.headers["Authorization"] = f"Bearer {body['access_token']}"
+    return body["user"]
+
+
+@contextlib.asynccontextmanager
+async def _app_client(session_factory, engine, *, signed_in: bool = True):
+    """The app under test, wired to the in-memory DB and a stubbed Groq engine."""
+    generation_service.set_engine(engine)
 
     async def _override():
         async with session_factory() as session:
@@ -253,57 +280,52 @@ async def client(session_factory, groq_stub):
     fastapi_app.dependency_overrides[get_session] = _override
     transport = ASGITransport(app=fastapi_app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test/api/v1") as ac:
+        if signed_in:
+            await sign_up(ac)
         yield ac
     fastapi_app.dependency_overrides.clear()
     generation_service.set_engine(None)
+
+
+@pytest_asyncio.fixture
+async def client(session_factory, groq_stub):
+    """A client signed in as alice@school.test (the default test user)."""
+    async with _app_client(session_factory, GenerationEngine(groq_client=groq_stub)) as ac:
+        yield ac
+
+
+@pytest_asyncio.fixture
+async def anon_client(session_factory, groq_stub):
+    """A client with no credentials."""
+    async with _app_client(
+        session_factory, GenerationEngine(groq_client=groq_stub), signed_in=False
+    ) as ac:
+        yield ac
+
+
+@pytest_asyncio.fixture
+async def bob_client(client):
+    """A second signed-in user talking to the same app and database as `client`."""
+    transport = ASGITransport(app=fastapi_app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as bob:
+        await sign_up(bob, name="Bob Teacher", email="bob@school.test")
+        yield bob
 
 
 @pytest_asyncio.fixture
 async def failing_client(session_factory):
     """Client whose Groq calls always fail — for the 502 path."""
-    generation_service.set_engine(
-        GenerationEngine(groq_client=FakeGroqClient(raise_error=True))
-    )
-
-    async def _override():
-        async with session_factory() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    fastapi_app.dependency_overrides[get_session] = _override
-    transport = ASGITransport(app=fastapi_app, raise_app_exceptions=False)
-    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as ac:
+    engine = GenerationEngine(groq_client=FakeGroqClient(raise_error=True))
+    async with _app_client(session_factory, engine) as ac:
         yield ac
-    fastapi_app.dependency_overrides.clear()
-    generation_service.set_engine(None)
 
 
 @pytest_asyncio.fixture
 async def bad_payload_client(session_factory):
     """Client whose Groq calls return unusable output — for the 422 path."""
-    generation_service.set_engine(
-        GenerationEngine(groq_client=FakeGroqClient(bad_payload=True))
-    )
-
-    async def _override():
-        async with session_factory() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    fastapi_app.dependency_overrides[get_session] = _override
-    transport = ASGITransport(app=fastapi_app, raise_app_exceptions=False)
-    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as ac:
+    engine = GenerationEngine(groq_client=FakeGroqClient(bad_payload=True))
+    async with _app_client(session_factory, engine) as ac:
         yield ac
-    fastapi_app.dependency_overrides.clear()
-    generation_service.set_engine(None)
 
 
 # --- helpers ---------------------------------------------------------------

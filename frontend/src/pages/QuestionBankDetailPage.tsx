@@ -370,6 +370,12 @@ export default function QuestionBankDetailPage() {
     }
   };
 
+  // Marks per section, for the section headings (empty for papers built by hand).
+  const sectionMarks = new Map<string, number>();
+  for (const q of bank.questions) {
+    if (q.section) sectionMarks.set(q.section, (sectionMarks.get(q.section) ?? 0) + q.marks);
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-5">
       {/* Back */}
@@ -451,12 +457,19 @@ export default function QuestionBankDetailPage() {
           />
         ) : (
           <div className="space-y-3">
-            {bank.questions.map((q) => (
-              <QuestionRow
-                key={q.id}
-                question={q}
-                onDelete={(qId) => setDeleteId(qId)}
-              />
+            {bank.questions.map((q, i) => (
+              <div key={q.id} className="space-y-3">
+                {/* Blueprint papers keep their sections; show a heading where one starts. */}
+                {q.section && q.section !== bank.questions[i - 1]?.section && (
+                  <div className="flex items-baseline justify-between gap-3 pt-2 border-b border-slate-200 pb-1.5">
+                    <h4 className="text-sm font-bold text-slate-900">{q.section}</h4>
+                    <span className="text-xs font-medium text-slate-500">
+                      {sectionMarks.get(q.section)} marks
+                    </span>
+                  </div>
+                )}
+                <QuestionRow question={q} onDelete={(qId) => setDeleteId(qId)} />
+              </div>
             ))}
           </div>
         )}

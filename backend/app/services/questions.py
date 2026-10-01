@@ -26,7 +26,7 @@ from generation_engine.schemas import Difficulty, QuestionType, Subject as Subje
 from generation_engine.schemas import Question as EngineQuestion
 from generation_engine.validation import check_marks_format
 
-from ..errors import BadRequestError, NotFoundError
+from ..errors import BadRequestError, ForbiddenError, NotFoundError
 from ..models import Chapter, Question, Subject
 from .syllabus import resolve_chapter
 
@@ -52,6 +52,7 @@ async def persist_batch(
     questions: Sequence[EngineQuestion],
     *,
     chapter: Chapter,
+    created_by: uuid.UUID | None = None,
 ) -> list[Question]:
     """
     Store a validated batch. Questions whose exact text already exists in the
@@ -101,6 +102,7 @@ async def persist_batch(
             topic=q.topic or "",
             tags=list(q.tags or []),
             content_hash=h,
+            created_by=created_by,
         )
         session.add(row)
         stored.append(row)
@@ -199,10 +201,20 @@ async def get_questions_by_ids(
 
 
 async def update_question(
-    session: AsyncSession, question_id: uuid.UUID, changes: dict[str, Any]
+    session: AsyncSession,
+    question_id: uuid.UUID,
+    changes: dict[str, Any],
+    *,
+    user_id: uuid.UUID,
 ) -> Question:
-    """Apply a partial edit, re-validating the result against Module A."""
+    """Apply a partial edit, re-validating the result against Module A.
+
+    The question pool is shared, and papers made by other users may already
+    contain this question, so only the person who generated it may change it.
+    """
     row = await get_question(session, question_id)
+    if row.created_by != user_id:
+        raise ForbiddenError("You can only edit questions you generated.")
 
     applied = {k: v for k, v in changes.items() if v is not None}
     if not applied:
@@ -247,9 +259,19 @@ async def update_question(
     return row
 
 
-async def delete_question(session: AsyncSession, question_id: uuid.UUID) -> None:
-    """Soft delete — the row stays so papers/sessions referencing it survive."""
+async def delete_question(
+    session: AsyncSession, question_id: uuid.UUID, *, user_id: uuid.UUID
+) -> None:
+    """Soft delete — the row stays so papers/sessions referencing it survive.
+
+    Only the question's creator removes it from the shared pool. Discarding a
+    question someone else generated (for example one served from the cache) is
+    a successful no-op: the caller's own draft drops it, but other users keep
+    it, so nobody can wipe questions out of another teacher's workflow.
+    """
     row = await get_question(session, question_id)  # 404 if already discarded
+    if row.created_by != user_id:
+        return
     row.is_active = False
     await session.flush()
 

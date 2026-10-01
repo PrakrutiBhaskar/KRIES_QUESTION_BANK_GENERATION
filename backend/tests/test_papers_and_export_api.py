@@ -5,6 +5,9 @@ Paper builder and export — test-plan.md Section 2, rows for `POST /papers`,
 from __future__ import annotations
 
 import uuid
+from urllib.parse import parse_qs, urlparse
+
+from app.security import create_download_token
 
 import pytest
 
@@ -260,11 +263,14 @@ async def test_export_returns_a_downloadable_pdf(client):
     assert response.status_code == 200, response.text
 
     body = response.json()
-    assert body["download_url"].endswith(body["filename"])
+    assert body["download_url"].split("?")[0].endswith(body["filename"])
+    assert "token=" in body["download_url"]
     assert body["filename"].endswith(".pdf")
     assert body["size_bytes"] > 0
 
-    download = await client.get(f"/export/files/{body['filename']}")
+    download = await client.get(
+        f"/export/files/{body['filename']}", params={"token": _token_of(body["download_url"])}
+    )
     assert download.status_code == 200
     assert download.headers["content-type"] == "application/pdf"
     # PDF magic number — this is a real document, not an empty file.
@@ -293,7 +299,8 @@ async def test_export_unknown_paper_returns_404(client):
 
 
 async def test_download_rejects_path_traversal(client):
-    response = await client.get("/export/files/..%2F..%2Fetc%2Fpasswd")
+    name = "..%2F..%2Fetc%2Fpasswd"
+    response = await client.get(f"/export/files/{name}", params={"token": create_download_token(name)})
     assert response.status_code == 404
 
 
@@ -316,3 +323,7 @@ async def test_delete_unknown_paper_is_404(client):
     response = await client.delete(f"/papers/{uuid.uuid4()}")
     assert response.status_code == 404
     assert response.json()["error"]
+
+
+def _token_of(download_url: str) -> str:
+    return parse_qs(urlparse(download_url).query)["token"][0]

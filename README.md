@@ -26,7 +26,7 @@ into a self-check practice session with answers withheld until revealed.
 | Frontend | React Native — single codebase for Web + Android |
 | Backend | Python, FastAPI |
 | Database | PostgreSQL |
-| Auth | Not in MVP — deferred; schema has nullable `user_id` columns ready for it |
+| Auth | Sign-up / sign-in with JWT bearer tokens; papers and practice sessions are private to their owner; per-user and per-IP rate limits (see `docs/api-contract.md`) |
 | Syllabus data source | Parsed from textbook PDFs (not yet built) |
 | Hosting | AWS preferred, Render as fallback |
 
@@ -135,7 +135,7 @@ docs below for full detail:
 cd generation_engine
 pip install -r requirements.txt
 cp .env.example .env        # add your GROQ_API_KEY
-pytest                      # 159 tests, no network required — fully mocked
+pytest                      # 236 tests, no network required — fully mocked
 ```
 
 Sanity-check against the **real** Groq API (not mocked) before trusting it:
@@ -228,6 +228,44 @@ re-discovers them the hard way:
   on its own line first. `curl` is aliased to `Invoke-WebRequest`, which
   takes different flags than real curl — use `Invoke-RestMethod` for JSON
   APIs, or call `curl.exe` explicitly for the real thing.
+
+## Question Papers (blueprint-based papers)
+
+The **Question Papers** page builds a board-style paper from a *blueprint*
+instead of a hand-picked list:
+
+- **Chapters + weightage** — pick any number of chapters (up to 12) and give each a
+  share of the paper's marks; the shares must add up to 100%.
+- **Sections** — each section has a question type, marks per question and a total
+  (e.g. "Section B: Short answer, 2 marks each, 10 marks" = 5 questions). Difficulty is
+  per section, and `mixed` cycles easy / medium / hard.
+
+```
+POST /api/v1/papers/blueprint/preview   how the marks split across chapters (no LLM, no writes)
+POST /api/v1/papers/blueprint           build and save the paper (returns a normal PaperOut)
+```
+
+How it works (`backend/app/services/blueprint.py`):
+
+1. **Allocation** is plain arithmetic. Each chapter's target is `weightage% x total
+   marks`; questions are handed out biggest-marks first, each to the chapter furthest
+   below its target. It is deterministic, which is what lets the page preview it live.
+   Questions are whole units, so a chapter can miss its target by a mark or two (two
+   5-mark questions cannot cover four chapters at 25% each) — the preview shows the
+   achieved figure next to the target.
+2. **Fetching** goes through the same service as `POST /generate`: stored questions are
+   reused and only the shortfall is generated. Tick *Always generate new questions*
+   (`refresh`) to skip the stored ones; otherwise repeating a blueprint returns the same
+   paper.
+3. **All-or-nothing.** The request is one transaction; if any generation call fails
+   (502/422) no paper and no new questions are stored.
+
+Sections are stored on `paper_questions.section` (migration `0004`; `ensure_schema`
+adds the column on startup for databases created without Alembic), so the bank page and
+all three PDF renderers show "Section A ... 10 marks" headings. Papers built by hand
+have no sections and render exactly as before. A blueprint paper may have at most 100
+questions, and `POST /papers/blueprint` shares the per-user `RATE_LIMIT_GENERATE` budget
+with `/generate` because it can make many LLM calls.
 
 ## Current verified status
 

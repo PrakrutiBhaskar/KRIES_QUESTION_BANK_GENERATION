@@ -2,16 +2,24 @@
 Request bodies, exactly as documented in api-contract.md.
 
 Where a field isn't in the contract it's optional with a safe default, so
-existing callers keep working: `refresh` on /generate and `user_id` on
-/papers and /practice/sessions are the only two.
+existing callers keep working: `refresh` on /generate is the only one.
+The owner of a paper or practice session is taken from the bearer token, never
+from the request body.
 """
 from __future__ import annotations
 
 import uuid
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from generation_engine.schemas import Difficulty, QuestionType, Subject
+from generation_engine.schemas import (
+    VALID_GRADES,
+    VALID_MARKS_BY_TYPE,
+    Difficulty,
+    QuestionType,
+    Subject,
+)
 
 
 class GenerateIn(BaseModel):
@@ -81,7 +89,6 @@ class PaperIn(BaseModel):
     # from the questions. If the client's figure disagrees, that's a 400 rather
     # than a silent overwrite, so a stale frontend total surfaces immediately.
     total_marks: int | None = None
-    user_id: uuid.UUID | None = None
 
     @field_validator("question_ids")
     @classmethod
@@ -143,7 +150,6 @@ class PracticeSessionIn(BaseModel):
     grade: int
     difficulty: Difficulty | None = None
     count: int = Field(default=10, ge=1, le=50)
-    user_id: uuid.UUID | None = None
 
     @field_validator("chapter")
     @classmethod
@@ -151,3 +157,128 @@ class PracticeSessionIn(BaseModel):
         if not v or not v.strip():
             raise ValueError("must not be blank")
         return v.strip()
+
+
+# --- blueprint papers --------------------------------------------------------
+
+# A blueprint is the teacher's spec for a board-style paper: how many marks each
+# section is worth (and what kind of question fills it), and how the paper's
+# marks are split across chapters. The server turns it into a concrete list of
+# questions — see services/blueprint.py.
+MAX_BLUEPRINT_CHAPTERS = 12
+MAX_BLUEPRINT_SECTIONS = 8
+# Each question may mean an LLM call's worth of work and the request is one
+# long transaction, so the size of a single paper is capped.
+MAX_BLUEPRINT_QUESTIONS = 100
+
+SectionDifficulty = Literal["easy", "medium", "hard", "mixed"]
+
+
+class BlueprintChapterIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    # Share of the paper's total marks, in percent.
+    weightage: float = Field(gt=0, le=100)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("must not be blank")
+        return v.strip()
+
+
+class BlueprintSectionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=80)
+    type: QuestionType
+    marks_per_question: int
+    # What the whole section is worth. The question count is derived:
+    # total_marks / marks_per_question.
+    total_marks: int = Field(gt=0)
+    difficulty: SectionDifficulty = "medium"
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("must not be blank")
+        return v.strip()
+
+    @model_validator(mode="after")
+    def check_marks(self) -> "BlueprintSectionIn":
+        allowed = VALID_MARKS_BY_TYPE[self.type]
+        if self.marks_per_question not in allowed:
+            raise ValueError(
+                f'section "{self.name}": {self.type.value} questions must use marks '
+                f"in {sorted(allowed)}, got {self.marks_per_question}"
+            )
+        if self.total_marks % self.marks_per_question:
+            raise ValueError(
+                f'section "{self.name}": {self.total_marks} marks is not a whole number '
+                f"of {self.marks_per_question}-mark questions"
+            )
+        return self
+
+    @property
+    def question_count(self) -> int:
+        return self.total_marks // self.marks_per_question
+
+
+class BlueprintIn(BaseModel):
+    """POST /papers/blueprint and POST /papers/blueprint/preview."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = None
+    subject: Subject
+    grade: int
+    chapters: list[BlueprintChapterIn] = Field(
+        min_length=1, max_length=MAX_BLUEPRINT_CHAPTERS
+    )
+    sections: list[BlueprintSectionIn] = Field(
+        min_length=1, max_length=MAX_BLUEPRINT_SECTIONS
+    )
+    # Same meaning as on /generate: skip stored questions and write new ones.
+    refresh: bool = False
+
+    @field_validator("grade")
+    @classmethod
+    def grade_valid(cls, v: int) -> int:
+        if v not in VALID_GRADES:
+            raise ValueError(f"must be one of {sorted(VALID_GRADES)}")
+        return v
+
+    @field_validator("title")
+    @classmethod
+    def title_clean(cls, v: str | None) -> str | None:
+        return v.strip() or None if v is not None else None
+
+    @model_validator(mode="after")
+    def check_blueprint(self) -> "BlueprintIn":
+        names = [c.name.lower() for c in self.chapters]
+        if len(set(names)) != len(names):
+            raise ValueError("chapters must not repeat")
+        section_names = [s.name.lower() for s in self.sections]
+        if len(set(section_names)) != len(section_names):
+            raise ValueError("section names must be unique")
+
+        total_weight = sum(c.weightage for c in self.chapters)
+        if abs(total_weight - 100) > 0.01:
+            raise ValueError(
+                f"chapter weightage must add up to 100%, got {total_weight:g}%"
+            )
+
+        total_questions = sum(s.question_count for s in self.sections)
+        if total_questions > MAX_BLUEPRINT_QUESTIONS:
+            raise ValueError(
+                f"a paper may have at most {MAX_BLUEPRINT_QUESTIONS} questions, "
+                f"this blueprint has {total_questions}"
+            )
+        return self
+
+    @property
+    def total_marks(self) -> int:
+        return sum(s.total_marks for s in self.sections)

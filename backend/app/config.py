@@ -9,6 +9,7 @@ concerns: database, export, CORS, caching.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
@@ -53,6 +54,27 @@ def _anchor(path: Path) -> Path:
         if candidate.exists():
             return candidate
     return (BACKEND_DIR / path).resolve()
+
+
+@dataclass(frozen=True)
+class Rule:
+    limit: int
+    window: float  # seconds
+
+
+@lru_cache(maxsize=64)
+def parse_rule(spec: str) -> Rule:
+    """'10/60' -> at most 10 hits per 60 seconds."""
+    try:
+        count, seconds = spec.strip().split("/")
+        rule = Rule(int(count), float(seconds))
+    except ValueError:
+        raise ValueError(
+            f"invalid rate limit {spec!r}: expected '<requests>/<seconds>', e.g. '10/60'"
+        ) from None
+    if rule.limit < 1 or rule.window <= 0:
+        raise ValueError(f"invalid rate limit {spec!r}: both numbers must be positive")
+    return rule
 
 
 class Settings(BaseSettings):
@@ -128,6 +150,66 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(
         default=60 * 24 * 7, alias="ACCESS_TOKEN_EXPIRE_MINUTES", ge=1
     )
+
+    # --- Password reset ---
+    # A reset link is a signed token valid for this many minutes. It is single-use:
+    # it is bound to the current password hash, so it dies as soon as the password changes.
+    password_reset_expire_minutes: int = Field(
+        default=30, alias="PASSWORD_RESET_EXPIRE_MINUTES", ge=1
+    )
+    # Where the reset link points (the frontend's origin, no trailing slash).
+    frontend_url: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
+    # Outgoing email. With SMTP_HOST empty, no email is sent: the reset link is
+    # written to the backend log instead (fine for local development).
+    smtp_host: str = Field(default="", alias="SMTP_HOST")
+    smtp_port: int = Field(default=587, alias="SMTP_PORT")
+    smtp_username: str = Field(default="", alias="SMTP_USERNAME")
+    smtp_password: str = Field(default="", alias="SMTP_PASSWORD")
+    smtp_from: str = Field(default="KRIES <no-reply@localhost>", alias="SMTP_FROM")
+    # starttls (port 587) | ssl (port 465) | none
+    smtp_security: Literal["starttls", "ssl", "none"] = Field(
+        default="starttls", alias="SMTP_SECURITY"
+    )
+
+    # --- Rate limiting (in-memory, per process; see app/ratelimit.py) ---
+    # Each limit is "<requests>/<seconds>", e.g. "10/60" = 10 requests per minute.
+    rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
+    # Every /api request, per signed-in user (or per IP when not signed in).
+    rate_limit_default: str = Field(default="120/60", alias="RATE_LIMIT_DEFAULT")
+    # POST /auth/login, per IP.
+    rate_limit_login: str = Field(default="10/60", alias="RATE_LIMIT_LOGIN")
+    # POST /auth/signup, per IP.
+    rate_limit_signup: str = Field(default="5/3600", alias="RATE_LIMIT_SIGNUP")
+    # POST /auth/forgot-password and /auth/reset-password, per IP.
+    rate_limit_password_reset: str = Field(
+        default="5/900", alias="RATE_LIMIT_PASSWORD_RESET"
+    )
+    # Calls that can reach the LLM (POST /generate, POST /practice/sessions), per user.
+    # One "Mixed" generation in the UI is up to 9 calls, so keep this generous.
+    rate_limit_generate: str = Field(default="30/60", alias="RATE_LIMIT_GENERATE")
+    # POST /export/{id}, per user.
+    rate_limit_export: str = Field(default="10/60", alias="RATE_LIMIT_EXPORT")
+    # Wrong passwords allowed per (IP, email) before that pair is locked out.
+    login_max_failures: str = Field(default="5/900", alias="LOGIN_MAX_FAILURES")
+    # Read the client IP from X-Forwarded-For. Turn on ONLY behind a reverse
+    # proxy you control (Render, Nginx...): otherwise clients can fake their IP
+    # and dodge the per-IP limits.
+    trust_proxy_headers: bool = Field(default=False, alias="TRUST_PROXY_HEADERS")
+
+    @field_validator(
+        "rate_limit_default",
+        "rate_limit_login",
+        "rate_limit_signup",
+        "rate_limit_password_reset",
+        "rate_limit_generate",
+        "rate_limit_export",
+        "login_max_failures",
+        mode="after",
+    )
+    @classmethod
+    def _valid_rate_limit(cls, v: str) -> str:
+        parse_rule(v)  # raises ValueError with a readable message
+        return v
 
     @field_validator("syllabus_json_path", "export_dir", mode="after")
     @classmethod

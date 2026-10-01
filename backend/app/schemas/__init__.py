@@ -1,8 +1,19 @@
 """Pydantic request/response models for the public API."""
 
-from .auth import LoginIn, SignUpIn, TokenOut, UserOut
+from .auth import (
+    ForgotPasswordIn,
+    LoginIn,
+    MessageOut,
+    ResetPasswordIn,
+    SignUpIn,
+    TokenOut,
+    UserOut,
+)
 from .common import ErrorOut, MaskedQuestionOut, Page, QuestionOut
 from .requests import (
+    BlueprintChapterIn,
+    BlueprintIn,
+    BlueprintSectionIn,
     GenerateIn,
     PaperIn,
     PaperItemPatch,
@@ -11,6 +22,10 @@ from .requests import (
     QuestionPatch,
 )
 from .responses import (
+    BlueprintAllocationOut,
+    BlueprintChapterPlanOut,
+    BlueprintPlanOut,
+    BlueprintSectionPlanOut,
     ChapterOut,
     CombinationOut,
     ExportOut,
@@ -23,6 +38,16 @@ from .responses import (
 )
 
 __all__ = [
+    "ForgotPasswordIn",
+    "MessageOut",
+    "ResetPasswordIn",
+    "BlueprintAllocationOut",
+    "BlueprintChapterIn",
+    "BlueprintChapterPlanOut",
+    "BlueprintIn",
+    "BlueprintPlanOut",
+    "BlueprintSectionIn",
+    "BlueprintSectionPlanOut",
     "LoginIn",
     "SignUpIn",
     "TokenOut",

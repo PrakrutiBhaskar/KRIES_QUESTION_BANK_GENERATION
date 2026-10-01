@@ -147,6 +147,14 @@ class Question(Base, TimestampMixin):
         Boolean, nullable=False, default=True, server_default=func.true()
     )
 
+    # Who generated this question (users.id). The question pool is shared —
+    # anyone signed in can read and reuse stored questions, which is what the
+    # generation cache is for — but only the creator can edit or discard one.
+    # Null for questions generated before sign-in existed: nobody can change them.
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
+
     # `content_hash` backs the duplicate guard on insert — see
     # services/questions.py. Module A already de-duplicates within a batch;
     # this catches collisions across batches.
@@ -165,10 +173,13 @@ class Paper(Base, TimestampMixin):
         ForeignKey("subjects.id", ondelete="RESTRICT"), nullable=False
     )
     total_marks: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    # Nullable until auth lands (ADR 5). No FK to `users` yet because the
-    # table doesn't exist in the MVP migration; the column is here so adding
-    # the constraint later is a one-line migration, not a rewrite.
-    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    # The owner (users.id). Every paper endpoint filters on it, so one user can
+    # never list, read, change, export or delete another user's paper. Nullable
+    # for papers created before sign-in existed: those belong to nobody and
+    # stay hidden until they are assigned to an account (see docs/api-contract.md).
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
 
     subject: Mapped[Subject] = relationship(lazy="joined")
     items: Mapped[list["PaperQuestion"]] = relationship(
@@ -197,6 +208,10 @@ class PaperQuestion(Base):
     )
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     marks_override: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Which section of the paper the question sits in ("Section A", ...). Only
+    # blueprint papers set it; papers built by hand leave it null and render
+    # as one flat list, exactly as before.
+    section: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     paper: Mapped[Paper] = relationship(back_populates="items")
     question: Mapped[Question] = relationship(lazy="joined")
@@ -216,7 +231,10 @@ class PracticeSession(Base, TimestampMixin):
     chapter_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("chapters.id", ondelete="RESTRICT"), nullable=False
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)
+    # Owner (users.id); practice endpoints only serve a session to its owner.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
 
     subject: Mapped[Subject] = relationship(lazy="joined")
     chapter: Mapped[Chapter] = relationship(lazy="joined")

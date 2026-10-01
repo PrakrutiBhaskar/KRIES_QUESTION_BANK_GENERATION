@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Wand2,
   BookOpen,
+  FileText,
   Settings,
   LogOut,
   GraduationCap,
@@ -18,6 +19,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/generate', icon: Wand2, label: 'Generate' },
+  { to: '/question-papers', icon: FileText, label: 'Question Papers' },
   { to: '/question-banks', icon: BookOpen, label: 'Question Banks' },
 ];
 

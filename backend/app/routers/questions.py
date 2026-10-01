@@ -19,6 +19,8 @@ from generation_engine.prompts import supported_combinations
 from generation_engine.schemas import Difficulty, QuestionType, Subject
 
 from ..db import get_session
+from ..deps import get_current_user
+from ..models import User
 from ..schemas import (
     CombinationOut,
     ErrorOut,
@@ -45,10 +47,12 @@ router = APIRouter(tags=["questions"])
     },
 )
 async def generate(
-    payload: GenerateIn, session: AsyncSession = Depends(get_session)
+    payload: GenerateIn,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> GenerateOut:
     questions, cached, generated, report = await generation_service.generate_questions(
-        session, payload
+        session, payload, user_id=user.id
     )
     return GenerateOut(
         questions=[QuestionOut.from_model(q) for q in questions],
@@ -133,16 +137,24 @@ async def get_question(
 @router.patch(
     "/questions/{question_id}",
     response_model=QuestionOut,
-    summary="Edit a question (teacher curation)",
-    responses={400: {"model": ErrorOut}, 404: {"model": ErrorOut}},
+    summary="Edit a question you generated",
+    responses={
+        400: {"model": ErrorOut},
+        403: {"model": ErrorOut, "description": "Someone else generated this question"},
+        404: {"model": ErrorOut},
+    },
 )
 async def patch_question(
     question_id: uuid.UUID,
     payload: QuestionPatch,
     session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> QuestionOut:
     row = await question_service.update_question(
-        session, question_id, payload.model_dump(exclude_unset=True)
+        session,
+        question_id,
+        payload.model_dump(exclude_unset=True),
+        user_id=user.id,
     )
     return QuestionOut.from_model(row)
 
@@ -151,10 +163,17 @@ async def patch_question(
     "/questions/{question_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Discard a question",
+    description=(
+        "Removes a question you generated from the shared pool. For a question "
+        "someone else generated this succeeds without changing anything, so "
+        "the caller can drop it from their own draft without affecting others."
+    ),
     responses={404: {"model": ErrorOut}},
 )
 async def delete_question(
-    question_id: uuid.UUID, session: AsyncSession = Depends(get_session)
+    question_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
 ) -> Response:
-    await question_service.delete_question(session, question_id)
+    await question_service.delete_question(session, question_id, user_id=user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -106,3 +106,88 @@ def decode_access_token(token: str) -> uuid.UUID | None:
         return uuid.UUID(str(payload["sub"]))
     except (jwt.PyJWTError, ValueError, KeyError):
         return None
+
+
+# --- Short-lived download links ---------------------------------------------
+# A browser tab opened with window.open() can't send an Authorization header,
+# so POST /export/{id} (which IS authenticated and owner-checked) returns a
+# link carrying a signed token bound to that one filename. The token has no
+# "sub" claim, so it can never be used as an access token, and vice versa.
+
+DOWNLOAD_TOKEN_TTL_SECONDS = 10 * 60
+
+
+def create_download_token(filename: str, ttl_seconds: int = DOWNLOAD_TOKEN_TTL_SECONDS) -> str:
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {"typ": "download", "fn": filename, "iat": now, "exp": now + timedelta(seconds=ttl_seconds)},
+        _secret(),
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def verify_download_token(token: str, filename: str) -> bool:
+    try:
+        payload = jwt.decode(
+            token,
+            _secret(),
+            algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "fn", "typ"]},
+        )
+    except jwt.PyJWTError:
+        return False
+    return payload.get("typ") == "download" and hmac.compare_digest(
+        str(payload.get("fn")), filename
+    )
+
+# --- Password-reset tokens ---------------------------------------------------
+# Stateless (no table needed). The token carries a fingerprint of the user's
+# CURRENT password hash, so once the password is changed the same link stops
+# working: reset links are single-use without storing anything.
+
+
+def _pw_fingerprint(password_hash: str) -> str:
+    return hmac.new(
+        _secret().encode("utf-8"), password_hash.encode("utf-8"), hashlib.sha256
+    ).hexdigest()[:24]
+
+
+def create_reset_token(user_id: uuid.UUID, password_hash: str) -> str:
+    now = datetime.now(timezone.utc)
+    return jwt.encode(
+        {
+            "typ": "reset",
+            "sub": str(user_id),
+            "pw": _pw_fingerprint(password_hash),
+            "iat": now,
+            "exp": now + timedelta(minutes=settings.password_reset_expire_minutes),
+        },
+        _secret(),
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def peek_reset_token(token: str) -> uuid.UUID | None:
+    """The user id inside a well-formed, unexpired reset token, else None.
+    Says nothing about whether the link was already used; see reset_token_matches."""
+    try:
+        payload = jwt.decode(
+            token,
+            _secret(),
+            algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "sub", "typ", "pw"]},
+        )
+        if payload.get("typ") != "reset":
+            return None
+        return uuid.UUID(str(payload["sub"]))
+    except (jwt.PyJWTError, ValueError, KeyError):
+        return None
+
+
+def reset_token_matches(token: str, password_hash: str) -> bool:
+    """True if the token was issued against this exact password hash."""
+    try:
+        payload = jwt.decode(token, _secret(), algorithms=[settings.jwt_algorithm])
+    except jwt.PyJWTError:
+        return False
+    return hmac.compare_digest(str(payload.get("pw", "")), _pw_fingerprint(password_hash))

@@ -21,6 +21,7 @@ questions instead of the same set back.
 from __future__ import annotations
 
 import logging
+import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -89,7 +90,7 @@ async def _cached_questions(
 
 
 async def generate_questions(
-    session: AsyncSession, payload: GenerateIn
+    session: AsyncSession, payload: GenerateIn, *, user_id: uuid.UUID
 ) -> tuple[list[Question], int, int, dict | None]:
     """
     Returns (questions, cached_count, generated_count, report).
@@ -153,7 +154,9 @@ async def generate_questions(
 
     logger.info("generation report: %s", report.as_dict())
 
-    stored = await question_service.persist_batch(session, generated, chapter=chapter)
+    stored = await question_service.persist_batch(
+        session, generated, chapter=chapter, created_by=user_id
+    )
 
     # persist_batch folds away any question whose text already existed, so the
     # combined list is de-duplicated by identity here rather than by text.

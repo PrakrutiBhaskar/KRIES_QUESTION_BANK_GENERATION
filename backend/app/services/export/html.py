@@ -13,6 +13,21 @@ from html import escape
 
 from .answer_format import format_answer, split_label
 
+
+def item_section(item) -> str | None:
+    """The item's section, or None. Tolerates items that predate sections."""
+    return getattr(item, "section", None) or None
+
+
+def section_totals(ordered_items) -> dict[str, int]:
+    """Marks per section, for the heading line (blueprint papers only)."""
+    totals: dict[str, int] = {}
+    for item in ordered_items:
+        section = item_section(item)
+        if section:
+            totals[section] = totals.get(section, 0) + item.effective_marks
+    return totals
+
 _STYLE = """
 @page { size: A4; margin: 18mm 16mm 20mm 16mm;
         @bottom-center { content: "Page " counter(page) " of " counter(pages);
@@ -26,6 +41,9 @@ body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
         color: #333; margin-top: 6px; }
 .instructions { font-size: 9.5pt; color: #444; margin: 0 0 16px;
                 border-left: 3px solid #ccc; padding-left: 8px; }
+.section-head { display: flex; justify-content: space-between; font-weight: 700;
+                font-size: 12pt; margin: 16px 0 8px; padding-bottom: 3px;
+                border-bottom: 1px solid #111; page-break-after: avoid; }
 .q { margin: 0 0 12px; page-break-inside: avoid; }
 .q-head { display: flex; gap: 8px; align-items: baseline; }
 .q-num { font-weight: 600; min-width: 22px; }
@@ -82,9 +100,18 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
     ]
 
     ordered = sorted(paper.items, key=lambda i: i.order_index)
+    section_marks = section_totals(ordered)
 
+    current_section = None
     for n, item in enumerate(ordered, start=1):
         q = item.question
+        section = item_section(item)
+        if section and section != current_section:
+            current_section = section
+            parts.append(
+                f"<div class='section-head'><span>{escape(section)}</span>"
+                f"<span>{section_marks[section]} marks</span></div>"
+            )
         parts.append("<div class='q'><div class='q-head'>")
         parts.append(f"<span class='q-num'>{n}.</span>")
         parts.append(f"<span class='q-text'>{escape(q.text)}</span>")

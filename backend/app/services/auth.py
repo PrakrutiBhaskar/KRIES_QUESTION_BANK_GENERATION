@@ -7,9 +7,23 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..errors import ConflictError, UnauthorizedError
+from ..config import parse_rule, settings
+from ..errors import (
+    BadRequestError,
+    ConflictError,
+    TooManyRequestsError,
+    UnauthorizedError,
+)
 from ..models import User
-from ..security import DUMMY_HASH, hash_password, verify_password
+from ..ratelimit import limiter
+from ..security import (
+    DUMMY_HASH,
+    create_reset_token,
+    hash_password,
+    peek_reset_token,
+    reset_token_matches,
+    verify_password,
+)
 
 
 async def get_by_email(session: AsyncSession, email: str) -> User | None:
@@ -41,11 +55,58 @@ async def create_user(
     return user
 
 
-async def authenticate(session: AsyncSession, email: str, password: str) -> User:
+async def authenticate(
+    session: AsyncSession, email: str, password: str, client_ip: str = "unknown"
+) -> User:
+    # Lockout: too many wrong passwords for this (IP, email) pair blocks it for
+    # a while — even if the next password is right — so a password can't be
+    # guessed at the per-IP request rate. The email is part of the key, so a
+    # stranger can't lock someone out from a different network.
+    lock_key = f"login-fail:{client_ip}:{email}"
+    lock_rule = parse_rule(settings.login_max_failures)
+    if settings.rate_limit_enabled:
+        wait = limiter.retry_after(lock_key, lock_rule)
+        if wait:
+            raise TooManyRequestsError(
+                wait,
+                detail=(
+                    "Too many failed sign-in attempts. "
+                    f"Try again in {max(1, round(wait / 60))} minute(s)."
+                    if wait >= 60
+                    else f"Too many failed sign-in attempts. Try again in {max(1, round(wait))} second(s)."
+                ),
+            )
+
     user = await get_by_email(session, email)
     # Always run one scrypt verification, and give one message for both
     # failure modes, so the endpoint doesn't reveal which emails are registered.
     ok = verify_password(password, user.password_hash if user else DUMMY_HASH)
     if user is None or not ok or not user.is_active:
+        if settings.rate_limit_enabled:
+            limiter.record(lock_key, lock_rule)
         raise UnauthorizedError("Incorrect email or password.", error="invalid_credentials")
+    limiter.clear(lock_key)
+    return user
+
+
+def build_reset_link(user: User) -> str:
+    token = create_reset_token(user.id, user.password_hash)
+    return f"{settings.frontend_url.rstrip('/')}/reset-password?token={token}"
+
+
+async def reset_password(session: AsyncSession, token: str, new_password: str) -> User:
+    """Set a new password from a reset link. Single-use: the token is bound to the
+    old password hash, so it stops working the moment the password changes."""
+    invalid = BadRequestError(
+        "This reset link is invalid or has expired. Please request a new one.",
+        error="invalid_reset_token",
+    )
+    user_id = peek_reset_token(token)
+    if user_id is None:
+        raise invalid
+    user = await get_by_id(session, user_id)
+    if user is None or not user.is_active or not reset_token_matches(token, user.password_hash):
+        raise invalid
+    user.password_hash = hash_password(new_password)
+    await session.flush()
     return user

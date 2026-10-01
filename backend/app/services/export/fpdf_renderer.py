@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .answer_format import format_answer, split_label
+from .html import item_section, section_totals
 
 FONT_DIR = Path(__file__).resolve().parents[3] / "assets" / "fonts"
 
@@ -109,10 +110,25 @@ def render_fpdf(paper) -> bytes:
     pdf.ln(4)
 
     # --- questions ----------------------------------------------------
+    section_marks = section_totals(ordered)
+    current_section = None
     for n, item in enumerate(ordered, start=1):
         q = item.question
         if pdf.will_page_break(28):
             pdf.add_page()
+        section = item_section(item)
+        if section and section != current_section:
+            current_section = section
+            pdf.ln(2)
+            y = pdf.get_y()
+            pdf.set_font("Noto", "B", 12)
+            pdf.set_xy(_LEFT + epw - 40, y)
+            pdf.cell(40, 6, f"{section_marks[section]} marks", align="R")
+            pdf.set_xy(_LEFT, y)
+            write(section, w=epw - 40, style="B", size=12, h=6)
+            pdf.set_line_width(0.2)
+            pdf.line(_LEFT, pdf.get_y(), _LEFT + epw, pdf.get_y())
+            pdf.ln(3)
         y0 = pdf.get_y()
         pdf.set_font("Noto", "B", 11)
         pdf.set_xy(_LEFT + epw - _MARKS_W, y0)

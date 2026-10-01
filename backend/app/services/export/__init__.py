@@ -43,9 +43,10 @@ def export_dir() -> Path:
     return path
 
 
-def public_url(filename: str) -> str:
+def public_url(filename: str, token: str | None = None) -> str:
     base = settings.public_base_url.rstrip("/")
-    return f"{base}{settings.api_prefix}/export/files/{filename}"
+    url = f"{base}{settings.api_prefix}/export/files/{filename}"
+    return f"{url}?token={token}" if token else url
 
 
 def resolve_download(filename: str) -> Path:

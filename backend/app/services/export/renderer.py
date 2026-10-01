@@ -28,7 +28,7 @@ from ...config import settings
 from ...errors import ServiceUnavailableError
 from .answer_format import format_answer, split_label
 from .fpdf_renderer import fpdf_available, render_fpdf
-from .html import render_paper_html
+from .html import item_section, render_paper_html, section_totals
 
 logger = logging.getLogger("backend.export")
 
@@ -149,6 +149,10 @@ def _render_reportlab(paper) -> bytes:
             "qb-opt", parent=base["Normal"], fontName=body_font, fontSize=10.5,
             leftIndent=22, leading=14,
         ),
+        "section": ParagraphStyle(
+            "qb-section", parent=base["Normal"], fontName=bold_font, fontSize=12,
+            spaceBefore=6, spaceAfter=6, keepWithNext=True,
+        ),
         "h2": ParagraphStyle(
             "qb-h2", parent=base["Heading2"], fontName=bold_font, fontSize=13,
             spaceAfter=6,
@@ -212,8 +216,17 @@ def _render_reportlab(paper) -> bytes:
         flow.append(Paragraph(_esc(line), styles["instr"]))
     flow.append(Spacer(1, 10))
 
+    section_marks = section_totals(ordered)
+    current_section = None
     for n, item in enumerate(ordered, start=1):
         q = item.question
+        section = item_section(item)
+        if section and section != current_section:
+            current_section = section
+            flow.append(Paragraph(
+                f"{_esc(section)} &nbsp;&nbsp;({section_marks[section]} marks)",
+                styles["section"],
+            ))
         row = Table(
             [[
                 Paragraph(f"{n}. {_esc(q.text)}", styles["q"]),

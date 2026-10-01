@@ -4,6 +4,8 @@
 // ============================================================
 import { UNAUTHORIZED_EVENT, clearSession, getToken } from './auth';
 import type {
+  BlueprintInput,
+  BlueprintPlan,
   ChapterInfo,
   Difficulty,
   Grade,
@@ -22,11 +24,14 @@ export const API_BASE: string = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1')
 export class ApiError extends Error {
   status: number;
   code: string;
-  constructor(status: number, code: string, detail: string) {
+  /** Seconds to wait before retrying, for a 429 (rate limited) response. */
+  retryAfter?: number;
+  constructor(status: number, code: string, detail: string, retryAfter?: number) {
     super(detail || code);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -87,7 +92,13 @@ async function request<T>(
       clearSession();
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
     }
-    throw new ApiError(res.status, b.error ?? 'error', detail);
+    const retryAfter = Number(res.headers.get('Retry-After'));
+    throw new ApiError(
+      res.status,
+      b.error ?? 'error',
+      detail,
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined,
+    );
   }
   return body as T;
 }
@@ -117,7 +128,13 @@ interface PaperWire {
   subject: Subject;
   total_marks: number;
   created_at: string;
-  questions: { order_index: number; marks: number; marks_override: number | null; question: QuestionWire }[];
+  questions: {
+    order_index: number;
+    marks: number;
+    marks_override: number | null;
+    section?: string | null;
+    question: QuestionWire;
+  }[];
 }
 
 interface GenerateWire {
@@ -157,6 +174,7 @@ function toBank(p: PaperWire): QuestionBank {
     ...toQuestion(item.question, i),
     marks: item.marks as Marks,
     baseMarks: item.question.marks as Marks,
+    section: item.section ?? undefined,
   }));
 
   const chapters = new Set(questions.map((q) => q.chapter));
@@ -214,6 +232,28 @@ export async function signIn(email: string, password: string): Promise<AuthResul
     { auth: false },
   );
   return { token: r.access_token, user: r.user };
+}
+
+/** Ask for a password-reset email. The reply is the same whether or not the account exists. */
+export async function requestPasswordReset(email: string): Promise<string> {
+  const r = await request<{ message: string }>(
+    '/auth/forgot-password',
+    { method: 'POST', body: JSON.stringify({ email }) },
+    15000,
+    { auth: false },
+  );
+  return r.message;
+}
+
+/** Set a new password using the token from the emailed link. */
+export async function resetPassword(token: string, password: string): Promise<string> {
+  const r = await request<{ message: string }>(
+    '/auth/reset-password',
+    { method: 'POST', body: JSON.stringify({ token, password }) },
+    15000,
+    { auth: false },
+  );
+  return r.message;
 }
 
 /** The signed-in user; also how a stored token is validated on page load. */
@@ -365,6 +405,88 @@ export async function renameBank(id: string, title: string): Promise<QuestionBan
 
 export async function deleteBank(id: string): Promise<void> {
   await request<void>(`/papers/${id}`, { method: 'DELETE' });
+}
+
+// ------------------------------------------------------------
+// Blueprint papers
+// ------------------------------------------------------------
+function blueprintBody(b: BlueprintInput): Record<string, unknown> {
+  return {
+    title: b.title.trim() || null,
+    subject: b.subject,
+    grade: b.grade,
+    chapters: b.chapters.map((c) => ({ name: c.name, weightage: c.weightage })),
+    sections: b.sections.map((s) => ({
+      name: s.name,
+      type: s.type,
+      marks_per_question: s.marksPerQuestion,
+      total_marks: s.totalMarks,
+      difficulty: s.difficulty,
+    })),
+    refresh: b.refresh,
+  };
+}
+
+interface BlueprintPlanWire {
+  total_marks: number;
+  total_questions: number;
+  sections: {
+    name: string;
+    type: QuestionType;
+    marks_per_question: number;
+    questions: number;
+    marks: number;
+    allocations: { chapter: string; questions: number; marks: number }[];
+  }[];
+  chapters: {
+    chapter: string;
+    weightage: number;
+    target_marks: number;
+    planned_marks: number;
+    planned_questions: number;
+  }[];
+}
+
+/** How the blueprint's marks would be split across chapters. Calls no LLM. */
+export async function previewBlueprint(b: BlueprintInput): Promise<BlueprintPlan> {
+  const r = await request<BlueprintPlanWire>(
+    '/papers/blueprint/preview',
+    { method: 'POST', body: JSON.stringify(blueprintBody(b)) },
+    15000,
+  );
+  return {
+    totalMarks: r.total_marks,
+    totalQuestions: r.total_questions,
+    sections: r.sections.map((s) => ({
+      name: s.name,
+      type: s.type,
+      marksPerQuestion: s.marks_per_question,
+      questions: s.questions,
+      marks: s.marks,
+      allocations: s.allocations,
+    })),
+    chapters: r.chapters.map((c) => ({
+      chapter: c.chapter,
+      weightage: c.weightage,
+      targetMarks: c.target_marks,
+      plannedMarks: c.planned_marks,
+      plannedQuestions: c.planned_questions,
+    })),
+  };
+}
+
+/**
+ * Build and save a paper from a blueprint. Reuses stored questions and
+ * generates the rest, so a large paper can take a while — hence the long timeout.
+ */
+export async function createBlueprintPaper(b: BlueprintInput): Promise<QuestionBank> {
+  return toBank(
+    await request<PaperWire>(
+      '/papers/blueprint',
+      { method: 'POST', body: JSON.stringify(blueprintBody(b)) },
+      5 * 60 * 1000,
+    ),
+  );
 }
 
 // ------------------------------------------------------------
