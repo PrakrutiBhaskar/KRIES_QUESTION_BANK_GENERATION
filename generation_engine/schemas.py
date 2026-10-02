@@ -139,6 +139,11 @@ class GenerationRequest(BaseModel):
     difficulty: Difficulty
     count: int = Field(ge=1, le=25)
     topic: Optional[str] = None  # optional narrowing hint fed into the prompt
+    # Where to start walking the chapter's textbook passages. The backend sets
+    # this to the number of questions already stored for the chapter so that
+    # repeated generation moves through the WHOLE chapter instead of
+    # re-covering the same passages. Ignored without an ingested textbook.
+    coverage_offset: int = Field(default=0, ge=0)
 
     @field_validator("chapter")
     @classmethod

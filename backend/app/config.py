@@ -133,6 +133,19 @@ class Settings(BaseSettings):
         default=BACKEND_DIR / "data" / "syllabus.json", alias="SYLLABUS_JSON_PATH"
     )
 
+    # --- Textbook corpus (strict Karnataka State Board mode) ---
+    # Folder of corpus JSON produced by scripts/ingest_textbooks.py from the
+    # KTBS textbook PDFs. Chapters, grades and topics are derived from these;
+    # questions are written from their text.
+    textbooks_dir: Path = Field(
+        default=BACKEND_DIR / "data" / "textbooks", alias="TEXTBOOKS_DIR"
+    )
+    # true  -> generate ONLY for (subject, grade) pairs with an ingested textbook;
+    #          the bundled syllabus.json is ignored (nothing hardcoded).
+    # false -> textbooks are used where present; anything else falls back to
+    #          syllabus.json / free chapter names.
+    require_textbook: bool = Field(default=False, alias="REQUIRE_TEXTBOOK")
+
     # --- Practice mode ---
     # If a practice session can't be filled from stored questions, generate the
     # shortfall on demand instead of returning a short set.
@@ -211,7 +224,7 @@ class Settings(BaseSettings):
         parse_rule(v)  # raises ValueError with a readable message
         return v
 
-    @field_validator("syllabus_json_path", "export_dir", mode="after")
+    @field_validator("syllabus_json_path", "export_dir", "textbooks_dir", mode="after")
     @classmethod
     def anchor_relative_paths(cls, v: Path | None) -> Path | None:
         return _anchor(v) if v is not None else None

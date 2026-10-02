@@ -40,7 +40,7 @@ from ..errors import BadRequestError, UnprocessableError, UpstreamError
 from ..models import Question
 from ..schemas.requests import GenerateIn
 from . import questions as question_service
-from .syllabus import get_syllabus_index, resolve_chapter
+from .syllabus import get_corpus, get_syllabus_index, resolve_chapter
 
 logger = logging.getLogger("backend.generation")
 
@@ -57,7 +57,11 @@ def get_engine() -> GenerationEngine:
     """
     global _engine
     if _engine is None:
-        _engine = GenerationEngine(syllabus=get_syllabus_index())
+        _engine = GenerationEngine(
+            syllabus=get_syllabus_index(),
+            textbooks=get_corpus(),
+            require_textbook=settings.require_textbook,
+        )
     return _engine
 
 
@@ -102,6 +106,41 @@ async def generate_questions(
     # That's the only write that happens before generation succeeds, and it's
     # reference data rather than question data — "no partial data stored" in
     # test-plan.md is about questions, and none are written on a failure path.
+    # Strictly Karnataka State Board: refuse a chapter that isn't in this
+    # grade's syllabus BEFORE resolve_chapter would create a row for it.
+    corpus = get_corpus()
+    if settings.require_textbook and (
+        corpus is None or not corpus.has_grade(payload.subject, payload.grade)
+    ):
+        raise BadRequestError(
+            "no Karnataka State Board textbook has been ingested for "
+            f"{payload.subject.value} Class {payload.grade}; run "
+            "scripts/ingest_textbooks.py on the KTBS PDF first"
+        )
+    index = get_syllabus_index()
+    if index is not None:
+        if not index.has_chapter(payload.subject, payload.chapter):
+            raise BadRequestError(
+                f'unknown chapter "{payload.chapter}" for subject '
+                f"{payload.subject.value}"
+            )
+        if not index.has_chapter(payload.subject, payload.chapter, grade=payload.grade):
+            taught_in = index.grades_for_chapter(payload.subject, payload.chapter)
+            hint = (
+                f" (it is taught in Class {', '.join(str(g) for g in taught_in)})"
+                if taught_in
+                else ""
+            )
+            raise BadRequestError(
+                f'chapter "{payload.chapter}" is not part of the Karnataka State '
+                f"Board Class {payload.grade} {payload.subject.value} syllabus{hint}"
+            )
+    elif engine_settings.require_syllabus:
+        raise BadRequestError(
+            "no Karnataka State Board syllabus is loaded; refusing to generate "
+            "for an unverified chapter"
+        )
+
     chapter = await resolve_chapter(session, payload.subject, payload.chapter)
 
     cached: list[Question] = []
@@ -131,6 +170,19 @@ async def generate_questions(
 
     # Hand the canonical chapter name to Module A so prompts and any syllabus
     # check use the syllabus' own spelling, not the caller's.
+    # Walk the chapter's textbook passages from where earlier batches stopped,
+    # so repeated generation covers the whole chapter.
+    coverage_offset = (
+        await session.scalar(
+            select(func.count(Question.id)).where(
+                Question.is_active.is_(True),
+                Question.chapter_id == chapter.id,
+                Question.grade == payload.grade,
+            )
+        )
+        or 0
+    )
+
     request = GenerationRequest(
         subject=payload.subject,
         chapter=chapter.name,
@@ -140,6 +192,7 @@ async def generate_questions(
         difficulty=payload.difficulty,
         count=shortfall,
         topic=payload.topic,
+        coverage_offset=coverage_offset,
     )
 
     engine = get_engine()

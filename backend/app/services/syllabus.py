@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from generation_engine.schemas import Subject as SubjectEnum
 from generation_engine.syllabus import SyllabusIndex
+from generation_engine.textbook import TextbookCorpus
 
 from ..config import settings
 from ..errors import NotFoundError
@@ -33,6 +34,7 @@ from ..models import Chapter, Question, Subject
 logger = logging.getLogger("backend.syllabus")
 
 _syllabus_index: SyllabusIndex | None = None
+_corpus: TextbookCorpus | None = None
 # subject name -> grade -> normalised chapter names. Optional "grades" block in
 # the syllabus JSON; subjects without one (English) aren't grade-filtered.
 _grade_chapters: dict[str, dict[int, set[str]]] = {}
@@ -42,9 +44,7 @@ def _norm(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", name.lower()).strip()
 
 
-def _load_grade_map(path) -> dict[str, dict[int, set[str]]]:
-    with open(path, "r", encoding="utf-8") as fh:
-        raw = json.load(fh)
+def _grade_map_from_dict(raw: dict) -> dict[str, dict[int, set[str]]]:
     out: dict[str, dict[int, set[str]]] = {}
     for subject, entry in raw.items():
         grades = entry.get("grades") if isinstance(entry, dict) else None
@@ -56,25 +56,71 @@ def _load_grade_map(path) -> dict[str, dict[int, set[str]]]:
     return out
 
 
+def _load_grade_map(path) -> dict[str, dict[int, set[str]]]:
+    """Grade map straight from a syllabus JSON file (kept for tests/tools)."""
+    with open(path, "r", encoding="utf-8") as fh:
+        return _grade_map_from_dict(json.load(fh))
+
+
+def get_corpus() -> TextbookCorpus | None:
+    """The ingested KTBS textbooks, or None when none are available."""
+    return _corpus
+
+
 def get_syllabus_index() -> SyllabusIndex | None:
     """The loaded SyllabusIndex, or None when no syllabus data is configured."""
     return _syllabus_index
 
 
 def load_syllabus_index() -> SyllabusIndex | None:
-    """Load SYLLABUS_JSON_PATH once at startup. Missing file is not fatal."""
-    global _syllabus_index, _grade_chapters
+    """
+    Build the syllabus at startup.
+
+    1. Load the ingested KTBS textbooks (TEXTBOOKS_DIR). Their chapters, grades
+       and section titles define the syllabus for every (subject, grade) they
+       cover.
+    2. REQUIRE_TEXTBOOK=true: that is the whole syllabus — syllabus.json is not
+       read, so nothing is hardcoded.
+       Otherwise the bundled syllabus.json fills in (subject, grade) pairs with
+       no textbook yet, and textbooks override it where present.
+    """
+    global _syllabus_index, _grade_chapters, _corpus
+    _corpus = TextbookCorpus.from_dir(settings.textbooks_dir)
+    if _corpus.is_empty():
+        logger.warning(
+            "No textbook corpus in %s — generation is not textbook-grounded. "
+            "Run scripts/ingest_textbooks.py on the KTBS PDFs.",
+            settings.textbooks_dir,
+        )
+        if settings.require_textbook:
+            logger.error("REQUIRE_TEXTBOOK is on but no textbooks are ingested: every generate request will be refused.")
+    else:
+        logger.info(
+            "Loaded textbook corpus: %s",
+            ", ".join(f"{s.value} {g}" for s in _corpus.subjects() for g in _corpus.grades(s)),
+        )
+
+    base: dict = {}
     path = settings.syllabus_json_path
-    if not path:
-        logger.info("No SYLLABUS_JSON_PATH set — chapter names accepted as given.")
+    if path and not settings.require_textbook:
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                base = {k: v for k, v in json.load(fh).items() if not str(k).startswith("_")}
+        except (OSError, ValueError) as exc:
+            logger.warning("Could not read syllabus from %s: %s", path, exc)
+    merged = _corpus.to_syllabus_dict(base)
+
+    if not merged:
+        logger.info("No syllabus data — chapter names accepted as given.")
         _grade_chapters = {}
+        _syllabus_index = None
         return None
     try:
-        _syllabus_index = SyllabusIndex.from_json(path)
-        _grade_chapters = _load_grade_map(path)
-        logger.info("Loaded syllabus index (%d chapters) from %s", len(_syllabus_index), path)
-    except (OSError, ValueError) as exc:
-        logger.warning("Could not load syllabus from %s: %s", path, exc)
+        _syllabus_index = SyllabusIndex.from_dict(merged)
+        _grade_chapters = _grade_map_from_dict(merged)
+        logger.info("Loaded syllabus index (%d chapters)", len(_syllabus_index))
+    except ValueError as exc:
+        logger.warning("Could not build syllabus index: %s", exc)
         _syllabus_index = None
     return _syllabus_index
 
@@ -211,6 +257,12 @@ async def list_chapters(
         .order_by(Chapter.order_index, Chapter.name)
     )
     rows = list((await session.execute(stmt)).all())
+    # With a syllabus loaded, chapters left in the DB from an older chapter
+    # list (or created before the syllabus was enforced) are not offered.
+    if _syllabus_index is not None:
+        rows = [
+            (c, n) for c, n in rows if _syllabus_index.has_chapter(subject, c.name)
+        ]
     allowed = _grade_chapters.get(subject.value, {}).get(grade) if grade else None
     if allowed is not None:
         rows = [(c, n) for c, n in rows if _norm(c.name) in allowed]

@@ -45,6 +45,8 @@ from .engine import GenerationEngine, GenerationReport
 from .difficulty import estimate_difficulty, flag_difficulty_mismatch
 from .prompts import build_prompt, supported_combinations
 from .syllabus import SyllabusIndex
+from .textbook import Passage, TextbookCorpus, select_passages
+from .textbook_ingest import ingest_pdf, build_corpus_dict
 from .syllabus_ingest import (
     extract_chapters_from_pdf,
     extract_chapters_from_text,

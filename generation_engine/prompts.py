@@ -43,22 +43,86 @@ _JSON_SHAPE_DESCRIPTIVE = """{
 
 def _base_system_prompt() -> str:
     return (
-        "You are an expert Karnataka State Board question paper setter. "
-        "You write syllabus-aligned exam questions with answer keys, "
-        "calibrated to whichever grade you're told to target for a given "
-        "request. You always follow the requested JSON output shape "
-        "exactly, with no markdown fences, no commentary, and no text "
-        "outside the JSON object."
+        "You are an expert Karnataka State Board (KSEEB / KTBS) question "
+        "paper setter. You write exam questions with answer keys that stay "
+        "STRICTLY within the Karnataka State Board syllabus: only content "
+        "that appears in the Karnataka Textbook Society (KTBS) textbook for "
+        "the stated class, subject and chapter. You never draw on another "
+        "board's syllabus or a higher or lower class's content, never use "
+        "outside material, and never name other boards or their textbooks. "
+        "You use the terminology, units, examples and Indian/Karnataka "
+        "context that the KTBS textbook uses. You always follow the "
+        "requested JSON output shape exactly, with no markdown fences, no "
+        "commentary, and no text outside the JSON object."
     )
+
+
+_PASSAGE_FIELD = (
+    '  "passage": "integer — the [P#] number of the textbook passage this '
+    'question is based on",\n'
+)
+
+
+def _with_passage_field(json_shape: str) -> str:
+    return json_shape.replace('  "topic"', _PASSAGE_FIELD + '  "topic"', 1)
+
+
+def _source_block(passages: list, max_chars: int) -> str:
+    """The textbook text the questions must be written from — the only permitted source."""
+    parts = [
+        "\nSOURCE TEXTBOOK PASSAGES (Karnataka Textbook Society, "
+        "Class {grade}). These passages are the ONLY permitted source. Write "
+        "EXACTLY ONE question per passage, in order: question i must be "
+        "answerable from passage [Pi] alone and must test what that passage "
+        "teaches. Do not use facts, definitions, figures or examples that are "
+        "not in or directly implied by the passage. For numerical subjects you "
+        "may change the numbers of a worked example, but the concept, method "
+        "and terminology must come from the passage. Set \"passage\" to i."
+    ]
+    for i, ps in enumerate(passages, 1):
+        text = ps.text if len(ps.text) <= max_chars else ps.text[:max_chars].rsplit(" ", 1)[0] + " …"
+        parts.append(f"\n[P{i}] (section: {ps.section})\n{text}")
+    return "\n".join(parts)
+
+
+def _scope_block(
+    request: GenerationRequest, chapter_topics: Optional[list[str]]
+) -> str:
+    lines = [
+        "\nSYLLABUS SCOPE (mandatory): Karnataka State Board, "
+        f"Class {request.grade}, {request.subject.value}, chapter "
+        f'"{request.chapter}". Every question and answer must be answerable '
+        "from this chapter of the KTBS textbook alone. Do not use concepts, "
+        "formulae, theorems, events or vocabulary from other chapters, other "
+        "classes or other boards. If you are unsure a point is in this "
+        "chapter, leave it out."
+    ]
+    if chapter_topics and not request.topic:
+        lines.append(
+            "Topics covered in this chapter (spread questions across them, "
+            "and do not go beyond them): " + "; ".join(chapter_topics) + "."
+        )
+    return "\n".join(lines)
 
 
 def _footer(
     request: GenerationRequest,
     json_shape: str,
     retry_feedback: Optional[list[str]] = None,
+    chapter_topics: Optional[list[str]] = None,
+    passages: Optional[list] = None,
+    max_passage_chars: int = 900,
 ) -> str:
     subject_note = get_prompt_note(request.subject)
-    grade_line = f"\nTarget grade: Karnataka State Board Class {request.grade}."
+    grade_line = (
+        f"\nTarget grade: Karnataka State Board Class {request.grade}."
+        + _scope_block(request, None if passages else chapter_topics)
+    )
+    if passages:
+        grade_line += _source_block(passages, max_passage_chars).replace(
+            "{grade}", str(request.grade)
+        )
+        json_shape = _with_passage_field(json_shape)
     topic_line = (
         f'\nFocus on the sub-topic: "{request.topic}".' if request.topic else ""
     )
@@ -144,9 +208,19 @@ def supported_combinations() -> list[tuple[QuestionType, int]]:
 def build_prompt(
     request: GenerationRequest,
     retry_feedback: Optional[list[str]] = None,
+    chapter_topics: Optional[list[str]] = None,
+    passages: Optional[list] = None,
+    max_passage_chars: int = 900,
 ) -> tuple[str, str]:
     """
     Returns (system_prompt, user_prompt) for the given request.
+
+    `chapter_topics` are the syllabus' sub-topics for the chapter (from
+    SyllabusIndex.topics); when given they bound the questions' scope.
+
+    `passages` are the textbook passages assigned to this batch (one per
+    question, len == request.count). When given, questions must be written from
+    them and each must report which passage it used.
 
     `retry_feedback` is an optional list of reasons a previous attempt was
     rejected; when supplied it's appended to the prompt so the model corrects
@@ -157,5 +231,7 @@ def build_prompt(
     validation.validate_request_combination).
     """
     builder, json_shape = _TEMPLATES[(request.type, request.marks)]
-    user_prompt = builder(request) + _footer(request, json_shape, retry_feedback)
+    user_prompt = builder(request) + _footer(
+        request, json_shape, retry_feedback, chapter_topics, passages, max_passage_chars
+    )
     return _base_system_prompt(), user_prompt

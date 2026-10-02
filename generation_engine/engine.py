@@ -25,9 +25,12 @@ from .groq_client import GroqClient
 from .prompts import build_prompt
 from .schemas import GenerationRequest, Question
 from .syllabus import SyllabusIndex
+from .textbook import Passage, TextbookCorpus, select_passages
 from .validation import (
     build_question,
     check_answer_relevance,
+    check_board_scope,
+    check_grounding,
     check_marks_format,
     find_duplicates,
     validate_request_combination,
@@ -47,6 +50,10 @@ class GenerationReport:
     dropped_marks_format_invalid: int = 0
     dropped_duplicates: int = 0
     dropped_irrelevant: int = 0
+    dropped_out_of_syllabus: int = 0
+    dropped_ungrounded: int = 0
+    passages_total: int = 0
+    passages_used: list[str] = field(default_factory=list)
     difficulty_warnings: list[str] = field(default_factory=list)
     rejection_reasons: list[str] = field(default_factory=list)
 
@@ -59,6 +66,10 @@ class GenerationReport:
             "dropped_marks_format_invalid": self.dropped_marks_format_invalid,
             "dropped_duplicates": self.dropped_duplicates,
             "dropped_irrelevant": self.dropped_irrelevant,
+            "dropped_out_of_syllabus": self.dropped_out_of_syllabus,
+            "dropped_ungrounded": self.dropped_ungrounded,
+            "passages_total": self.passages_total,
+            "passages_used": list(self.passages_used),
             "difficulty_warnings": list(self.difficulty_warnings),
             "rejection_reasons": list(self.rejection_reasons),
         }
@@ -69,9 +80,19 @@ class GenerationEngine:
         self,
         groq_client: GroqClient | None = None,
         syllabus: Optional[SyllabusIndex] = None,
+        textbooks: Optional[TextbookCorpus] = None,
+        require_textbook: Optional[bool] = None,
     ):
         self.groq_client = groq_client or GroqClient()
+        self.textbooks = textbooks
+        # With a textbook corpus and no explicit index, the textbooks ARE the
+        # syllabus: chapters/grades/topics are derived from them, not listed.
+        if syllabus is None and textbooks is not None and not textbooks.is_empty():
+            syllabus = SyllabusIndex.from_dict(textbooks.to_syllabus_dict())
         self.syllabus = syllabus
+        self.require_textbook = (
+            settings.require_textbook if require_textbook is None else require_textbook
+        )
 
     async def generate(
         self, request: GenerationRequest
@@ -83,14 +104,33 @@ class GenerationEngine:
           - GenerationValidationError (422) if a valid batch of `count`
             questions can't be assembled within the retry budget
         """
-        problems = validate_request_combination(request, syllabus=self.syllabus)
+        problems = validate_request_combination(
+            request,
+            syllabus=self.syllabus,
+            require_syllabus=settings.require_syllabus,
+        )
         if problems:
             raise InvalidRequestError("; ".join(problems))
+
+        all_passages: list[Passage] = []
+        if self.textbooks is not None:
+            all_passages = self.textbooks.passages(
+                request.subject, request.grade, request.chapter, topic=request.topic
+            )
+        if not all_passages and self.require_textbook:
+            raise InvalidRequestError(
+                "no Karnataka State Board textbook text has been ingested for "
+                f'{request.subject.value} Class {request.grade}, chapter '
+                f'"{request.chapter}". Ingest the KTBS textbook PDF '
+                "(scripts/ingest_textbooks.py) before generating."
+            )
+        issued = 0  # passages handed out so far; retries move on to fresh ones
 
         accepted: list[Question] = []
         report = GenerationReport(
             requested_count=request.count, returned_count=0, attempts=0
         )
+        report.passages_total = len(all_passages)
 
         remaining = request.count
         max_attempts = settings.max_regeneration_retries + 1
@@ -104,7 +144,11 @@ class GenerationEngine:
             report.attempts = attempt
 
             batch_request = request.model_copy(update={"count": remaining})
-            raw_items = await self._call_groq(batch_request, feedback)
+            batch_passages = select_passages(
+                all_passages, remaining, request.coverage_offset + issued
+            )
+            issued += len(batch_passages)
+            raw_items = await self._call_groq(batch_request, feedback, batch_passages)
 
             # Reasons collected this round, fed back into the next prompt so
             # the model corrects course rather than resampling blindly.
@@ -120,19 +164,45 @@ class GenerationEngine:
                     report.rejection_reasons.append(f"schema invalid: {reason}")
                     logger.warning("Schema validation failed, dropping item: %s", reason)
                     continue
-                candidates.append(result.question)
+                q = result.question
+                if batch_passages:
+                    src = self._source_passage(result.raw, batch_passages)
+                    texts = [src.text] if src else [p.text for p in batch_passages]
+                    problems = check_grounding(
+                        q, texts, settings.grounding_min_overlap
+                    )
+                    if problems:
+                        report.dropped_ungrounded += 1
+                        feedback.append("; ".join(problems))
+                        report.rejection_reasons.append("; ".join(problems))
+                        logger.warning(
+                            "Grounding check failed, dropping item %r", q.text[:60]
+                        )
+                        continue
+                    if src:
+                        q.tags = [*q.tags, f"src:{src.id}"]
+                        if not q.topic:
+                            q.topic = src.section
+                        if src.id not in report.passages_used:
+                            report.passages_used.append(src.id)
+                candidates.append(q)
 
             # marks-vs-answer-length + relevance checks
             surviving: list[Question] = []
             for q in candidates:
+                scope_problems = check_board_scope(q)
                 format_problems = check_marks_format(q)
                 relevance_problems = check_answer_relevance(q)
-                if format_problems or relevance_problems:
-                    if format_problems:
+                if scope_problems or format_problems or relevance_problems:
+                    if scope_problems:
+                        report.dropped_out_of_syllabus += 1
+                    elif format_problems:
                         report.dropped_marks_format_invalid += 1
                     else:
                         report.dropped_irrelevant += 1
-                    joined = "; ".join(format_problems + relevance_problems)
+                    joined = "; ".join(
+                        scope_problems + format_problems + relevance_problems
+                    )
                     feedback.append(joined)
                     report.rejection_reasons.append(joined)
                     logger.warning(
@@ -180,6 +250,8 @@ class GenerationEngine:
                 f"Dropped: {report.dropped_schema_invalid} schema-invalid, "
                 f"{report.dropped_marks_format_invalid} marks-format-invalid, "
                 f"{report.dropped_irrelevant} irrelevant, "
+                f"{report.dropped_out_of_syllabus} out-of-syllabus, "
+                f"{report.dropped_ungrounded} ungrounded, "
                 f"{report.dropped_duplicates} duplicates.",
                 context={"report": report.as_dict()},
             )
@@ -191,10 +263,33 @@ class GenerationEngine:
     # ------------------------------------------------------------------
 
     async def _call_groq(
-        self, request: GenerationRequest, feedback: list[str] | None = None
+        self,
+        request: GenerationRequest,
+        feedback: list[str] | None = None,
+        passages: list[Passage] | None = None,
     ) -> list[dict]:
-        system_prompt, user_prompt = build_prompt(request, retry_feedback=feedback)
+        topics = (
+            self.syllabus.topics(request.subject, request.chapter)
+            if self.syllabus is not None and not passages
+            else None
+        )
+        system_prompt, user_prompt = build_prompt(
+            request,
+            retry_feedback=feedback,
+            chapter_topics=topics,
+            passages=passages or None,
+            max_passage_chars=settings.max_passage_chars,
+        )
         return await self.groq_client.complete_json(system_prompt, user_prompt)
+
+    @staticmethod
+    def _source_passage(raw: dict, passages: list[Passage]) -> Passage | None:
+        """The passage the model says it used (1-based "passage"), if valid."""
+        try:
+            idx = int(raw.get("passage"))
+        except (TypeError, ValueError):
+            return None
+        return passages[idx - 1] if 1 <= idx <= len(passages) else None
 
     @staticmethod
     def _summarize(error: str, limit: int = 200) -> str:

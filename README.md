@@ -104,6 +104,14 @@ plus a 1-line justification, regardless of marks. This rule is enforced by
 question is edited (`PATCH /questions/{id}`), so a hand-edit can't drop a
 3-mark answer down to one line.
 
+## Strictly Karnataka State Board, from the textbook
+
+Drop the KTBS PDFs (`science_8.pdf`, `math_7_1.pdf`, ...) in a folder and run
+`python scripts/ingest_textbooks.py pdfs/ --write`. Chapters per grade come from
+the textbooks, questions are written from their passages and spread over the whole
+chapter, and `REQUIRE_TEXTBOOK=true` refuses anything not backed by an ingested
+book. Details: `generation_engine/README.md`.
+
 ## Repo layout
 
 ```

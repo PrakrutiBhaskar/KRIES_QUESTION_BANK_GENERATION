@@ -39,6 +39,7 @@ from .subject_formats import compile_required_pattern, get_marks_rule
 def validate_request_combination(
     request: GenerationRequest,
     syllabus: Optional["SyllabusIndex"] = None,  # noqa: F821 - see syllabus.py
+    require_syllabus: bool = False,
 ) -> list[str]:
     """
     Returns a list of human-readable problems with the request combination.
@@ -46,10 +47,12 @@ def validate_request_combination(
     (400) if this is non-empty — kept as pure validation here so it's
     trivially testable.
 
-    If a `syllabus` index is supplied, the chapter is additionally checked
-    against the known chapter list for that subject. Without one, any
-    non-blank chapter string is accepted (the MVP has no syllabus source
-    wired up yet — see spec.md Section 8).
+    If a `syllabus` index is supplied, the chapter must be part of the
+    Karnataka State Board syllabus for that subject AND for the requested
+    grade (when the data is grade-scoped) — a Class 7 request for a Class 9
+    chapter is a 400, not a silently accepted mismatch. Without an index, any
+    non-blank chapter string is accepted unless `require_syllabus` is set, in
+    which case the request is refused because the chapter can't be verified.
     """
     problems: list[str] = []
 
@@ -72,12 +75,29 @@ def validate_request_combination(
 
     if not request.chapter or not request.chapter.strip():
         problems.append("chapter must not be blank")
-    elif syllabus is not None and not syllabus.has_chapter(
-        request.subject, request.chapter
-    ):
+    elif syllabus is not None:
+        if not syllabus.has_chapter(request.subject, request.chapter):
+            problems.append(
+                f'unknown chapter "{request.chapter}" for subject '
+                f"{request.subject.value}"
+            )
+        elif not syllabus.has_chapter(
+            request.subject, request.chapter, grade=request.grade
+        ):
+            taught_in = syllabus.grades_for_chapter(request.subject, request.chapter)
+            hint = (
+                f" (it is taught in Class {', '.join(str(g) for g in taught_in)})"
+                if taught_in
+                else ""
+            )
+            problems.append(
+                f'chapter "{request.chapter}" is not part of the Karnataka State '
+                f"Board Class {request.grade} {request.subject.value} syllabus{hint}"
+            )
+    elif require_syllabus:
         problems.append(
-            f'unknown chapter "{request.chapter}" for subject '
-            f"{request.subject.value}"
+            "no Karnataka State Board syllabus is loaded, so the chapter "
+            f'"{request.chapter}" cannot be verified against it'
         )
 
     return problems
@@ -173,6 +193,109 @@ def find_duplicates(
         kept_normalized.append(norm)
 
     return drop
+
+
+# ---------------------------------------------------------------------------
+# 2b. Board-scope guard (Karnataka State Board only)
+# ---------------------------------------------------------------------------
+
+# Names of other boards / curricula. A question written for the Karnataka State
+# Board has no reason to mention them; if one does, the model has drifted into
+# another syllabus (or is quoting another board's textbook) and the item is
+# dropped. Word-boundary matched so e.g. "basic" or "cbse" inside other words
+# can't trip it.
+_OTHER_BOARD_PATTERN = re.compile(
+    r"\b(ncert|cbse|icse|isc|igcse|cambridge|ib\s+(?:board|curriculum|diploma)|"
+    r"edexcel|nios)\b",
+    re.IGNORECASE,
+)
+
+
+def check_board_scope(question: Question) -> list[str]:
+    """
+    Returns problems if the question text, options, answer, explanation, topic
+    or tags reference another board's syllabus. Empty list means OK. This is a
+    cheap lexical backstop to the prompt's scope instructions, not a proof that
+    the content is in the KTBS textbook.
+    """
+    haystacks = [
+        question.text,
+        question.answer,
+        question.explanation,
+        question.topic,
+        *(question.options or []),
+        *question.tags,
+    ]
+    for hay in haystacks:
+        if not hay:
+            continue
+        m = _OTHER_BOARD_PATTERN.search(hay)
+        if m:
+            return [
+                f'out of syllabus: references "{m.group(0)}" — questions must '
+                "follow the Karnataka State Board syllabus only"
+            ]
+    return []
+
+
+# ---------------------------------------------------------------------------
+# 2c. Textbook-grounding check
+# ---------------------------------------------------------------------------
+
+_WORD = re.compile(r"[\w\u0C80-\u0CFF]+", re.UNICODE)
+_STOPWORDS = frozenset(
+    "about above after again also among because been before being between both "
+    "could does each from have here into just like made make many more most much "
+    "must only other over same should some such than that their them then there "
+    "these they this those through under very want were what when where which "
+    "while will with would your following given correct statement answer "
+    "question choose select write state explain describe define name list".split()
+)
+
+
+def _stem(tok: str) -> str:
+    return tok[:4] if _KANNADA_CHAR.search(tok) else tok[:5]
+
+
+_KANNADA_CHAR = re.compile(r"[\u0C80-\u0CFF]")
+
+
+def _content_stems(text: str) -> set[str]:
+    stems: set[str] = set()
+    for tok in _WORD.findall(text.lower()):
+        if tok.isdigit() or any(c.isdigit() for c in tok):
+            continue
+        if len(tok) < 4 or tok in _STOPWORDS:
+            continue
+        stems.add(_stem(tok))
+    return stems
+
+
+def check_grounding(
+    question: Question, passage_texts: list[str], min_overlap: float
+) -> list[str]:
+    """
+    Problems if too few of the question's content words occur in the textbook
+    passage(s) it was written from. Lexical, stem-level (so "photosynthesising"
+    matches "photosynthesis"), numbers ignored — it catches a model that has
+    wandered off the textbook, not a wrong fact. Math questions that swap in new
+    numbers still pass because their terminology comes from the passage.
+    """
+    if min_overlap <= 0 or not passage_texts:
+        return []
+    own = " ".join([question.text, question.answer, *(question.options or [])])
+    q_stems = _content_stems(own)
+    if len(q_stems) < 4:  # too little signal to judge
+        return []
+    source = _content_stems(" ".join(passage_texts))
+    overlap = len(q_stems & source) / len(q_stems)
+    if overlap < min_overlap:
+        return [
+            f"not grounded in the textbook passage: only {overlap:.0%} of the "
+            f"question's key terms appear in it (need {min_overlap:.0%}) — "
+            "write the question from the passage given, using its terms"
+        ]
+    return []
 
 
 # ---------------------------------------------------------------------------

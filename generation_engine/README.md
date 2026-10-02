@@ -103,3 +103,40 @@ a subject's placeholder list out entirely.
 
 - **Factual correctness.** `check_answer_relevance` catches only structurally broken answers. `GenerationEngine.verify_relevance_llm` adds a second LLM pass for coherence (off by default, `ENABLE_LLM_RELEVANCE_CHECK=true`), but it checks coherence, not truth. The manual spot-check in test-plan.md Section 4 still stands.
 - **Threshold tuning.** Near-duplicate similarity (0.90) and the word-count bounds are first estimates, not calibrated against real Groq output.
+
+## Textbook-grounded generation (Karnataka State Board only)
+
+Questions are written **from the KTBS textbook text**, and the chapter list is
+**read from the textbook, not hardcoded**.
+
+```
+KTBS PDFs --scripts/ingest_textbooks.py--> backend/data/textbooks/*.json
+                                              |  (chapters, sections, passages)
+                       +----------------------+----------------------+
+                       v                                             v
+        syllabus = chapters per (subject, grade)        passages the model writes from
+```
+
+1. **Ingest** (`generation_engine/textbook_ingest.py`, CLI `scripts/ingest_textbooks.py`):
+   finds chapters (explicit list -> PDF outline -> contents page -> "Chapter N"
+   headings), splits each into sections and ~900-char passages. Text-layer PDFs
+   only (no OCR). Chapters it cannot locate are reported, never invented.
+2. **Syllabus**: `TextbookCorpus.to_syllabus_dict()` -> `SyllabusIndex`. A chapter
+   is valid only for the grade whose textbook contains it; section titles become
+   the chapter's topics.
+3. **Coverage**: each batch is assigned `count` passages by `select_passages`
+   (coprime-stride walk from `coverage_offset`), so one batch is spread over the
+   chapter and repeated batches visit every passage before repeating. The backend
+   passes the number of questions already stored for the chapter as the offset.
+4. **Prompt**: passages are numbered `[P1]..[Pn]`; exactly one question per
+   passage, answerable from that passage alone; the model reports `passage`.
+5. **Validation**: `check_grounding` drops questions whose key terms aren't in
+   their passage (lexical, stem-level, Kannada-aware); `check_board_scope` drops
+   mentions of other boards. Accepted questions carry a `src:<passage-id>` tag and
+   a `topic` defaulting to the passage's section.
+6. `REQUIRE_TEXTBOOK=true` refuses any (subject, grade, chapter) with no ingested
+   textbook text (HTTP 400) instead of letting the model free-write.
+
+Limits: grounding is lexical — it catches off-textbook drift, not a wrong fact
+(the manual spot-check in test-plan.md still applies). Kannada needs a Unicode
+text layer; legacy-font PDFs extract as garbage and the ingest report says so.

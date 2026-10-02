@@ -106,6 +106,28 @@ class Settings:
     )
     max_batch_count: int = field(default_factory=_env_int("MAX_BATCH_COUNT", 25))
 
+    # Strict Karnataka State Board mode. When true, the engine refuses to
+    # generate unless a syllabus index is loaded, so a chapter can never be
+    # accepted just because nobody supplied the syllabus. (When an index IS
+    # loaded it is always enforced, grade by grade, regardless of this flag.)
+    require_syllabus: bool = field(
+        default_factory=_env_bool("REQUIRE_SYLLABUS", False)
+    )
+
+    # Textbook grounding. When true, every request must be answerable from an
+    # ingested KTBS textbook for its (subject, grade, chapter); with no textbook
+    # text the request is refused instead of letting the model free-write.
+    require_textbook: bool = field(
+        default_factory=_env_bool("REQUIRE_TEXTBOOK", False)
+    )
+    # Max characters of each textbook passage shown to the model (token budget).
+    max_passage_chars: int = field(default_factory=_env_int("MAX_PASSAGE_CHARS", 900))
+    # Minimum fraction of a question's content words that must appear in the
+    # textbook passage it was written from. 0 disables the grounding check.
+    grounding_min_overlap: float = field(
+        default_factory=_env_float("GROUNDING_MIN_OVERLAP", 0.30)
+    )
+
     # Optional second-pass LLM relevance check. Off by default because it
     # adds one extra Groq call per batch.
     enable_llm_relevance_check: bool = field(

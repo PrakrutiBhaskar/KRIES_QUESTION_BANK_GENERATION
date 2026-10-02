@@ -31,3 +31,31 @@ Not included: *Pathya Puraka Adhyayana* (supplementary readers), and the
 Lesson titles were compiled from third-party KTBS study sites, not the
 official PDFs — verify against the current textbook edition before relying
 on them.
+
+## Strict Karnataka State Board enforcement
+
+The engine treats this file as the allow-list. A request is rejected (HTTP 400)
+unless its chapter is in the requested **grade's** list for that subject, and
+the prompt tells the model to stay inside that chapter of the KTBS textbook.
+
+- `grades` -> enforced per grade. Subjects without it (currently **English**)
+  can't be grade-checked: any listed chapter is accepted for any grade.
+- `topics` (optional, `{chapter: [sub-topics]}`) -> injected into the prompt to
+  bound each chapter's scope.
+- `_meta` -> provenance; ignored by the loader.
+- `REQUIRE_SYLLABUS=true` (engine/backend env) refuses generation when no
+  syllabus is loaded, instead of accepting any chapter string.
+
+**Verification status:** Math (Class 7/8/9) was rebuilt from published KTBS
+English-medium contents. Science, Social Science, English and Kannada are still
+the earlier interim lists - re-ingest them from the current-year KTBS PDFs
+(`scripts/ingest_syllabus.py`, add per-grade lists) before relying on them.
+Karnataka has had old and revised editions of several books; confirm which
+one your schools use.
+
+## Textbooks supersede this file
+
+With textbooks ingested into `backend/data/textbooks/` (see
+`generation_engine/README.md`), the syllabus is derived from them. With
+`REQUIRE_TEXTBOOK=true`, this `syllabus.json` is **not read at all** — it is only a
+fallback for (subject, grade) pairs that have no textbook yet when the flag is off.
