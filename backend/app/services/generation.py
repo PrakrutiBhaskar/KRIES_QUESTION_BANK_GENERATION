@@ -114,6 +114,9 @@ async def _cached_questions(
         stmt = stmt.where(func.lower(Question.topic) == payload.topic.strip().lower())
     if figure_ids is not None:
         stmt = stmt.where(Question.figure_id.in_(figure_ids))
+    else:
+        # A plain (theory) request never reuses a stored diagram-based question.
+        stmt = stmt.where(Question.figure_id.is_(None))
     return list((await session.scalars(stmt)).all())
 
 

@@ -91,7 +91,6 @@ export interface GenerateFormData {
   difficulty: Difficulty;
   marksPerQuestion: Marks;
   fresh: boolean;           // skip stored questions and force new generation
-  useFigures: boolean;      // write the questions about figures from the shared library
 }
 
 // ============================================================

@@ -24,6 +24,14 @@ overshoot a small chapter's target, and the 1-mark questions that follow are
 what smooth that out again. Because questions are whole units, a chapter can
 land a mark or two off its target; the preview reports the achieved figure.
 
+Diagram and theory mix
+----------------------
+A paper is never all theory. Within every (chapter, type, marks, difficulty)
+group, roughly a third of the questions are written about figures from the
+shared figure library and the rest are theory. A chapter with no usable library
+figure is all theory; if that is true of the whole paper there is nothing to
+draw on, so the paper falls back to theory only (and a warning is logged).
+
 The result is not guaranteed to hit the percentages exactly (a 2-mark section
 cannot split 50/50 over three chapters), but it is always as close as whole
 questions allow.
@@ -48,6 +56,8 @@ from ..schemas.responses import (
     BlueprintPlanOut,
     BlueprintSectionPlanOut,
 )
+from ..config import settings
+from . import figures as figure_service
 from . import generation as generation_service
 from .papers import compute_total_marks
 from .syllabus import get_or_create_subject
@@ -61,6 +71,18 @@ _BATCH = 25
 _TOP_UP_ROUNDS = 2
 
 _MIXED_CYCLE = ("easy", "medium", "hard")
+
+
+def figure_share(count: int) -> int:
+    """How many of `count` same-kind questions should be about figures.
+
+    About a third, and at least one whenever there are two or more to choose
+    from. A lone question stays theory here; `create_blueprint_paper` promotes
+    one to a figure question if the paper would otherwise have none.
+    """
+    if count < 2:
+        return 0
+    return max(1, count // 3)
 
 
 @dataclass
@@ -178,6 +200,7 @@ async def _fetch_group(
     difficulty: str,
     count: int,
     user_id: uuid.UUID,
+    use_figures: bool = False,
     on_progress: Callable[[int], None] | None = None,
 ) -> list[Question]:
     """`count` distinct questions for one (chapter, type, marks, difficulty).
@@ -198,6 +221,7 @@ async def _fetch_group(
             difficulty=difficulty,
             count=n,
             refresh=refresh,
+            use_figures=use_figures,
         )
         rows, *_ = await generation_service.generate_questions(
             session, payload, user_id=user_id
@@ -224,8 +248,9 @@ async def _fetch_group(
     if len(got) < count:
         raise UnprocessableError(
             f"Could only find {len(got)} of {count} distinct {marks}-mark "
-            f'{q_type.value} questions for "{chapter}". Try again, or reduce '
-            f"the number of questions drawn from this chapter."
+            f'{"diagram-based " if use_figures else ""}{q_type.value} questions '
+            f'for "{chapter}". Try again, or reduce the number of questions '
+            f"drawn from this chapter."
         )
     return got
 
@@ -245,20 +270,68 @@ async def create_blueprint_paper(
     plan = build_plan(blueprint)
     difficulties = _slot_difficulties(blueprint, plan)
 
-    # Fold every slot into (chapter, type, marks, difficulty) groups, so two
-    # sections that ask for the same kind of question share one fetch instead of
-    # each fetching (and possibly colliding on) the same stored rows.
-    GroupKey = tuple[str, QuestionType, int, str]
-    needed: dict[GroupKey, int] = {}
-    slot_keys: list[list[GroupKey]] = []
+    # Which chapters have at least one library figure to write from. Only those
+    # can contribute diagram-based questions.
+    figure_chapters: set[str] = set()
+    for chapter in dict.fromkeys(c for slots in plan.slots for c in slots):
+        usable = await figure_service.library_figures_for_generation(
+            session,
+            subject=blueprint.subject.value,
+            chapter=chapter,
+            topic=None,
+            limit=settings.max_generation_figures,
+        )
+        if usable:
+            figure_chapters.add(chapter)
+    if not figure_chapters:
+        logger.warning(
+            "No library figures for any chapter of this %s paper; it will be "
+            "theory only. Add figures on the Figure Library page.",
+            blueprint.subject.value,
+        )
+
+    # Fold every slot into (chapter, type, marks, difficulty, figures?) groups,
+    # so two sections that ask for the same kind of question share one fetch
+    # instead of each fetching (and possibly colliding on) the same stored rows.
+    # Per (chapter, type, marks, difficulty) the first `figure_share(n)` slots,
+    # in paper order, become diagram-based questions; the rest are theory.
+    GroupKey = tuple[str, QuestionType, int, str, bool]
+    BaseKey = tuple[str, QuestionType, int, str]
+    base_slots: list[list[BaseKey]] = []
+    base_total: dict[BaseKey, int] = {}
     for section, slots, diffs in zip(blueprint.sections, plan.slots, difficulties):
         keys = [
             (chapter, section.type, section.marks_per_question, diff)
             for chapter, diff in zip(slots, diffs)
         ]
-        slot_keys.append(keys)
+        base_slots.append(keys)
         for key in keys:
+            base_total[key] = base_total.get(key, 0) + 1
+
+    figure_left = {
+        key: (figure_share(n) if key[0] in figure_chapters else 0)
+        for key, n in base_total.items()
+    }
+    # A paper with figure-capable chapters but only single-question groups would
+    # have no diagram question at all: promote one slot so it is always a mix.
+    if figure_chapters and not any(figure_left.values()):
+        for key in base_total:
+            if key[0] in figure_chapters:
+                figure_left[key] = 1
+                break
+
+    needed: dict[GroupKey, int] = {}
+    slot_keys: list[list[GroupKey]] = []
+    for keys in base_slots:
+        resolved: list[GroupKey] = []
+        for base in keys:
+            as_figure = figure_left[base] > 0
+            if as_figure:
+                figure_left[base] -= 1
+            key: GroupKey = (*base, as_figure)
+            resolved.append(key)
             needed[key] = needed.get(key, 0) + 1
+        slot_keys.append(resolved)
 
     # Sequential on purpose: every call writes through the same request-scoped
     # session, and each may be a slow LLM call. A failure anywhere rolls the
@@ -275,7 +348,7 @@ async def create_blueprint_paper(
     report()
     pools: dict[GroupKey, list[Question]] = {}
     for key, count in needed.items():
-        chapter, q_type, marks, difficulty = key
+        chapter, q_type, marks, difficulty, with_figures = key
         pools[key] = await _fetch_group(
             session,
             blueprint,
@@ -285,6 +358,7 @@ async def create_blueprint_paper(
             difficulty=difficulty,
             count=count,
             user_id=user_id,
+            use_figures=with_figures,
             on_progress=report,
         )
 

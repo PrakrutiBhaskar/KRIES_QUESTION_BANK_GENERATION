@@ -20,7 +20,6 @@ import {
   errorMessage,
   fetchChapters,
   fetchCombinations,
-  fetchFigureLibrary,
   generateQuestions,
   planBatches,
   renumber,
@@ -184,7 +183,7 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
 // Generate Page
 // ============================================================
 export default function GeneratePage() {
-  const { upsertBank, showToast, settings, user } = useApp();
+  const { upsertBank, showToast, settings } = useApp();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<GenerateFormData>({
@@ -196,7 +195,6 @@ export default function GeneratePage() {
     difficulty: settings.defaultDifficulty,
     marksPerQuestion: settings.defaultMarks,
     fresh: false,
-    useFigures: false,
   });
 
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
@@ -204,12 +202,6 @@ export default function GeneratePage() {
   const [chaptersError, setChaptersError] = useState<string | null>(null);
   const [chaptersReload, setChaptersReload] = useState(0);
   const [marksByType, setMarksByType] = useState<MarksByType>(DEFAULT_MARKS_BY_TYPE);
-  // How many library figures are tagged with the chosen subject + chapter
-  // (null = not asked yet / unknown). Only fetched while "use figures" is on.
-  const [figureResult, setFigureResult] = useState<{ key: string; n: number } | null>(null);
-  const figureKey = `${form.subject}|${form.chapter}`;
-  const figureCount = form.useFigures && figureResult?.key === figureKey ? figureResult.n : null;
-
   const [loading, setLoading] = useState(false);
   // Questions created so far in the current run (updates as each batch finishes).
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -250,28 +242,6 @@ export default function GeneratePage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.subject, form.grade, chaptersReload]);
-
-  // The figures a figure request would draw on. A figure counts only if it has a
-  // caption or labelled parts, the same rule the backend applies.
-  useEffect(() => {
-    if (!form.useFigures || !form.chapter) return;
-    let cancelled = false;
-    fetchFigureLibrary({ subject: form.subject, chapter: form.chapter })
-      .then((rows) => {
-        if (!cancelled) {
-          setFigureResult({
-            key: `${form.subject}|${form.chapter}`,
-            n: rows.filter((f) => f.caption.trim() || f.labels.length > 0).length,
-          });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setFigureResult(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [form.useFigures, form.subject, form.chapter]);
 
   const setField = <K extends keyof GenerateFormData>(key: K, val: GenerateFormData[K]) =>
     setForm((p) => ({ ...p, [key]: val }));
@@ -315,7 +285,6 @@ export default function GeneratePage() {
           difficulty: b.difficulty,
           count: b.count,
           refresh,
-          useFigures: form.useFigures,
         });
         for (const q of res.questions) {
           if (seen.has(q.id)) continue;
@@ -343,8 +312,7 @@ export default function GeneratePage() {
       if (questions.length < form.questionCount) {
         showToast(
           `Generated ${questions.length} unique questions (asked for ${form.questionCount}). ` +
-            'Some repeated an existing question' +
-            (form.useFigures ? '; adding more figures for this chapter gives more variety.' : '.'),
+            'Some repeated an existing question.',
           'warning',
         );
       } else {
@@ -628,30 +596,6 @@ export default function GeneratePage() {
                 )}
               </div>
 
-              <div>
-                <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.useFigures}
-                    onChange={(e) => setField('useFigures', e.target.checked)}
-                    className="mt-0.5 accent-indigo-600"
-                  />
-                  <span>
-                    Write questions about figures
-                    <span className="block text-slate-400">
-                      Each question is about one diagram from the figure library for this chapter, and the diagram is printed in the answer key.
-                    </span>
-                  </span>
-                </label>
-                {form.useFigures && figureCount !== null && (
-                  <p className={`mt-1.5 ml-6 text-xs ${figureCount === 0 ? 'text-amber-600' : 'text-slate-500'}`}>
-                    {figureCount === 0
-                      ? `The figure library has nothing for ${form.subject} / ${form.chapter} yet. ${user?.role === 'Admin' ? 'Add one on the Figure Library page.' : 'Ask an administrator to add one.'}`
-                      : `${figureCount} figure${figureCount === 1 ? '' : 's'} available for this chapter.`}
-                  </p>
-                )}
-              </div>
-
               <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
@@ -672,7 +616,7 @@ export default function GeneratePage() {
           {/* Generate button */}
           <button
             type="submit"
-            disabled={loading || chaptersLoading || !form.chapter.trim() || (form.useFigures && figureCount === 0)}
+            disabled={loading || chaptersLoading || !form.chapter.trim()}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
           >
             {loading ? (
