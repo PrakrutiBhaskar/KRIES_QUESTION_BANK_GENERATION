@@ -29,6 +29,21 @@ def _env_str(name: str, default: str):
     return lambda: os.getenv(name, default)
 
 
+_PLACEHOLDER_KEYS = {"", "your-groq-api-key-here", "your_groq_api_key", "your-api-key", "changeme", "xxx"}
+
+
+def clean_api_key(raw: str | None) -> str:
+    """Strip whitespace, quotes and a stray 'Bearer ' prefix; placeholders count as unset."""
+    key = (raw or "").strip().strip("'\"").strip()
+    if key.lower().startswith("bearer "):
+        key = key[7:].strip()
+    return "" if key.lower() in _PLACEHOLDER_KEYS else key
+
+
+def mask_key(key: str) -> str:
+    return f"{key[:4]}…{key[-4:]}" if len(key) > 10 else ("(empty)" if not key else "****")
+
+
 def _env_int(name: str, default: int):
     def resolve() -> int:
         val = os.getenv(name)
@@ -58,7 +73,9 @@ def _env_bool(name: str, default: bool):
 @dataclass(frozen=True)
 class Settings:
     # --- Groq API ---
-    groq_api_key: str = field(default_factory=_env_str("GROQ_API_KEY", ""))
+    groq_api_key: str = field(
+        default_factory=lambda: clean_api_key(os.getenv("GROQ_API_KEY", ""))
+    )
     groq_base_url: str = field(
         default_factory=_env_str("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
     )

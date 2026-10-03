@@ -59,3 +59,12 @@ With textbooks ingested into `backend/data/textbooks/` (see
 `generation_engine/README.md`), the syllabus is derived from them. With
 `REQUIRE_TEXTBOOK=true`, this `syllabus.json` is **not read at all** — it is only a
 fallback for (subject, grade) pairs that have no textbook yet when the flag is off.
+
+## Kannada (first language), Classes 7-9
+
+Lesson lists are the textbook contents pages: ಗದ್ಯ ಭಾಗ, ಪದ್ಯ ಭಾಗ and the
+ಪೂರಕ / ಪಠ್ಯಪೂರಕ ಪಾಠಗಳು (supplementary lessons, keep the "(ಗದ್ಯ)" / "(ಪದ್ಯ)"
+suffix the book prints), both volumes per grade: Class 7 = 21, Class 8 = 22,
+Class 9 = 22 lessons. Remove the supplementary ones from a grade if your
+question papers never draw from them. Transcribed from photos, so spot-check
+spellings against the book; matching ignores ZWNJ/ZWJ but not other differences.

@@ -34,6 +34,15 @@ logger = logging.getLogger("backend")
 async def lifespan(app: FastAPI):
     # Syllabus first: the GenerationEngine takes the index at construction
     # time, so loading it afterwards would leave the engine without one.
+    from generation_engine.config import mask_key, settings as _engine_settings
+
+    if _engine_settings.groq_api_key:
+        logger.info("Groq API key loaded: %s", mask_key(_engine_settings.groq_api_key))
+    else:
+        logger.error(
+            "GROQ_API_KEY is missing or still the placeholder. Set a real key in "
+            "backend/.env (or the repo-root .env); generation will fail until then."
+        )
     index = load_syllabus_index()
     set_engine(None)
     get_engine()

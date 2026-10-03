@@ -22,11 +22,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from generation_engine.schemas import QuestionType
 
 from ..config import settings
-from ..errors import NotFoundError, UnprocessableError
+from ..errors import BadRequestError, NotFoundError, UnprocessableError
 from ..models import PracticeSession, PracticeSessionQuestion, Question
 from ..schemas.requests import GenerateIn, PracticeSessionIn
 from . import generation as generation_service
-from .syllabus import resolve_chapter
+from .syllabus import get_syllabus_index, resolve_chapter
 
 # Marks to request per type when generating a shortfall. MCQ is fixed at 1
 # (schemas.VALID_MARKS_BY_TYPE); Short defaults to the 2-mark format and Long
@@ -54,6 +54,14 @@ async def _stored_pool(
 async def create_session(
     session: AsyncSession, payload: PracticeSessionIn, user_id: uuid.UUID
 ) -> PracticeSession:
+    index = get_syllabus_index()
+    if index is not None and not index.has_chapter(
+        payload.subject, payload.chapter, grade=payload.grade
+    ):
+        raise BadRequestError(
+            f'chapter "{payload.chapter}" is not part of the Karnataka State '
+            f"Board Class {payload.grade} {payload.subject.value} syllabus"
+        )
     chapter = await resolve_chapter(session, payload.subject, payload.chapter)
 
     pool = await _stored_pool(session, payload, chapter.id)

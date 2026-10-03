@@ -126,3 +126,48 @@ async def test_engine_rejects_wrong_grade_chapter_with_400(index):
 
 def test_require_syllabus_setting_defaults_off():
     assert settings.require_syllabus is False
+
+
+# --- Kannada (first language) lesson lists from the KTBS contents pages ---
+
+def test_kannada_lessons_are_scoped_to_their_grade(index):
+    K = Subject.KANNADA
+    assert index.grades(K) == [7, 8, 9]
+    assert [len(index.chapters(K, grade=g)) for g in (7, 8, 9)] == [21, 22, 22]
+    assert index.has_chapter(K, "ಹುತ್ತರಿ ಹಾಡು", grade=7)
+    assert not index.has_chapter(K, "ಹುತ್ತರಿ ಹಾಡು", grade=8)
+    assert index.has_chapter(K, "ಮಗ್ಗದ ಸಾಹೇಬ", grade=8)
+    assert index.has_chapter(K, "ಅಧಿಕಾರ", grade=9)
+
+
+def test_kannada_title_matching_ignores_zwnj_and_keeps_vowel_signs(index):
+    K = Subject.KANNADA
+    assert index.has_chapter(K, "ಹಿಲ್ಪನ್ಹೆಡ್ ಚಳವಳಿ", grade=7)  # typed without the ZWNJ
+    # titles that differ only by vowel signs must stay distinct
+    assert index.canonical_chapter(K, "ಅಮ್ಮ", grade=8) == "ಅಮ್ಮ"
+    assert not index.has_chapter(K, "ಅಮ", grade=8)
+
+
+# --- strict grades: a chapter lives only in the grade(s) that name it ---
+
+def test_strict_index_gives_unscoped_subject_no_chapters_in_any_grade():
+    idx = SyllabusIndex.from_dict({"English": {"chapters": ["Tenses"]}}, strict_grades=True)
+    assert idx.chapters(Subject.ENGLISH, grade=8) == []
+    assert not idx.has_chapter(Subject.ENGLISH, "Tenses", grade=8)
+
+
+def test_shipped_syllabus_strict_has_no_grade_leakage(index):
+    strict = SyllabusIndex.from_json(SYLLABUS_PATH, strict_grades=True)
+    for subject in strict.subjects():
+        for g in (7, 8, 9):
+            for ch in strict.chapters(subject, grade=g):
+                assert strict.has_chapter(subject, ch, grade=g)
+                other = [x for x in (7, 8, 9) if x != g]
+                # a chapter listed for g may only also be listed for another grade if
+                # that grade's own list names it (shared textbook titles like Data Handling)
+                for o in other:
+                    assert strict.has_chapter(subject, ch, grade=o) == (
+                        o in strict.grades_for_chapter(subject, ch)
+                    )
+    assert strict.chapters(Subject.ENGLISH, grade=7) == []
+    assert not strict.has_chapter(Subject.KANNADA, "ಮಗ್ಗದ ಸಾಹೇಬ", grade=7)

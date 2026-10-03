@@ -114,7 +114,9 @@ class GroqClient:
         tpm_limit: int | None = None,
         estimated_output_tokens: int | None = None,
     ):
-        self.api_key = api_key or settings.groq_api_key
+        from .config import clean_api_key
+
+        self.api_key = clean_api_key(api_key) or settings.groq_api_key
         self.base_url = (base_url or settings.groq_base_url).rstrip("/")
         self.model = model or settings.groq_model
         self.timeout = timeout or settings.groq_timeout_seconds
@@ -200,6 +202,16 @@ class GroqClient:
                     )
                     if attempt == attempts:
                         raise GroqAPIError(last_error)
+                elif response.status_code in (401, 403):
+                    from .config import mask_key
+
+                    raise GroqAPIError(
+                        f"Groq rejected the API key ({mask_key(self.api_key)}, "
+                        f"HTTP {response.status_code}). Put a valid key from "
+                        "console.groq.com/keys in backend/.env as GROQ_API_KEY=gsk_... "
+                        "(no quotes or spaces), make sure no GROQ_API_KEY environment "
+                        "variable overrides it, then restart the backend."
+                    )
                 elif response.status_code >= 400:
                     # Non-retryable (bad key, bad model, malformed request).
                     raise GroqAPIError(

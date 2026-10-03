@@ -53,9 +53,12 @@ from .schemas import Subject
 
 
 def _normalize_chapter(name: str) -> str:
+    name = name.replace("\u200c", "").replace("\u200d", "")  # ZWNJ/ZWJ: typed inconsistently
     name = name.strip().lower()
     name = re.sub(r"^(chapter|ch\.?|adhyaya)\s*\d+\s*[:.\-]?\s*", "", name)
-    name = re.sub(r"[^\w\s]", "", name)
+    # \w drops Kannada vowel signs and virama (they're combining marks), which
+    # would collapse distinct titles; keep the whole Kannada block.
+    name = re.sub(r"[^\w\s\u0C80-\u0CFF]", "", name)
     return re.sub(r"\s+", " ", name).strip()
 
 
@@ -67,7 +70,12 @@ class SyllabusIndex:
         chapters_by_subject: Mapping[Subject, Iterable[str]],
         chapters_by_grade: Optional[Mapping[Subject, Mapping[int, Iterable[str]]]] = None,
         topics_by_chapter: Optional[Mapping[Subject, Mapping[str, Iterable[str]]]] = None,
+        strict_grades: bool = False,
     ):
+        # strict_grades: a chapter belongs ONLY to the grade list that names it.
+        # A subject with no per-grade lists then has no chapters for any grade
+        # (instead of every chapter being accepted for every grade).
+        self.strict_grades = strict_grades
         # subject -> normalised name -> display name (insertion-ordered)
         self._chapters: dict[Subject, dict[str, str]] = {}
         for subject, chapters in chapters_by_subject.items():
@@ -106,7 +114,9 @@ class SyllabusIndex:
     # --- construction ---
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, object]) -> "SyllabusIndex":
+    def from_dict(
+        cls, data: Mapping[str, object], strict_grades: bool = False
+    ) -> "SyllabusIndex":
         chapters_by_subject: dict[Subject, list[str]] = {}
         chapters_by_grade: dict[Subject, dict[int, list[str]]] = {}
         topics: dict[Subject, dict[str, list[str]]] = {}
@@ -173,12 +183,12 @@ class SyllabusIndex:
                     topic_map[str(ch)] = [str(t) for t in ts]
                 topics[subject] = topic_map
 
-        return cls(chapters_by_subject, chapters_by_grade, topics)
+        return cls(chapters_by_subject, chapters_by_grade, topics, strict_grades)
 
     @classmethod
-    def from_json(cls, path: str | Path) -> "SyllabusIndex":
+    def from_json(cls, path: str | Path, strict_grades: bool = False) -> "SyllabusIndex":
         with open(path, "r", encoding="utf-8") as fh:
-            return cls.from_dict(json.load(fh))
+            return cls.from_dict(json.load(fh), strict_grades)
 
     # --- lookup ---
 
@@ -198,6 +208,8 @@ class SyllabusIndex:
         set and the subject grade-scoped, only that grade's chapters.
         """
         all_chapters = self._chapters.get(subject, {})
+        if grade is not None and self.strict_grades and not self.is_grade_scoped(subject):
+            return []
         if grade is not None and self.is_grade_scoped(subject):
             return [
                 all_chapters[k]
@@ -218,6 +230,8 @@ class SyllabusIndex:
     ) -> bool:
         key = _normalize_chapter(chapter)
         if key not in self._chapters.get(subject, {}):
+            return False
+        if grade is not None and self.strict_grades and not self.is_grade_scoped(subject):
             return False
         if grade is not None and self.is_grade_scoped(subject):
             return key in self._by_grade[subject].get(int(grade), [])

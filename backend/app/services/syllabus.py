@@ -116,7 +116,7 @@ def load_syllabus_index() -> SyllabusIndex | None:
         _syllabus_index = None
         return None
     try:
-        _syllabus_index = SyllabusIndex.from_dict(merged)
+        _syllabus_index = SyllabusIndex.from_dict(merged, strict_grades=True)
         _grade_chapters = _grade_map_from_dict(merged)
         logger.info("Loaded syllabus index (%d chapters)", len(_syllabus_index))
     except ValueError as exc:
@@ -250,7 +250,11 @@ async def list_chapters(
         .options(noload(Chapter.subject))
         .outerjoin(
             Question,
-            (Question.chapter_id == Chapter.id) & (Question.is_active.is_(True)),
+            (Question.chapter_id == Chapter.id)
+            & (Question.is_active.is_(True))
+            # A chapter name can recur in two grades (e.g. Maths "Data Handling");
+            # count only the requested grade's questions.
+            & ((Question.grade == grade) if grade else True),
         )
         .where(Chapter.subject_id == subject_row.id)
         .group_by(Chapter.id)
@@ -263,9 +267,13 @@ async def list_chapters(
         rows = [
             (c, n) for c, n in rows if _syllabus_index.has_chapter(subject, c.name)
         ]
-    allowed = _grade_chapters.get(subject.value, {}).get(grade) if grade else None
-    if allowed is not None:
-        rows = [(c, n) for c, n in rows if _norm(c.name) in allowed]
+    if grade and _syllabus_index is not None:
+        # Strict: a chapter is listed only under the grade whose syllabus names it.
+        rows = [
+            (c, n)
+            for c, n in rows
+            if _syllabus_index.has_chapter(subject, c.name, grade=grade)
+        ]
     return rows
 
 
