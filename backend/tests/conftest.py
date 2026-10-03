@@ -49,6 +49,7 @@ os.environ.setdefault("ENABLE_LLM_ANSWER_VERIFICATION", "false")
 
 from app.db import Base, get_session  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
+from app.services import blueprint_jobs  # noqa: E402
 from app.services import generation as generation_service  # noqa: E402
 from generation_engine.engine import GenerationEngine  # noqa: E402
 from generation_engine.exceptions import GroqAPIError  # noqa: E402
@@ -334,6 +335,8 @@ async def sign_up(ac: AsyncClient, *, name: str = "Alice Teacher", email: str = 
 async def _app_client(session_factory, engine, *, signed_in: bool = True):
     """The app under test, wired to the in-memory DB and a stubbed Groq engine."""
     generation_service.set_engine(engine)
+    blueprint_jobs.set_session_factory(session_factory)
+    blueprint_jobs.reset()
 
     async def _override():
         async with session_factory() as session:
@@ -352,6 +355,8 @@ async def _app_client(session_factory, engine, *, signed_in: bool = True):
         yield ac
     fastapi_app.dependency_overrides.clear()
     generation_service.set_engine(None)
+    blueprint_jobs.set_session_factory(None)
+    blueprint_jobs.reset()
 
 
 @pytest_asyncio.fixture

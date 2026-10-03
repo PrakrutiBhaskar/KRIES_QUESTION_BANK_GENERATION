@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_serializer
 
@@ -182,3 +183,20 @@ class BlueprintPlanOut(BaseModel):
     total_questions: int
     sections: list[BlueprintSectionPlanOut]
     chapters: list[BlueprintChapterPlanOut]
+
+
+class BlueprintJobOut(BaseModel):
+    """Progress of a paper being built in the background."""
+
+    id: uuid.UUID
+    status: Literal["running", "done", "error"]
+    # Questions gathered so far out of the number the paper needs.
+    done: int
+    total: int
+    # Set when status == "done".
+    paper: PaperOut | None = None
+    # Set when status == "error": the same error / detail the one-shot endpoint
+    # would have answered with, and the HTTP status it would have used.
+    error: str | None = None
+    detail: str | None = None
+    error_status: int | None = None

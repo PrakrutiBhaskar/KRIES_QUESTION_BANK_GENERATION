@@ -23,11 +23,23 @@ Examples:
     # Several images, same chapter
     python scripts/upload_figure.py a.png b.png --admin principal@school.in \\
         --subject Science --chapter Photosynthesis --caption "Leaf diagram"
+
+    # A whole folder, each image with its own caption / chapter / labels
+    python scripts/upload_figure.py --manifest backend/data/figures/manifest.json \\
+        --admin principal@school.in --dry-run      # check first, writes nothing
+    python scripts/upload_figure.py --manifest backend/data/figures/manifest.json \\
+        --admin principal@school.in
+
+The manifest is JSON: {"figures": [{"file": "cell.png", "subject": "Science",
+"chapter": "...", "topic": "...", "caption": "...", "labels": ["..."]}, ...]}.
+`file` is relative to the manifest. Running it again skips figures already in
+the library with the same subject, chapter and caption (use --force to add anyway).
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 from pathlib import Path
 
@@ -45,7 +57,14 @@ from sqlalchemy.ext.asyncio import async_sessionmaker  # noqa: E402
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description="Add diagrams to the figure library.")
-    ap.add_argument("files", nargs="+", type=Path, help="PNG / JPEG / GIF / WebP file(s)")
+    ap.add_argument("files", nargs="*", type=Path, help="PNG / JPEG / GIF / WebP file(s)")
+    ap.add_argument(
+        "--manifest", type=Path, help="JSON file giving each image its own metadata (bulk mode)"
+    )
+    ap.add_argument("--dry-run", action="store_true", help="Validate everything, write nothing")
+    ap.add_argument(
+        "--force", action="store_true", help="Add figures even if the same caption already exists"
+    )
     ap.add_argument("--admin", required=True, help="Email of an administrator account (the uploader)")
     ap.add_argument("--subject", default="", help="Science, Math or Social Science")
     ap.add_argument("--chapter", default="", help="Chapter name, as in the syllabus")
@@ -54,7 +73,47 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument(
         "--labels", nargs="*", default=[], help='Labelled parts, e.g. "A: nucleus" "B: cell wall"'
     )
-    return ap.parse_args(argv)
+    args = ap.parse_args(argv)
+    if not args.files and not args.manifest:
+        ap.error("give at least one image file, or --manifest")
+    return args
+
+
+def load_jobs(args: argparse.Namespace) -> list[dict]:
+    """One dict per image: path plus its caption / subject / chapter / topic / labels."""
+    jobs: list[dict] = []
+    for path in args.files:
+        jobs.append(
+            {
+                "path": path,
+                "caption": args.caption,
+                "subject": args.subject,
+                "chapter": args.chapter,
+                "topic": args.topic,
+                "labels": args.labels,
+            }
+        )
+    if args.manifest:
+        base = args.manifest.resolve().parent
+        data = json.loads(args.manifest.read_text(encoding="utf-8"))
+        entries = data["figures"] if isinstance(data, dict) else data
+        for entry in entries:
+            jobs.append(
+                {
+                    "path": base / entry["file"],
+                    "caption": entry.get("caption", args.caption),
+                    "subject": entry.get("subject", args.subject),
+                    "chapter": entry.get("chapter", args.chapter),
+                    "topic": entry.get("topic", args.topic),
+                    "labels": entry.get("labels", args.labels),
+                }
+            )
+    return jobs
+
+
+def _key(subject: str, chapter: str, caption: str) -> tuple[str, str, str]:
+    norm = lambda v: " ".join((v or "").split()).lower()  # noqa: E731
+    return norm(subject), norm(chapter), norm(caption)
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -70,20 +129,35 @@ async def run(args: argparse.Namespace) -> int:
             if admin.role != "Admin":
                 print(f"{args.admin!r} is not an administrator. Run scripts/make_admin.py first.")
                 return 2
-            for path in args.files:
+            existing = {
+                _key(f.subject or "", f.chapter or "", f.caption or "")
+                for f in (await figure_service.list_figures(session, limit=100000))[0]
+            }
+            admin_id = admin.id  # rollback() expires ORM objects; keep the plain value
+            jobs = load_jobs(args)
+            added = skipped = 0
+            for job in jobs:
+                path: Path = job["path"]
+                key = _key(job["subject"], job["chapter"], job["caption"])
+                if key in existing and not args.force:
+                    skipped += 1
+                    print(f"exists  {path.name}: same subject/chapter/caption already in the library")
+                    continue
                 try:
+                    kwargs = {k: job[k] for k in ("caption", "subject", "chapter", "topic", "labels")}
                     figure = await figure_service.create_figure(
-                        session,
-                        path.read_bytes(),
-                        caption=args.caption,
-                        uploaded_by=admin.id,
-                        subject=args.subject,
-                        chapter=args.chapter,
-                        topic=args.topic,
-                        labels=args.labels,
+                        session, path.read_bytes(), uploaded_by=admin_id, **kwargs
                     )
-                    await session.commit()
-                    print(f"added {path.name}: figure {figure.id}")
+                    if args.dry_run:
+                        stored = figure_service.figure_path(figure)  # read before rollback
+                        await session.rollback()
+                        stored.unlink(missing_ok=True)
+                        print(f"ok      {path.name}")
+                    else:
+                        await session.commit()
+                        print(f"added   {path.name}: figure {figure.id}")
+                    existing.add(key)
+                    added += 1
                 except (BadRequestError, PayloadTooLargeError) as exc:
                     await session.rollback()
                     failures += 1
@@ -91,6 +165,8 @@ async def run(args: argparse.Namespace) -> int:
                 except OSError as exc:
                     failures += 1
                     print(f"skipped {path}: {exc}")
+            verb = "would add" if args.dry_run else "added"
+            print(f"\n{verb} {added}, already present {skipped}, failed {failures}")
     finally:
         await engine.dispose()
     return 1 if failures else 0

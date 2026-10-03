@@ -1,0 +1,159 @@
+{
+  "_comment": "Grade 9 Science figures. python scripts/upload_figure.py --manifest backend/data/figures/grade9/manifest.json --admin <email>. Files in _duplicates/ are lower-quality twins of uploaded figures and are not in the manifest.",
+  "figures": [
+    {
+      "file": "01-parenchyma-cells.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Plant tissues",
+      "caption": "Parenchyma cells in long section, showing the cell contents and the spaces between cells",
+      "labels": [
+        "Cytoplasm",
+        "Nucleus",
+        "Middle lamella",
+        "Chloroplast",
+        "Vacuole",
+        "Intercellular space",
+        "Primary cell wall"
+      ]
+    },
+    {
+      "file": "02-collenchyma-wall-thickenings.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Plant tissues",
+      "caption": "Plant tissue cells with thickened corners in their walls (collenchyma)",
+      "labels": [
+        "Wall thickenings",
+        "Nucleus",
+        "Vacuole",
+        "Cell wall"
+      ],
+      "note": "Tissue type is my reading of the drawing (thickened corners); the image itself doesn't name it."
+    },
+    {
+      "file": "03-phloem-tissue.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Complex permanent tissue",
+      "caption": "Phloem tissue",
+      "labels": [
+        "Sieve plate",
+        "Sieve tube",
+        "Phloem parenchyma",
+        "Component cell"
+      ],
+      "note": "'Component cell' is the image's spelling of companion cell."
+    },
+    {
+      "file": "04-paramoecium.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Unicellular organisms",
+      "caption": "Paramoecium, a single-celled organism",
+      "labels": [
+        "Water vacuole",
+        "Cilia",
+        "Macronucleus",
+        "Micronucleus",
+        "Oral groove",
+        "Cytosome",
+        "Food vacuole",
+        "Cytopyge",
+        "Waste"
+      ],
+      "note": "Image has a stray '2. Paramoecium:' heading."
+    },
+    {
+      "file": "05-permanent-tissue-flowchart.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Plant tissues",
+      "caption": "Flowchart of permanent tissue: simple tissue (parenchyma, collenchyma, sclerenchyma) and complex tissue (xylem, phloem)",
+      "labels": [
+        "Permanent tissue",
+        "Simple",
+        "Complex",
+        "Parenchyma",
+        "Collenchyma",
+        "Sclerenchyma",
+        "Xylem",
+        "Phloem"
+      ]
+    },
+    {
+      "file": "06-neuron.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Animal tissues",
+      "caption": "Neuron, the unit of nervous tissue",
+      "labels": [
+        "Dendrite",
+        "Nucleus",
+        "Axon",
+        "Nerve ending",
+        "Cell body"
+      ]
+    },
+    {
+      "file": "07-prokaryotic-cell.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Prokaryotic cell",
+      "caption": "Prokaryotic cell (a bacterium)",
+      "labels": [
+        "Plasma membrane",
+        "Ribosomes",
+        "Cell wall",
+        "Nucleoid"
+      ],
+      "note": "The image spells 'Nucleoid' as 'Nuclcoid' and its caption is slightly cut off."
+    },
+    {
+      "file": "08-atom-energy-levels.png",
+      "subject": "Science",
+      "chapter": "Structure of the Atom",
+      "topic": "Energy levels",
+      "caption": "A few energy levels (shells) in an atom",
+      "labels": [
+        "Nucleus",
+        "K shell (n=1)",
+        "M shell (n=3)",
+        "N shell (n=4)"
+      ],
+      "note": "The L shell (n=2) ring is drawn but not labelled."
+    },
+    {
+      "file": "09-muscle-fibre-types.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Animal tissues",
+      "caption": "Types of muscle fibres: (a) striated muscle, (b) smooth muscle, (c) cardiac muscle",
+      "labels": [
+        "Nuclei",
+        "Striations",
+        "Spindle-shaped muscle cell",
+        "Nucleus",
+        "Intercalated discs"
+      ],
+      "note": "Left edge of the caption is clipped; (a)/(b)/(c) are the image's own panel labels."
+    },
+    {
+      "file": "10-amoeba.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Unicellular organisms",
+      "caption": "Amoeba, a single-celled organism",
+      "labels": [
+        "Ectoplasm",
+        "Endoplasm",
+        "Mitochondria",
+        "Nucleus",
+        "Crystals",
+        "Food vacuole",
+        "Contractile vacuole",
+        "Advancing pseudopod"
+      ]
+    }
+  ]
+}

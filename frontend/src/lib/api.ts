@@ -693,6 +693,76 @@ export async function createBlueprintPaper(b: BlueprintInput): Promise<QuestionB
   );
 }
 
+interface BlueprintJobWire {
+  id: string;
+  status: 'running' | 'done' | 'error';
+  done: number;
+  total: number;
+  paper: PaperWire | null;
+  error: string | null;
+  detail: string | null;
+  error_status: number | null;
+}
+
+/** How far a paper build has got: questions gathered out of the number needed. */
+export interface BlueprintProgress {
+  done: number;
+  total: number;
+}
+
+const JOB_POLL_MS = 1500;
+const JOB_GIVE_UP_MS = 15 * 60 * 1000;
+const JOB_MAX_POLL_FAILURES = 5;
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Build and save a paper from a blueprint, reporting progress as it goes.
+ *
+ * Starts the build as a background job on the server and polls it, so the page
+ * can show "N of M questions created" instead of a spinner. Same result and same
+ * all-or-nothing behaviour as createBlueprintPaper. If `signal` aborts (the
+ * page was closed) polling stops; the server finishes the paper regardless and
+ * it shows up in Question Banks.
+ */
+export async function buildBlueprintPaper(
+  b: BlueprintInput,
+  onProgress: (p: BlueprintProgress) => void,
+  signal?: AbortSignal,
+): Promise<QuestionBank> {
+  let job = await request<BlueprintJobWire>(
+    '/papers/blueprint/jobs',
+    { method: 'POST', body: JSON.stringify(blueprintBody(b)) },
+    30000,
+  );
+  onProgress({ done: job.done, total: job.total });
+
+  const startedAt = Date.now();
+  let failures = 0;
+  while (job.status === 'running') {
+    await sleep(JOB_POLL_MS);
+    if (signal?.aborted) throw new ApiError(0, 'cancelled', 'Cancelled.');
+    if (Date.now() - startedAt > JOB_GIVE_UP_MS) {
+      throw new ApiError(0, 'timeout', 'Building the paper is taking too long. Check Question Banks in a few minutes.');
+    }
+    try {
+      job = await request<BlueprintJobWire>(`/papers/blueprint/jobs/${job.id}`, {}, 15000);
+      failures = 0;
+    } catch (err) {
+      // A dropped request or a timeout is not the build failing; try again a few times.
+      const transient = err instanceof TypeError || (err instanceof ApiError && err.code === 'timeout');
+      if (!transient || ++failures >= JOB_MAX_POLL_FAILURES) throw err;
+      continue;
+    }
+    onProgress({ done: job.done, total: job.total });
+  }
+
+  if (job.status === 'error') {
+    throw new ApiError(job.error_status ?? 500, job.error ?? 'error', job.detail ?? 'Building the paper failed.');
+  }
+  return toBank(job.paper as PaperWire);
+}
+
 // ------------------------------------------------------------
 // Export
 // ------------------------------------------------------------

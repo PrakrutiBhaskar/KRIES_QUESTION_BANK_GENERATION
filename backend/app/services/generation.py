@@ -226,6 +226,8 @@ async def generate_questions(
             f"got {payload.count}"
         )
 
+    # Hand the canonical chapter name to Module A so prompts and any syllabus
+    # check use the syllabus' own spelling, not the caller's.
     # Walk the chapter's textbook passages from where earlier batches stopped,
     # so repeated generation covers the whole chapter.
     coverage_offset = (
@@ -239,8 +241,6 @@ async def generate_questions(
         or 0
     )
 
-    # Hand the canonical chapter name to Module A so prompts and any syllabus
-    # check use the syllabus' own spelling, not the caller's.
     request = GenerationRequest(
         subject=payload.subject,
         chapter=chapter.name,
@@ -251,7 +251,6 @@ async def generate_questions(
         count=shortfall,
         topic=payload.topic,
         figures=[figure_service.to_context(f) for f in figures] if figures else None,
-        coverage_offset=coverage_offset,
     )
 
     engine = get_engine()

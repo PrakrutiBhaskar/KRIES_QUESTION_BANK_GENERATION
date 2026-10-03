@@ -8,6 +8,8 @@ Paper builder endpoints (api-contract.md Section 3).
   DELETE /papers/{id}     (not in the original contract; added for the frontend)
   POST  /papers/blueprint           build a board-style paper from a blueprint
   POST  /papers/blueprint/preview   the same allocation, without generating anything
+  POST  /papers/blueprint/jobs      start the same build in the background (202)
+  GET   /papers/blueprint/jobs/{id} progress: questions gathered so far, then the paper
 """
 from __future__ import annotations
 
@@ -19,8 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_session
 from ..deps import get_current_user
 from ..models import User
-from ..schemas import BlueprintIn, BlueprintPlanOut, ErrorOut, PaperIn, PaperOut, PaperPatch
+from ..schemas import BlueprintIn, BlueprintJobOut, BlueprintPlanOut, ErrorOut, PaperIn, PaperOut, PaperPatch
 from ..services import blueprint as blueprint_service
+from ..services import blueprint_jobs
 from ..services import papers as paper_service
 
 router = APIRouter(prefix="/papers", tags=["papers"])
@@ -68,6 +71,40 @@ async def create_blueprint_paper(
 ) -> PaperOut:
     paper = await blueprint_service.create_blueprint_paper(session, payload, user.id)
     return PaperOut.from_model(paper)
+
+
+@router.post(
+    "/blueprint/jobs",
+    response_model=BlueprintJobOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Build a paper from a blueprint in the background",
+    description=(
+        "Same build as `POST /papers/blueprint` (all-or-nothing, stored questions "
+        "reused), but it answers at once with a job id. Poll "
+        "`GET /papers/blueprint/jobs/{id}` for `done` / `total` questions and, when "
+        "`status` is `done`, the finished paper. One build per user at a time (409)."
+    ),
+    responses={400: {"model": ErrorOut}, 409: {"model": ErrorOut}, 429: {"model": ErrorOut}},
+)
+async def start_blueprint_job(
+    payload: BlueprintIn, user: User = Depends(get_current_user)
+) -> BlueprintJobOut:
+    # Same arithmetic as the preview, so an impossible blueprint is a 400 now
+    # rather than an error found halfway through.
+    blueprint_service.build_plan(payload)
+    return blueprint_jobs.start(payload, user.id).to_out()
+
+
+@router.get(
+    "/blueprint/jobs/{job_id}",
+    response_model=BlueprintJobOut,
+    summary="Progress of a background paper build",
+    responses={404: {"model": ErrorOut}},
+)
+async def get_blueprint_job(
+    job_id: uuid.UUID, user: User = Depends(get_current_user)
+) -> BlueprintJobOut:
+    return blueprint_jobs.get(job_id, user.id).to_out()
 
 
 @router.post(

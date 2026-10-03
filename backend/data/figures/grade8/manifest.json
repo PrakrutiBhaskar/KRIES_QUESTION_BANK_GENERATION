@@ -1,0 +1,379 @@
+{
+  "_comment": "Grade 8 Science figures. Use with: python scripts/upload_figure.py --manifest backend/data/figures/grade8/manifest.json --admin <email>. 'note' is ignored by the uploader.",
+  "figures": [
+    {
+      "file": "01-female-anopheles-mosquito.png",
+      "subject": "Science",
+      "chapter": "Microorganisms: Friend and Foe",
+      "topic": "Disease-carrying insects",
+      "caption": "Female Anopheles mosquito, the carrier of the malaria parasite",
+      "labels": [
+        "Antenna",
+        "Proboscis",
+        "Antennas",
+        "Abdominal segments"
+      ],
+      "note": "Has a 'KTBSSolutions.com' watermark in the image; the label 'Antennas' may be meant as palps."
+    },
+    {
+      "file": "02-nitrogen-fixing-blue-green-algae.png",
+      "subject": "Science",
+      "chapter": "Microorganisms: Friend and Foe",
+      "topic": "Nitrogen fixation",
+      "caption": "The nitrogen-fixing blue-green algae (Anabaena), with its vegetative cells, heterocyst, akinete and filaments",
+      "labels": [
+        "Heterocyst",
+        "Anabaena",
+        "Vegetative cell",
+        "Akinete",
+        "Filament",
+        "Filamentous form"
+      ]
+    },
+    {
+      "file": "03-hoe.png",
+      "subject": "Science",
+      "chapter": "Crop Production and Management",
+      "topic": "Agricultural implements",
+      "caption": "Fig. (b): A hoe",
+      "labels": [
+        "Grip",
+        "Handle",
+        "Beam",
+        "Bent plate",
+        "Rod"
+      ]
+    },
+    {
+      "file": "04-plough.png",
+      "subject": "Science",
+      "chapter": "Crop Production and Management",
+      "topic": "Agricultural implements",
+      "caption": "Fig. (a): The plough, drawn by a pair of bullocks",
+      "labels": [
+        "Beam",
+        "Ploughshaft",
+        "Ploughshare"
+      ]
+    },
+    {
+      "file": "05-petroleum-natural-gas-deposits.png",
+      "subject": "Science",
+      "chapter": "Coal and Petroleum",
+      "topic": "Petroleum and natural gas",
+      "caption": "Petroleum and natural gas deposits trapped under impervious rock, reached by wells",
+      "labels": [
+        "Wells",
+        "Impervious rock",
+        "Gas",
+        "Oil",
+        "Reservoir rock",
+        "Water"
+      ],
+      "note": "Bottom caption is slightly cropped."
+    },
+    {
+      "file": "06-spring-balance.png",
+      "subject": "Science",
+      "chapter": "Force and Pressure",
+      "topic": "Measuring force",
+      "caption": "A spring balance, with an enlarged view of its scale in grams",
+      "labels": [
+        "Top loop (for suspension)",
+        "Scales in grams",
+        "Spring and pointer",
+        "Hook (for attaching weight)"
+      ]
+    },
+    {
+      "file": "07-friction-on-table.png",
+      "subject": "Science",
+      "chapter": "Friction",
+      "topic": "Frictional force",
+      "caption": "A block on a table: the applied force and the opposing frictional force",
+      "labels": [
+        "Direction of applied force",
+        "Frictional force"
+      ],
+      "note": "Right edge slightly clipped."
+    },
+    {
+      "file": "08-thermoplastic-circuit.png",
+      "subject": "Science",
+      "chapter": "Synthetic Fibres and Plastics",
+      "topic": "Plastics and electricity",
+      "caption": "Circuit with a dry cell and a bulb, testing whether a thermoplastic object between A and B conducts electricity",
+      "labels": [
+        "Dry cell",
+        "Bulb",
+        "A thermoplastic object"
+      ]
+    },
+    {
+      "file": "09-iron-stand-thread-plate.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Vibrations",
+      "caption": "Fig. 1: An iron stand with a thread hanging from the clamp and a small plate suspended from it",
+      "labels": [
+        "Clamp with screw",
+        "Retort stand",
+        "Fine thread",
+        "Suspended small plate",
+        "Heavy base"
+      ],
+      "note": "CHECK CHAPTER: I guessed Sound; the diagram does not say which activity it is from."
+    },
+    {
+      "file": "10-nitrogen-cycle.png",
+      "subject": "Science",
+      "chapter": "Microorganisms: Friend and Foe",
+      "topic": "Nitrogen cycle",
+      "caption": "The nitrogen cycle, from atmospheric nitrogen through lightning, bacteria, plants and animals back to the soil",
+      "labels": [
+        "Atmospheric nitrogen",
+        "Lightning fixes nitrogen",
+        "Uptake by plants",
+        "Animals eat plants",
+        "Nitrogenous waste from excretion and death",
+        "Compounds of nitrogen in the soil",
+        "Bacteria turn compounds of nitrogen into gaseous nitrogen"
+      ]
+    },
+    {
+      "file": "11-human-cheek-cells.png",
+      "subject": "Science",
+      "chapter": "Cell: Structure and Functions",
+      "topic": "Animal cell",
+      "caption": "Human cheek cells",
+      "labels": [
+        "Nuclear membrane",
+        "Cytoplasm",
+        "Nucleus",
+        "Cell membrane"
+      ]
+    },
+    {
+      "file": "12-onion-peel-cells.png",
+      "subject": "Science",
+      "chapter": "Cell: Structure and Functions",
+      "topic": "Plant cell",
+      "caption": "Cells observed in an onion peel",
+      "labels": [
+        "Nucleus",
+        "Cytoplasm"
+      ]
+    },
+    {
+      "file": "13-plant-and-animal-cell.png",
+      "subject": "Science",
+      "chapter": "Cell: Structure and Functions",
+      "topic": "Plant and animal cells",
+      "caption": "(a) Plant cell and (b) animal cell compared",
+      "labels": [
+        "Cell wall",
+        "Cell membrane",
+        "Vacuole",
+        "Nucleus",
+        "Chloroplast",
+        "Cytoplasm"
+      ]
+    },
+    {
+      "file": "14-candle-flame.png",
+      "subject": "Science",
+      "chapter": "Combustion and Flame",
+      "topic": "Zones of a flame",
+      "caption": "Candle flame and its three zones",
+      "labels": [
+        "Hot outermost zone of complete combustion",
+        "Middle zone of incomplete combustion",
+        "Innermost zone of unburnt wax",
+        "Candle"
+      ],
+      "note": "Right edge has a border artefact."
+    },
+    {
+      "file": "15-larynx-anatomy.png",
+      "subject": "Science",
+      "chapter": "Reaching the Age of Adolescence",
+      "topic": "Voice box (larynx)",
+      "caption": "Larynx anatomy: the position of the voice box in the throat and a close-up of the vocal cords",
+      "labels": [
+        "Vocal cords",
+        "Cartilage"
+      ],
+      "note": "Two label lines in the image have no text. Chapter is not in your syllabus.json."
+    },
+    {
+      "file": "16-nerve-cell.png",
+      "subject": "Science",
+      "chapter": "Cell: Structure and Functions",
+      "topic": "Specialised cells",
+      "caption": "Nerve cell",
+      "labels": [
+        "Nucleus",
+        "Axon",
+        "Myelin sheath",
+        "Axon terminals"
+      ]
+    },
+    {
+      "file": "17-endocrine-glands.png",
+      "subject": "Science",
+      "chapter": "Reaching the Age of Adolescence",
+      "topic": "Hormones",
+      "caption": "Position of endocrine glands in the human body",
+      "labels": [
+        "Pituitary gland",
+        "Thyroid gland",
+        "Adrenal gland",
+        "Pancreas",
+        "Position of the ovary in the female",
+        "Testis"
+      ],
+      "note": "Chapter is not in your syllabus.json."
+    },
+    {
+      "file": "18-reproduction-in-hydra.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Animals",
+      "topic": "Asexual reproduction",
+      "caption": "Reproduction in Hydra by budding",
+      "labels": [
+        "Parent Hydra",
+        "Bud",
+        "New Hydra on detachment forms a new Hydra"
+      ]
+    },
+    {
+      "file": "19-yeast-budding-binary-fission.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Animals",
+      "topic": "Asexual reproduction",
+      "caption": "Reproduction in yeast by budding (the image's bottom caption reads 'Binary fission in Amoeba')",
+      "labels": [
+        "Cell wall",
+        "Nucleus",
+        "Cell membrane",
+        "Cytoplasm",
+        "Nucleus divides",
+        "Rapid budding colony of yeast",
+        "Yeast cells detached from the colony"
+      ],
+      "note": "Caption in the image doesn't match the drawing (shows yeast budding, not amoeba fission)."
+    },
+    {
+      "file": "20-electrolysis-copper-plating.png",
+      "subject": "Science",
+      "chapter": "Chemical Effects of Electric Current",
+      "topic": "Electroplating",
+      "caption": "Passing current through a salt solution with copper electrodes, with a compass showing the magnetic field around the wire; copper plates onto one electrode",
+      "labels": [
+        "Dry cell (battery)",
+        "Compass",
+        "Magnetic field line (dashed, with north arrow)",
+        "Conductor wire",
+        "Copper/carbon electrodes",
+        "Liquid (salt solution)",
+        "Copper plating on electrode"
+      ],
+      "note": "Left edge has a leftover 'ons.com' watermark fragment."
+    },
+    {
+      "file": "21-fertilisation-zygote-animals.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Animals",
+      "topic": "Fertilisation",
+      "caption": "Fertilisation of the ovum by a sperm, and the zygote formed (the image's bottom caption reads 'Reproduction by Budding and Fission')",
+      "labels": [
+        "Sperms",
+        "Ovum",
+        "Fusing",
+        "Zygote"
+      ],
+      "note": "Caption in the image doesn't match the drawing (shows fertilisation, not budding or fission)."
+    },
+    {
+      "file": "22-solar-system.png",
+      "subject": "Science",
+      "chapter": "Stars and the Solar System",
+      "topic": "The solar system",
+      "caption": "The solar system (not to scale): the Sun and planets in their orbits with the asteroid belt",
+      "labels": [
+        "Sun",
+        "Mercury",
+        "Venus",
+        "Earth",
+        "Mars",
+        "Asteroid belt",
+        "Jupiter",
+        "Saturn",
+        "Uranus",
+        "Neptune"
+      ],
+      "note": "Chapter is not in your syllabus.json."
+    },
+    {
+      "file": "23-ursa-major.png",
+      "subject": "Science",
+      "chapter": "Stars and the Solar System",
+      "topic": "Constellations",
+      "caption": "(a) The constellation Ursa Major",
+      "labels": [],
+      "note": "Chapter is not in your syllabus.json."
+    },
+    {
+      "file": "24-orion.png",
+      "subject": "Science",
+      "chapter": "Stars and the Solar System",
+      "topic": "Constellations",
+      "caption": "(b) The constellation Orion",
+      "labels": [],
+      "note": "Chapter is not in your syllabus.json."
+    },
+    {
+      "file": "25-human-eye.png",
+      "subject": "Science",
+      "chapter": "Light",
+      "topic": "The human eye",
+      "caption": "Human eye",
+      "labels": [
+        "Ciliary muscle",
+        "Iris",
+        "Lens",
+        "Cornea",
+        "Retina",
+        "Optic nerve"
+      ],
+      "note": "Light is in your syllabus.json under Class 7 only."
+    },
+    {
+      "file": "26-reflection-of-light.png",
+      "subject": "Science",
+      "chapter": "Light",
+      "topic": "Reflection of light",
+      "caption": "Reflection of light: incident ray, reflected ray, normal, angle of incidence (i) and angle of reflection (r)",
+      "labels": [
+        "Angle of reflection (r)",
+        "Angle of incidence (i)",
+        "Reflected ray",
+        "Incident ray",
+        "Normal"
+      ],
+      "note": "Light is in your syllabus.json under Class 7 only."
+    },
+    {
+      "file": "27-regular-and-diffused-reflection.png",
+      "subject": "Science",
+      "chapter": "Light",
+      "topic": "Reflection of light",
+      "caption": "Regular reflection from a smooth surface and diffused reflection from a rough surface",
+      "labels": [
+        "Regular reflection",
+        "Diffused reflection"
+      ],
+      "note": "Light is in your syllabus.json under Class 7 only."
+    }
+  ]
+}

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -177,6 +178,7 @@ async def _fetch_group(
     difficulty: str,
     count: int,
     user_id: uuid.UUID,
+    on_progress: Callable[[int], None] | None = None,
 ) -> list[Question]:
     """`count` distinct questions for one (chapter, type, marks, difficulty).
 
@@ -200,10 +202,13 @@ async def _fetch_group(
         rows, *_ = await generation_service.generate_questions(
             session, payload, user_id=user_id
         )
+        before = len(got)
         for row in rows:
             if row.id not in seen and len(got) < count:
                 seen.add(row.id)
                 got.append(row)
+        if on_progress is not None and len(got) > before:
+            on_progress(len(got) - before)
 
     # The first request honours the caller's `refresh`, so it may be served from
     # storage. Every later request forces fresh generation: asking the cache
@@ -226,8 +231,17 @@ async def _fetch_group(
 
 
 async def create_blueprint_paper(
-    session: AsyncSession, blueprint: BlueprintIn, user_id: uuid.UUID
+    session: AsyncSession,
+    blueprint: BlueprintIn,
+    user_id: uuid.UUID,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> Paper:
+    """Build and store the paper.
+
+    `on_progress(done, total)` is called with the number of questions gathered so
+    far (stored or newly generated) out of the number the paper needs, once at the
+    start and again after every batch. It is what the background job reports.
+    """
     plan = build_plan(blueprint)
     difficulties = _slot_difficulties(blueprint, plan)
 
@@ -249,6 +263,16 @@ async def create_blueprint_paper(
     # Sequential on purpose: every call writes through the same request-scoped
     # session, and each may be a slow LLM call. A failure anywhere rolls the
     # whole request back, so a paper is either complete or not stored at all.
+    total = sum(needed.values())
+    gathered = 0
+
+    def report(delta: int = 0) -> None:
+        nonlocal gathered
+        gathered = min(total, gathered + delta)
+        if on_progress is not None:
+            on_progress(gathered, total)
+
+    report()
     pools: dict[GroupKey, list[Question]] = {}
     for key, count in needed.items():
         chapter, q_type, marks, difficulty = key
@@ -261,6 +285,7 @@ async def create_blueprint_paper(
             difficulty=difficulty,
             count=count,
             user_id=user_id,
+            on_progress=report,
         )
 
     subject_row = await get_or_create_subject(session, blueprint.subject)

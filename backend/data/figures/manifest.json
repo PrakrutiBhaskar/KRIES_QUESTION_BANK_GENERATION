@@ -1,0 +1,633 @@
+{
+  "_comment": "Bulk figure manifest for scripts/upload_figure.py --manifest. 'file' is relative to this file; 'note' is ignored by the uploader.",
+  "figures": [
+    {
+      "file": "01-food-chains-arrows.png",
+      "subject": "Science",
+      "chapter": "Forests: Our Lifeline",
+      "topic": "Food chains",
+      "caption": "Three food chains drawn with arrows: plants to deer to tiger; plants to frog to snake to eagle; plants to insects to fish to swan",
+      "labels": [
+        "Plants",
+        "Deer",
+        "Tiger",
+        "Frog",
+        "Snake",
+        "Eagle",
+        "Insects",
+        "Fish",
+        "Swan"
+      ],
+      "note": "Low-quality scan; the label 'Tiges' is misspelt in the image. #12 is a cleaner version."
+    },
+    {
+      "file": "02-respiration-word-equations.png",
+      "subject": "Science",
+      "chapter": "Respiration in Organisms",
+      "topic": "Aerobic and anaerobic respiration",
+      "caption": "Word equations for respiration: glucose with oxygen gives carbon dioxide, water and energy; glucose without oxygen gives alcohol, carbon dioxide and energy",
+      "labels": []
+    },
+    {
+      "file": "03-distance-time-constant-speed.png",
+      "subject": "Science",
+      "chapter": "Motion and Time",
+      "topic": "Distance-time graphs",
+      "caption": "Distance-time graph of a car moving at constant speed (a straight sloping line)",
+      "labels": [
+        "Distance (y-axis)",
+        "Time (x-axis)"
+      ]
+    },
+    {
+      "file": "04-distance-time-car-parked.png",
+      "subject": "Science",
+      "chapter": "Motion and Time",
+      "topic": "Distance-time graphs",
+      "caption": "Distance-time graph of a car parked on a side road (a horizontal line)",
+      "labels": [
+        "Distance (y-axis)",
+        "Time (x-axis)"
+      ]
+    },
+    {
+      "file": "05-circuit-two-cells-bulb-gap.png",
+      "subject": "Science",
+      "chapter": "Electric Current and Its Effects",
+      "topic": "Electric circuits",
+      "caption": "Electric circuit with a bulb, two cells in series and a gap between two terminals in the wire",
+      "labels": [
+        "Bulb",
+        "Cell (two, in series)",
+        "Gap between terminals"
+      ]
+    },
+    {
+      "file": "06-circuit-bulb-switch.png",
+      "subject": "Science",
+      "chapter": "Electric Current and Its Effects",
+      "topic": "Electric circuits",
+      "caption": "Electric circuit with a bulb, a switch and a source of current",
+      "labels": [
+        "Bulb",
+        "Switch"
+      ],
+      "note": "Scan is smudged; the cell/battery at the top is hard to make out."
+    },
+    {
+      "file": "07-circuit-three-bulbs-switch.png",
+      "subject": "Science",
+      "chapter": "Electric Current and Its Effects",
+      "topic": "Electric circuits",
+      "caption": "Electric circuit with a battery, an open switch and three bulbs A, B and C in series",
+      "labels": [
+        "A: bulb",
+        "B: bulb",
+        "C: bulb",
+        "Switch",
+        "Battery"
+      ]
+    },
+    {
+      "file": "08-circuit-bulb-glowing.png",
+      "subject": "Science",
+      "chapter": "Electric Current and Its Effects",
+      "topic": "Electric circuits",
+      "caption": "Circuit diagram of an electric circuit with a cell, a glowing bulb and a closed switch",
+      "labels": [
+        "Cell",
+        "Bulb",
+        "Switch"
+      ]
+    },
+    {
+      "file": "09-pitcher-plant-morphology.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Plants",
+      "topic": "Insectivorous plants",
+      "caption": "Pitcher plant morphology, with a detail of the pitcher showing its carnivorous adaptation",
+      "labels": [
+        "Pitcher plant",
+        "Standard foliage leaf",
+        "Lid (operculum)",
+        "Peristome (waxy rim)",
+        "Digestive zone with enzymes",
+        "Fluid level",
+        "Captured insect",
+        "Leaf modified into pitcher"
+      ]
+    },
+    {
+      "file": "10-photosynthesis-pathway.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Plants",
+      "topic": "Photosynthesis",
+      "caption": "Photosynthesis pathway: cross-section of a leaf, chloroplast, stomata and the overall reaction",
+      "labels": [
+        "Cuticle",
+        "Epidermis",
+        "Palisade mesophyll",
+        "Spongy mesophyll",
+        "Chloroplast",
+        "Guard cells (stomata)",
+        "Carbon dioxide",
+        "Water",
+        "Glucose",
+        "Oxygen"
+      ]
+    },
+    {
+      "file": "11-animal-cell-epithelial.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Animals",
+      "topic": "Animal cell",
+      "caption": "Animal cell structure as seen in epithelial tissue",
+      "labels": [
+        "Nucleus",
+        "Mitochondria",
+        "Cytoplasm",
+        "Golgi apparatus",
+        "Cell membrane"
+      ],
+      "note": "Cell chapter is Class 8, so this is filed under a Class 7 chapter; change if it belongs elsewhere."
+    },
+    {
+      "file": "12-food-chains-ecosystems.png",
+      "subject": "Science",
+      "chapter": "Forests: Our Lifeline",
+      "topic": "Food chains",
+      "caption": "Simple food chains in a forest, a grassland and a wetland ecosystem",
+      "labels": [
+        "Plants",
+        "Deer",
+        "Tiger",
+        "Insects",
+        "Frog",
+        "Snake",
+        "Eagle",
+        "Fish",
+        "Swan"
+      ]
+    },
+    {
+      "file": "13-ruminant-digestion.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Animals",
+      "topic": "Digestion in ruminants",
+      "caption": "Digestive system of a ruminant (cow)",
+      "labels": [
+        "Rumen",
+        "Reticulum",
+        "Omasum",
+        "Abomasum"
+      ],
+      "note": "The image labels 'Abomasum' twice; one of them should read Omasum or Abomasum, check the source."
+    },
+    {
+      "file": "14-peristalsis-alimentary-canal.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Animals",
+      "topic": "Digestion in humans",
+      "caption": "Movement of food in the alimentary canal by peristalsis",
+      "labels": [
+        "Food",
+        "Contracting muscle wave",
+        "Bolus",
+        "Alimentary canal tube wall"
+      ]
+    },
+    {
+      "file": "15-human-digestive-system.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Animals",
+      "topic": "Digestion in humans",
+      "caption": "Human digestive system (Fig. 2.2)",
+      "labels": [
+        "Buccal cavity",
+        "Salivary gland",
+        "Oesophagus",
+        "Liver",
+        "Gall bladder",
+        "Stomach",
+        "Pancreas",
+        "Small intestine",
+        "Large intestine",
+        "Rectum",
+        "Anus"
+      ]
+    },
+    {
+      "file": "16-amoeba-feeding.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Animals",
+      "topic": "Nutrition in amoeba",
+      "caption": "Amoeba's feeding process: ingestion, digestion and egestion",
+      "labels": [
+        "Nucleus",
+        "Pseudopodium",
+        "Ingestion",
+        "Digestion",
+        "Egestion"
+      ]
+    },
+    {
+      "file": "17-photosynthesis-schematic.png",
+      "subject": "Science",
+      "chapter": "Nutrition in Plants",
+      "topic": "Photosynthesis",
+      "caption": "Schematic diagram showing photosynthesis in a plant",
+      "labels": [
+        "Light energy",
+        "Carbon dioxide",
+        "Oxygen",
+        "Chlorophyll in leaf",
+        "Water and minerals"
+      ]
+    },
+    {
+      "file": "18-lime-water-co2-setup.png",
+      "subject": "Science",
+      "chapter": "Physical and Chemical Changes",
+      "topic": "Chemical changes",
+      "caption": "Set-up to pass the gas from vinegar and baking soda through lime water",
+      "labels": [
+        "Vinegar + baking soda",
+        "Carbon dioxide",
+        "Lime water"
+      ]
+    },
+    {
+      "file": "19-heat-flow-metal-strip.png",
+      "subject": "Science",
+      "chapter": "Heat",
+      "topic": "Conduction",
+      "caption": "Flow of heat through a metal strip with wax drops falling as it melts",
+      "labels": []
+    },
+    {
+      "file": "20-lab-thermometer-water.png",
+      "subject": "Science",
+      "chapter": "Heat",
+      "topic": "Measuring temperature",
+      "caption": "Fig. 4.5: Measuring the temperature of water with a laboratory thermometer",
+      "labels": []
+    },
+    {
+      "file": "21-clinical-thermometer.png",
+      "subject": "Science",
+      "chapter": "Heat",
+      "topic": "Measuring temperature",
+      "caption": "Fig. 4.2: A clinical thermometer, with a magnified view of the scale at 37",
+      "labels": []
+    },
+    {
+      "file": "22-convection-heating-water.png",
+      "subject": "Science",
+      "chapter": "Heat",
+      "topic": "Convection",
+      "caption": "Fig. 4.14: Heating water by convection",
+      "labels": []
+    },
+    {
+      "file": "23-silkworm-life-cycle.png",
+      "subject": "Science",
+      "chapter": "Fibre to Fabric",
+      "topic": "Silk",
+      "caption": "Fig. 3.9: Life cycle of the silkworm",
+      "labels": [
+        "a: Male adult silk moth",
+        "b: Female adult silk moth",
+        "c: Eggs on mulberry leaves",
+        "d: Silkworm",
+        "e: Cocoon",
+        "f: Cocoon with developing moth"
+      ]
+    },
+    {
+      "file": "24-mechanical-clock.png",
+      "subject": "Science",
+      "chapter": "Motion and Time",
+      "topic": "Measuring time",
+      "caption": "A mechanical clock showing its gears",
+      "labels": [],
+      "note": "Bottom of the image is cropped (caption cut off)."
+    },
+    {
+      "file": "25-sundial.png",
+      "subject": "Science",
+      "chapter": "Motion and Time",
+      "topic": "Measuring time",
+      "caption": "A sundial",
+      "labels": [],
+      "note": "Bottom of the image is cropped slightly."
+    },
+    {
+      "file": "26-human-excretory-system.png",
+      "subject": "Science",
+      "chapter": "Transportation in Animals and Plants",
+      "topic": "Excretion",
+      "caption": "Human excretory system",
+      "labels": [
+        "Kidney",
+        "Ureter",
+        "Urinary bladder",
+        "Urethra",
+        "Urinary opening"
+      ]
+    },
+    {
+      "file": "27-heart-sections.png",
+      "subject": "Science",
+      "chapter": "Transportation in Animals and Plants",
+      "topic": "Heart",
+      "caption": "Sections of the human heart",
+      "labels": [
+        "Pulmonary artery",
+        "Aorta",
+        "Pulmonary vein",
+        "Right atrium",
+        "Left atrium",
+        "Left ventricle",
+        "Right ventricle",
+        "Partition separating the two halves"
+      ],
+      "note": "Right ventricle is labelled twice in the image."
+    },
+    {
+      "file": "28-breathing-mechanism.png",
+      "subject": "Science",
+      "chapter": "Respiration in Organisms",
+      "topic": "Breathing",
+      "caption": "Mechanism of breathing in human beings: inhalation and exhalation",
+      "labels": [
+        "Ribs",
+        "Diaphragm",
+        "Lungs"
+      ],
+      "note": "Right edge is clipped: labels cut off and caption partly cut at the bottom."
+    },
+    {
+      "file": "29-human-respiratory-system.png",
+      "subject": "Science",
+      "chapter": "Respiration in Organisms",
+      "topic": "Breathing",
+      "caption": "Human respiratory system",
+      "labels": [
+        "Nasal passage",
+        "Oral cavity",
+        "Pharynx",
+        "Trachea",
+        "Lungs",
+        "Ribs",
+        "Diaphragm"
+      ]
+    },
+    {
+      "file": "30-stamen-and-pistil.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Parts of a flower",
+      "caption": "Parts of a flower: (a) stamen and (b) pistil",
+      "labels": [
+        "Anther",
+        "Filament",
+        "Stigma",
+        "Style",
+        "Ovule",
+        "Ovary"
+      ]
+    },
+    {
+      "file": "31-potato-eyes-sprouting.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Vegetative propagation",
+      "caption": "Potato plant sprouting from an 'eye'",
+      "labels": [
+        "Eyes"
+      ],
+      "note": "Clipped on the right: the second label is cut off."
+    },
+    {
+      "file": "32-rose-stem-cutting.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Vegetative propagation",
+      "caption": "Stem-cutting of rose, with a detail of the bud in the axil",
+      "labels": [
+        "Node",
+        "Bud in the axil"
+      ],
+      "note": "Left edge is clipped: 'Node' is cut off."
+    },
+    {
+      "file": "33-blood-circulation-body-a.png",
+      "subject": "Science",
+      "chapter": "Transportation in Animals and Plants",
+      "topic": "Circulation of blood",
+      "caption": "Blood circulation in the human body showing the heart, a vein and an artery",
+      "labels": [
+        "Heart",
+        "Vein",
+        "Artery"
+      ],
+      "note": "Left labels and the bottom caption are clipped; looks like a duplicate of #34."
+    },
+    {
+      "file": "34-blood-circulation-body-b.png",
+      "subject": "Science",
+      "chapter": "Transportation in Animals and Plants",
+      "topic": "Circulation of blood",
+      "caption": "Blood circulation in the human body showing the heart, a vein and an artery",
+      "labels": [
+        "Heart",
+        "Vein",
+        "Artery"
+      ],
+      "note": "Left labels and the bottom caption are clipped; looks like a duplicate of #33."
+    },
+    {
+      "file": "35-circulation-schematic.png",
+      "subject": "Science",
+      "chapter": "Transportation in Animals and Plants",
+      "topic": "Circulation of blood",
+      "caption": "Schematic of blood circulation: heart, pulmonary artery and vein, artery, vein and capillaries",
+      "labels": [
+        "Heart",
+        "Pulmonary artery",
+        "Pulmonary vein",
+        "Artery",
+        "Vein",
+        "Capillaries"
+      ]
+    },
+    {
+      "file": "36-fern-spores.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Reproduction by spores",
+      "caption": "Reproduction through spore formation in fern",
+      "labels": [
+        "Sori"
+      ]
+    },
+    {
+      "file": "37-fungus-spores.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Reproduction by spores",
+      "caption": "Reproduction through spore formation in a fungus",
+      "labels": [
+        "Hypha",
+        "Sporangium",
+        "Spores"
+      ]
+    },
+    {
+      "file": "38-spirogyra-fragmentation.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Fragmentation",
+      "caption": "Fragmentation in Spirogyra (an alga)",
+      "labels": []
+    },
+    {
+      "file": "39-yeast-budding.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Budding",
+      "caption": "Reproduction in yeast by budding",
+      "labels": [
+        "Yeast cell",
+        "Developing bud",
+        "New bud",
+        "Chain of buds"
+      ]
+    },
+    {
+      "file": "40-bryophyllum-leaf-buds.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Vegetative propagation",
+      "caption": "Leaf of Bryophyllum with buds in the margin",
+      "labels": []
+    },
+    {
+      "file": "41-simple-electric-circuit.png",
+      "subject": "Science",
+      "chapter": "Electric Current and Its Effects",
+      "topic": "Electric circuits",
+      "caption": "Simple electric circuit with a cell, a switch and a bulb",
+      "labels": [
+        "Cell (+ and -)",
+        "Switch",
+        "Bulb"
+      ]
+    },
+    {
+      "file": "42-simple-pendulum-positions.png",
+      "subject": "Science",
+      "chapter": "Motion and Time",
+      "topic": "Simple pendulum",
+      "caption": "Simple pendulum and its different positions",
+      "labels": [
+        "A",
+        "O",
+        "B"
+      ]
+    },
+    {
+      "file": "43-pollination-self-cross.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Pollination",
+      "caption": "Process of pollination in flowers: (a) self-pollination and (b) cross-pollination",
+      "labels": [
+        "Anther",
+        "Stigma",
+        "Pollen"
+      ],
+      "note": "Left and right edges have a border artefact."
+    },
+    {
+      "file": "44-seed-dispersal-wings.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Seed dispersal",
+      "caption": "Dispersal of seeds by wings",
+      "labels": [
+        "Seed",
+        "Wing"
+      ]
+    },
+    {
+      "file": "45-fertilisation-zygote.png",
+      "subject": "Science",
+      "chapter": "Reproduction in Plants",
+      "topic": "Fertilisation",
+      "caption": "Plant fertilisation and zygote formation: (a) germinating pollen grain, (b) pollen tube reaching the ovum",
+      "labels": [
+        "Pollen grain (germinating)",
+        "Pollen tube",
+        "Ovum",
+        "Zygote formation"
+      ]
+    },
+    {
+      "file": "46-forest-rainwater-seepage.png",
+      "subject": "Science",
+      "chapter": "Forests: Our Lifeline",
+      "topic": "Forests and water",
+      "caption": "Fig. 1.7.1: Vegetation's role in rain, showing the forest canopy and rainwater seeping to the water table",
+      "labels": [
+        "Rain",
+        "Transpiration and evaporation",
+        "Closed canopy",
+        "Root system",
+        "Water table"
+      ]
+    },
+    {
+      "file": "47-forest-ecosystem-interrelations.png",
+      "subject": "Science",
+      "chapter": "Forests: Our Lifeline",
+      "topic": "Forest ecosystem",
+      "caption": "Biotic and abiotic interrelations in a forest ecosystem",
+      "labels": [
+        "Sun",
+        "Birds",
+        "Carbon dioxide",
+        "Oxygen",
+        "Photosynthesis",
+        "Decomposers",
+        "Nutrients",
+        "Soil",
+        "Water"
+      ]
+    },
+    {
+      "file": "48-water-cycle-human-influence.png",
+      "subject": "Science",
+      "chapter": "Water: A Precious Resource",
+      "topic": "Water cycle",
+      "caption": "Natural and human influences on the water cycle (numbered 1 to 7)",
+      "labels": [],
+      "note": "Numbers 1-7 are in the drawing but the key is not shown in the image."
+    },
+    {
+      "file": "49-groundwater-aquifers.png",
+      "subject": "Science",
+      "chapter": "Water: A Precious Resource",
+      "topic": "Groundwater",
+      "caption": "A detailed view of groundwater and aquifers",
+      "labels": [
+        "Hand pump",
+        "Recharge",
+        "Water table",
+        "Aquifer",
+        "Groundwater",
+        "Stream or lake"
+      ]
+    }
+  ]
+}

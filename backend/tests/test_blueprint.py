@@ -342,3 +342,112 @@ async def test_html_and_pdf_show_section_headings(client, db_session):
 
     export = await client.post(f"/export/{paper_json['id']}")
     assert export.status_code == 200, export.text
+
+
+# --- background builds with progress -------------------------------------------
+
+
+async def _wait_for_job(client, job_id: str, *, timeout: float = 10.0) -> tuple[dict, list[tuple[int, int]]]:
+    """Wait for the job to leave 'running'; returns its final GET plus every (done, total) seen.
+
+    While it runs we watch the in-process record instead of polling over HTTP:
+    the suite's in-memory database is a single shared connection, so a poll's own
+    database read would collide with the build's commit. (Real databases give each
+    session its own connection.) The final GET goes through the API as usual.
+    """
+    import asyncio
+    import uuid
+
+    from app.services import blueprint_jobs
+
+    job = blueprint_jobs._jobs[uuid.UUID(job_id)]
+    seen: list[tuple[int, int]] = []
+    deadline = asyncio.get_event_loop().time() + timeout
+    while job.status == "running":
+        seen.append((job.done, job.total))
+        assert asyncio.get_event_loop().time() < deadline, "job never finished"
+        await asyncio.sleep(0.005)
+    seen.append((job.done, job.total))
+    return (await client.get(f"/papers/blueprint/jobs/{job_id}")).json(), seen
+
+
+async def test_background_build_reports_progress_and_returns_the_paper(client):
+    started = await client.post("/papers/blueprint/jobs", json=blueprint())
+    assert started.status_code == 202
+    job, seen = await _wait_for_job(client, started.json()["id"])
+
+    assert job["status"] == "done"
+    assert job["total"] > 0
+    assert job["done"] == job["total"]
+    # Progress never goes backwards.
+    dones = [d for d, _ in seen]
+    assert dones == sorted(dones)
+
+    paper = job["paper"]
+    assert paper["total_marks"] == 30
+    assert len(paper["questions"]) == job["total"]
+    # It is a real, saved paper.
+    assert (await client.get(f"/papers/{paper['id']}")).status_code == 200
+
+
+async def test_background_build_matches_the_one_shot_endpoint(client):
+    job_id = (await client.post("/papers/blueprint/jobs", json=blueprint())).json()["id"]
+    job, _ = await _wait_for_job(client, job_id)
+    one_shot = (await client.post("/papers/blueprint", json=blueprint())).json()
+    sections = lambda p: [q["section"] for q in sorted(p["questions"], key=lambda q: q["order_index"])]  # noqa: E731
+    assert sections(job["paper"]) == sections(one_shot)
+
+
+async def test_background_build_reports_an_llm_failure_and_stores_nothing(failing_client):
+    job_id = (await failing_client.post("/papers/blueprint/jobs", json=blueprint())).json()["id"]
+    job, _ = await _wait_for_job(failing_client, job_id)
+    assert job["status"] == "error"
+    assert job["error_status"] == 502
+    assert job["paper"] is None
+    assert (await failing_client.get("/papers")).json() == []
+
+
+async def test_only_one_build_at_a_time_per_user(client, monkeypatch):
+    import asyncio
+
+    gate = asyncio.Event()
+
+    async def slow(session, bp, user_id, on_progress=None):
+        on_progress(3, 30)
+        await gate.wait()
+        raise RuntimeError("released")
+
+    monkeypatch.setattr("app.services.blueprint.create_blueprint_paper", slow)
+    first = await client.post("/papers/blueprint/jobs", json=blueprint())
+    assert first.status_code == 202
+    second = await client.post("/papers/blueprint/jobs", json=blueprint())
+    assert second.status_code == 409
+    assert second.json()["error"] == "paper_in_progress"
+
+    # While it runs the poll shows how far it got.
+    await asyncio.sleep(0.05)
+    running = (await client.get(f"/papers/blueprint/jobs/{first.json()['id']}")).json()
+    assert (running["status"], running["done"], running["total"]) == ("running", 3, 30)
+
+    gate.set()
+    job, _ = await _wait_for_job(client, first.json()["id"])
+    assert job["status"] == "error" and job["error_status"] == 500
+    # A finished job frees the slot.
+    assert (await client.post("/papers/blueprint/jobs", json=blueprint())).status_code in (202, 409)
+
+
+async def test_a_job_is_private_to_its_owner(client, bob_client):
+    job_id = (await client.post("/papers/blueprint/jobs", json=blueprint())).json()["id"]
+    assert (await bob_client.get(f"/papers/blueprint/jobs/{job_id}")).status_code == 404
+    await _wait_for_job(client, job_id)
+
+
+async def test_unknown_job_is_a_404(client):
+    import uuid
+
+    assert (await client.get(f"/papers/blueprint/jobs/{uuid.uuid4()}")).status_code == 404
+
+
+async def test_job_endpoints_validate_and_require_sign_in(client, anon_client):
+    assert (await client.post("/papers/blueprint/jobs", json=blueprint(surprise=True))).status_code == 400
+    assert (await anon_client.post("/papers/blueprint/jobs", json=blueprint())).status_code == 401

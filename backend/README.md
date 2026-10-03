@@ -77,6 +77,7 @@ password reset, the download link, and `/health`.
 | `GET` `PATCH` `DELETE` | `/papers/{id}` | Fetch, reorder, override marks, rename, delete |
 | `POST` | `/papers/blueprint/preview` | How a blueprint splits marks across chapters (no LLM, no writes) |
 | `POST` | `/papers/blueprint` | Build and save a paper from a blueprint |
+| `POST` `GET` | `/papers/blueprint/jobs`, `/papers/blueprint/jobs/{id}` | The same build in the background: returns a job id at once, then reports `done` / `total` questions and finally the paper (what the Question Papers page uses for its progress bar). In-memory, one build per user at a time |
 | `POST` `GET` | `/figures` | Upload a diagram (**administrators only**) / list the shared library (anyone signed in) |
 | `GET` `PATCH` `DELETE` | `/figures/{id}` | Metadata; edit and delete are administrators only (`409` while in use). `GET /figures/{id}/file` is the image |
 | `POST` | `/export/{paper_id}` | Render PDF, returns a signed `download_url` |
@@ -247,6 +248,16 @@ python scripts/upload_figure.py cell.png --admin principal@school.in \
   --subject Science --chapter "Cell - Structure and Functions" \
   --caption "Plant cell" --labels "A: nucleus" "B: cell wall"
 ```
+
+To load a whole folder where each image has its own caption, chapter and labels, use a manifest. The 49 Science
+diagrams in `backend/data/figures/` ship with one:
+
+```bash
+python scripts/upload_figure.py --manifest backend/data/figures/manifest.json --admin principal@school.in --dry-run
+python scripts/upload_figure.py --manifest backend/data/figures/manifest.json --admin principal@school.in
+```
+
+Re-running skips figures whose subject, chapter and caption are already in the library (`--force` adds anyway).
 
 Teachers and administrators see a figure's subject / chapter / topic / labels; students don't (the labels are
 an answer key). The old `FIGURE_ADMIN_TOKEN` / `X-Admin-Token` mechanism is gone.

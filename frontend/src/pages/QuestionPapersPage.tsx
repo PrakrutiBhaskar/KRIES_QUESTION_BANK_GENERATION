@@ -4,12 +4,13 @@ import { AlertTriangle, FileText, Loader2, Plus, Scale, Trash2, Wand2 } from 'lu
 import { useApp } from '../hooks/useApp';
 import { ChapterListSkeleton } from '../components/Skeleton';
 import {
-  createBlueprintPaper,
+  buildBlueprintPaper,
   errorMessage,
   fetchChapters,
   fetchCombinations,
   previewBlueprint,
 } from '../lib/api';
+import type { BlueprintProgress } from '../lib/api';
 import type {
   BlueprintInput,
   BlueprintPlan,
@@ -83,6 +84,9 @@ export default function QuestionPapersPage() {
   const [plan, setPlan] = useState<BlueprintPlan | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  // Questions gathered so far while the paper is being built.
+  const [progress, setProgress] = useState<BlueprintProgress>({ done: 0, total: 0 });
+  const buildAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetchCombinations()
@@ -245,16 +249,23 @@ export default function QuestionPapersPage() {
   const handleGenerate = async () => {
     if (!valid || generating) return;
     setGenerating(true);
+    setProgress({ done: 0, total: plan?.totalQuestions ?? 0 });
+    const abort = new AbortController();
+    buildAbort.current = abort;
     try {
-      const bank = await createBlueprintPaper(blueprint);
+      const bank = await buildBlueprintPaper(blueprint, setProgress, abort.signal);
       upsertBank(bank);
       showToast(`Question paper created: ${bank.questionCount} questions, ${bank.totalMarks} marks.`, 'success');
       navigate(`/question-banks/${bank.id}`);
     } catch (err) {
+      if (abort.signal.aborted) return;
       showToast(errorMessage(err), 'error');
       setGenerating(false);
     }
   };
+
+  // Leaving the page stops polling; the server still finishes and saves the paper.
+  useEffect(() => () => buildAbort.current?.abort(), []);
 
   const gaps = plan?.chapters.filter((c) => Math.abs(c.plannedMarks - c.targetMarks) > 1) ?? [];
 
@@ -629,7 +640,7 @@ export default function QuestionPapersPage() {
               {generating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Building paper…
+                  Building paper… {progress.total > 0 ? `${progress.done}/${progress.total}` : ''}
                 </>
               ) : (
                 <>
@@ -639,11 +650,32 @@ export default function QuestionPapersPage() {
               )}
             </button>
             {generating && (
-              <p className="flex items-start gap-2 text-xs text-slate-500">
-                <FileText className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                Stored questions are reused and the rest are written by the AI, so a large paper can take a minute or
-                two. Keep this page open.
-              </p>
+              <div role="status" aria-busy="true" className="space-y-2">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <p className="font-semibold text-slate-900">Creating questions…</p>
+                  <p className="font-semibold text-slate-900 tabular-nums whitespace-nowrap">
+                    {progress.done} <span className="font-normal text-slate-500">of {progress.total || '…'} created</span>
+                  </p>
+                </div>
+                <div
+                  className="h-1.5 bg-slate-100 rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={progress.total}
+                  aria-valuenow={progress.done}
+                  aria-label="Questions created"
+                >
+                  <div
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                    style={{ width: `${progress.total ? Math.min(100, Math.max(4, (progress.done / progress.total) * 100)) : 4}%` }}
+                  />
+                </div>
+                <p className="flex items-start gap-2 text-xs text-slate-500">
+                  <FileText className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                  Stored questions are reused and the rest are written by the AI, so a large paper can take a minute or
+                  two. Keep this page open.
+                </p>
+              </div>
             )}
           </div>
         </div>

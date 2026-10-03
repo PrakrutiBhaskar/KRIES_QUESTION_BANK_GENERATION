@@ -36,6 +36,7 @@ from .requests import (
 from .responses import (
     BlueprintAllocationOut,
     BlueprintChapterPlanOut,
+    BlueprintJobOut,
     BlueprintPlanOut,
     BlueprintSectionPlanOut,
     ChapterOut,
@@ -60,6 +61,7 @@ __all__ = [
     "BlueprintChapterIn",
     "BlueprintChapterPlanOut",
     "BlueprintIn",
+    "BlueprintJobOut",
     "BlueprintPlanOut",
     "BlueprintSectionIn",
     "ExportIn",

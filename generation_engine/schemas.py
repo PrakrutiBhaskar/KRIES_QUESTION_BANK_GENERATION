@@ -184,14 +184,14 @@ class GenerationRequest(BaseModel):
     difficulty: Difficulty
     count: int = Field(ge=1, le=25)
     topic: Optional[str] = None  # optional narrowing hint fed into the prompt
-    # Optional: stored figures to write questions about (text description only).
-    # When set, every generated question must be about exactly one of them.
-    figures: Optional[List[FigureContext]] = Field(default=None, max_length=20)
     # Where to start walking the chapter's textbook passages. The backend sets
     # this to the number of questions already stored for the chapter so that
     # repeated generation moves through the WHOLE chapter instead of
     # re-covering the same passages. Ignored without an ingested textbook.
     coverage_offset: int = Field(default=0, ge=0)
+    # Optional: stored figures to write questions about (text description only).
+    # When set, every generated question must be about exactly one of them.
+    figures: Optional[List[FigureContext]] = Field(default=None, max_length=20)
 
     @field_validator("chapter")
     @classmethod

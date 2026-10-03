@@ -155,7 +155,7 @@ def _rules_for(method: str, path: str) -> list[tuple[str, str, str]]:
             rules.append(("signup", settings.rate_limit_signup, "ip"))
         elif rel in ("/auth/forgot-password", "/auth/reset-password"):
             rules.append(("password-reset", settings.rate_limit_password_reset, "ip"))
-        elif rel in ("/generate", "/practice/sessions", "/papers/blueprint"):
+        elif rel in ("/generate", "/practice/sessions", "/papers/blueprint", "/papers/blueprint/jobs"):
             rules.append(("generate", settings.rate_limit_generate, "user"))
         elif rel.startswith("/export/") and not rel.startswith("/export/files/"):
             rules.append(("export", settings.rate_limit_export, "user"))
