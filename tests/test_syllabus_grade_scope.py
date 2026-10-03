@@ -171,3 +171,40 @@ def test_shipped_syllabus_strict_has_no_grade_leakage(index):
                     )
     assert strict.chapters(Subject.ENGLISH, grade=7) == []
     assert not strict.has_chapter(Subject.KANNADA, "ಮಗ್ಗದ ಸಾಹೇಬ", grade=7)
+
+
+# --- Science lists from the KTBS contents pages ---
+
+def test_science_chapters_are_in_their_own_grade_only(index):
+    S = Subject.SCIENCE
+    assert [len(index.chapters(S, grade=g)) for g in (7, 8, 9)] == [12, 13, 12]
+    assert index.has_chapter(S, "Heat Transfer in Nature", grade=7)
+    assert not index.has_chapter(S, "Heat Transfer in Nature", grade=8)
+    assert index.has_chapter(S, "Exploring Forces", grade=8)
+    assert not index.has_chapter(S, "Exploring Forces", grade=9)
+    assert index.has_chapter(S, "Is Matter Around Us Pure?", grade=9)
+    assert index.has_chapter(S, "is matter around us pure", grade=9)  # punctuation-insensitive
+    # old interim chapters that are not in the KTBS books are gone
+    assert not index.has_chapter(S, "Diversity in Living Organisms")
+    assert not index.has_chapter(S, "Natural Resources")
+
+
+# --- Social Science lists from the KTBS contents pages ---
+
+def test_social_science_chapters_are_in_their_own_grade_only(index):
+    SS = Subject.SOCIAL_SCIENCE
+    assert [len(index.chapters(SS, grade=g)) for g in (7, 8, 9)] == [27, 30, 33]
+    assert index.has_chapter(SS, "The Advent of Europeans to India", grade=7)
+    assert not index.has_chapter(SS, "The Advent of Europeans to India", grade=8)
+    assert index.has_chapter(SS, "Lithosphere", grade=8)
+    assert not index.has_chapter(SS, "Lithosphere", grade=9)
+    assert index.has_chapter(SS, "Our Constitution", grade=9)
+    assert not index.has_chapter(SS, "Our Constitution", grade=7)
+    # punctuation/case-insensitive
+    assert index.has_chapter(SS, "india in the 18th century 1707  1757", grade=7)
+    for a in (7, 8, 9):
+        for b in (7, 8, 9):
+            if a < b:
+                assert not set(map(str.lower, index.chapters(SS, grade=a))) & set(
+                    map(str.lower, index.chapters(SS, grade=b))
+                )
