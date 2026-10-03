@@ -20,8 +20,24 @@ All endpoints return JSON. Base path: `/api/v1`
   "marks": 1,
   "difficulty": "easy | medium | hard",
   "topic": "string",
-  "tags": ["string"]
+  "tags": ["string"],
+  "verification_status": "verified | unverified | flagged",
+  "verification_note": "string | null"
 }
+```
+
+`verification_status` / `verification_note` are additive (older clients can ignore
+them) and describe whether the answer key was checked when the question was
+generated; see [Answer verification](#answer-verification).
+
+**Optional extension — figures.** A question that has a diagram attached also carries
+`figure` (printed with the question) and/or `answer_figure` (printed only in the answer
+key). Both keys are **omitted** when there is no figure, so clients that don't know about
+figures see exactly the object above.
+
+```json
+"figure": { "id": "uuid", "caption": "string", "mime": "image/png", "width": 900,
+            "height": 600, "size_bytes": 48211, "url": "/api/v1/figures/<id>/file" }
 ```
 
 ---
@@ -51,6 +67,19 @@ Generate a batch of new questions for a subject/chapter.
 }
 ```
 
+**Optional: questions about library figures.** Add `"use_figures": true` to write every
+question about a figure from the *shared* figure library (added by administrators) tagged with the request's subject and chapter
+(a figure with a `topic` is skipped when the request names a different topic; figures with
+no topic count as chapter-wide). Or send `"figure_ids": ["<uuid>", ...]` to name exact
+figures (implies `use_figures`; they must exist in the library and have a caption or labels, and need
+not be tagged with the chapter). Each returned question then carries its `figure`. At most
+`MAX_GENERATION_FIGURES` (default 6) are used per call, the least-used first. The model is
+given each figure's caption, topic and labelled parts as text and never sees the image.
+Repeat requests are served from stored questions about the same figures only.
+
+Extra errors for figure requests: `400 no_figures` (nothing in the library matches),
+`400 figure_has_no_metadata`, `400 too_many_figures`, `404` (unknown figure).
+
 **Errors**
 - `400` — invalid subject/chapter/type/grade/marks combination
 - `502` — Groq API call failed
@@ -79,7 +108,15 @@ Filter/search stored questions.
 Fetch a single question by ID.
 
 ### `PATCH /questions/{id}`
-Edit a question (teacher curation).
+Edit a question (teacher curation): `text`, `options`, `explanation`, `marks`, `difficulty`,
+`topic` and `tags`. **The `answer` cannot be edited**: any request that includes the field
+gets `400` and nothing is changed. The answer key is verified when the question is generated
+(see *Answer verification*), so a hand-edited key would carry a verified badge for an answer
+nobody checked. To get a different answer, generate the question again. Also attaches or
+detaches diagrams:
+`figure_id` (printed with the question) and `answer_figure_id` (answer key only) take the
+id of any figure in the library, or `null` to detach. Omit a field to leave it unchanged.
+Errors: `403` for someone else's question, `404` for an unknown figure.
 
 ### `DELETE /questions/{id}`
 Discard a question.
@@ -145,7 +182,36 @@ Start a practice session for a subject/chapter.
 **Response `201`** — returns a session with a question set (answers withheld until reveal).
 
 ### `GET /practice/sessions/{id}/reveal/{question_id}`
-Reveal the answer + explanation for one question in a session.
+Reveal the answer + explanation for one question in a session. Includes `answer_figure`
+when the question has one; before the reveal a student only ever sees `figure`.
+
+---
+
+## 5b. Figures (diagrams)
+
+Not in the original contract. All routes need the bearer token.
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/figures` | **Administrators only**: `403 admin_required` for any other role (an admin is made with `scripts/make_admin.py`; the role can't be chosen at sign-up). `multipart/form-data`: `file` (PNG/JPEG; GIF/WebP are converted) and optional `caption` (≤ 300 chars), `subject`, `chapter`, `topic`, `labels` (one per line, or a JSON array; e.g. `A: nucleus`). `201` → figure object. `400 invalid_subject` for an unknown subject. `400 invalid_image` if it isn't a readable image (SVG is refused), `413 payload_too_large` over `MAX_FIGURE_BYTES` (default 5 MB) |
+| `GET` | `/figures` | The shared library, newest first (`page`, `page_size`; optional `subject`, `chapter` filters) |
+| `GET` | `/figures/{id}` | Metadata. Any signed-in user can read any figure (they travel with shared questions) |
+| `GET` | `/figures/{id}/file` | The image bytes. Needs the header, so a browser app fetches it and shows an object URL |
+| `PATCH` | `/figures/{id}` | Any of `caption`, `subject`, `chapter`, `topic`, `labels`; only what you send changes, an empty value clears it. **Administrators only** (`403 admin_required`). `400` for a bad value (nothing is changed) |
+| `DELETE` | `/figures/{id}` | **Administrators only** (`403 admin_required`). `409 figure_in_use` while a live question still uses it |
+
+**Metadata and privacy.** `subject`, `chapter`, `topic` and `labels` are what question
+generation writes from. Figure responses on the figure routes include them only for the
+administrators and teachers; for students they come back empty/null. They are never part of the
+`figure` object on a question: the labels are effectively an answer key, so they must not
+reach practice-mode students.
+
+Uploads are re-encoded server-side: transparency is flattened onto white, EXIF/GPS metadata
+is dropped, and the longest side is capped at 2400 px. Attach with `PATCH /questions/{id}`.
+
+In the exported PDF the question's `figure` is printed under the question text and its
+`answer_figure` under its entry in the answer key. An answer-key figure also counts as the
+"Diagram" part of the marks split.
 
 ---
 
@@ -305,3 +371,45 @@ and a `Retry-After: N` header.
 All are configurable (`RATE_LIMIT_*`, `LOGIN_MAX_FAILURES`; see `backend/.env.example`).
 Counters are in-process memory, so they reset on restart and are per worker; move
 them to Redis before running more than one worker or instance.
+
+---
+
+## Answer verification
+
+The model that writes a question also writes its answer key, so every generated
+batch is checked before it is returned. Two layers, cheapest first
+(`generation_engine/rule_checks.py`, `generation_engine/answer_verification.py`):
+
+1. **Rule checks** (Maths and Science, no LLM): arithmetic, `x%` of `n`, roots and
+   powers, LCM/HCF, averages, one-variable linear equations, simple interest,
+   area/perimeter/volume of common shapes; SI units, element symbols and atomic
+   numbers, common chemical formulas, a few constants, and one-step physics formulas
+   (speed, density, force, work, power, pressure, Ohm's law, with unit conversion).
+   They only fire when the question matches strictly enough that the answer is
+   unambiguous; anything else is left to layer 2.
+2. **Independent AI pass** (all subjects, one extra Groq call per batch). For MCQs the
+   verifier is *not shown* the key: it solves the question itself and its choice is
+   compared with the key. For Short/Long answers it is shown the answer and asked to
+   check it sceptically. Questions a rule already decided are not sent.
+
+| `verification_status` | Meaning | What happens |
+|---|---|---|
+| `verified` | A rule confirmed the key, or the AI pass reached the same answer | Returned and cached as normal |
+| `unverified` | Nothing could be checked: no rule applies, the AI pass wasn't confident, or the call failed | Returned and cached; the key is simply unconfirmed. Questions stored before this feature read as `unverified` |
+| `flagged` | A rule or the AI pass found the key wrong, and no replacement could be generated | Returned **clearly marked** so the teacher can review it; never served from the cache or used in practice sessions |
+
+A key found wrong is not returned as-is: the engine drops the question and
+regenerates a replacement (telling the model what was wrong), up to the normal retry
+limit. Only if that fails does it fill the batch with the `flagged` ones, so a
+generation request never fails just because of a strict verifier. The AI pass fails
+open: a Groq error leaves questions `unverified`.
+
+`POST /generate` `report` gains `answers_verified`, `answers_unverified`,
+`dropped_wrong_answer` (keys found wrong and replaced) and `flagged_kept`.
+
+Settings (`backend/.env`): `ENABLE_ANSWER_RULE_CHECKS` (default true),
+`ENABLE_LLM_ANSWER_VERIFICATION` (default true; set false to skip the extra Groq call),
+`VERIFIER_MODEL` (optional different model for the second opinion),
+`VERIFICATION_CHUNK_SIZE` (default 10). Database: `questions.verification_status` and
+`questions.verification_note` (nullable); added automatically with
+`AUTO_CREATE_TABLES=true`, or by Alembic migration `0007`.

@@ -18,7 +18,7 @@ from .deps import get_current_user
 from .db import engine as db_engine
 from .errors import register_exception_handlers
 from .ratelimit import RateLimitMiddleware
-from .routers import auth, export, papers, practice, questions, syllabus
+from .routers import auth, export, figures, papers, practice, questions, syllabus
 from .services.export import active_renderer
 from .services.generation import get_engine, set_engine
 from .services.syllabus import load_syllabus_index, seed_from_index
@@ -122,7 +122,13 @@ register_exception_handlers(app)
 # signed short-lived token instead — see routers/export.py.)
 app.include_router(auth.router, prefix=settings.api_prefix)
 app.include_router(export.router, prefix=settings.api_prefix)
-for router in (questions.router, papers.router, practice.router, syllabus.router):
+for router in (
+    questions.router,
+    figures.router,
+    papers.router,
+    practice.router,
+    syllabus.router,
+):
     app.include_router(
         router, prefix=settings.api_prefix, dependencies=[Depends(get_current_user)]
     )

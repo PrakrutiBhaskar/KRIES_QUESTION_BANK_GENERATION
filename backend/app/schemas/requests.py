@@ -12,6 +12,7 @@ import uuid
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 
 from generation_engine.schemas import (
     VALID_GRADES,
@@ -40,6 +41,25 @@ class GenerateIn(BaseModel):
     # path described in spec.md Module B. Set true to force fresh Groq calls.
     refresh: bool = False
 
+    # Not in the contract. Write the questions about figures from the shared figure
+    # library (see POST /figures): the model is given each figure's caption,
+    # topic and labelled parts as text and every question comes back with its
+    # figure attached. `use_figures` picks the library figures for this subject
+    # and chapter; `figure_ids` names exact ones and implies `use_figures`.
+    use_figures: bool = False
+    figure_ids: list[uuid.UUID] | None = Field(default=None, min_length=1)
+
+    @field_validator("figure_ids")
+    @classmethod
+    def figure_ids_unique(cls, v: list[uuid.UUID] | None) -> list[uuid.UUID] | None:
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError("figure_ids must not contain duplicates")
+        return v
+
+    @property
+    def wants_figures(self) -> bool:
+        return self.use_figures or bool(self.figure_ids)
+
     @field_validator("chapter")
     @classmethod
     def chapter_not_blank(cls, v: str) -> str:
@@ -56,25 +76,83 @@ class QuestionPatch(BaseModel):
     and `grade` are deliberately NOT editable: moving a question between
     subjects would invalidate the marks/format rules it was generated and
     validated under. Re-generate instead.
+
+    `answer` is NOT editable either: the answer key is checked when a question
+    is generated (see "Answer verification" in docs/api-contract.md), and a
+    hand-edited key would carry a "verified" badge for an answer nobody
+    checked. To get a different answer, generate the question again.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     text: str | None = None
     options: list[str] | None = None
-    answer: str | None = None
     explanation: str | None = None
     marks: int | None = None
     difficulty: Difficulty | None = None
     topic: str | None = None
     tags: list[str] | None = None
+    # Attach a figure from the library, or send null to detach it.
+    figure_id: uuid.UUID | None = None
+    answer_figure_id: uuid.UUID | None = None
 
-    @field_validator("text", "answer")
+    @model_validator(mode="before")
+    @classmethod
+    def answer_is_read_only(cls, data):
+        # Said plainly, rather than the generic "extra field not permitted".
+        if isinstance(data, dict) and "answer" in data:
+            raise PydanticCustomError(
+                "answer_read_only",
+                "answer cannot be edited: the answer key is verified when the "
+                "question is generated. Generate the question again for a "
+                "different answer.",
+            )
+        return data
+
+    @field_validator("text")
     @classmethod
     def not_blank(cls, v: str | None) -> str | None:
         if v is not None and not v.strip():
             raise ValueError("must not be blank")
         return v.strip() if v is not None else None
+
+
+class ExportIn(BaseModel):
+    """
+    POST /export/{paper_id} — optional body.
+
+    The whole body is optional, and so is every field in it, so existing
+    callers that POST with no body keep getting the full paper with its
+    answer key. Send `include_answer_key: false` for a question-paper-only PDF
+    (the one you hand to students).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    include_answer_key: bool = True
+
+
+class FigurePatch(BaseModel):
+    """PATCH /figures/{id} — caption and metadata; re-upload to change the image.
+
+    Only the fields sent change. Send `""` (or `[]` for labels) to clear one.
+    Length and value rules (subject must be a known subject, at most 30 labels)
+    are enforced by the figure service, which answers 400 with a clear message.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    caption: str | None = Field(default=None, max_length=300)
+    subject: str | None = None
+    chapter: str | None = None
+    topic: str | None = None
+    labels: list[str] | None = None
+
+    @model_validator(mode="after")
+    def at_least_one_field(self) -> "FigurePatch":
+        if not self.model_fields_set:
+            raise ValueError("send at least one of caption, subject, chapter, topic, labels")
+        return self
 
 
 class PaperIn(BaseModel):

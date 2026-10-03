@@ -277,6 +277,52 @@ async def test_export_returns_a_downloadable_pdf(client):
     assert download.content.startswith(b"%PDF-")
 
 
+def _pdf_text(pdf: bytes) -> str:
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    return "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(pdf)).pages)
+
+
+async def _export_text(client, paper_id, **kwargs) -> str:
+    response = await client.post(f"/export/{paper_id}", **kwargs)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    download = await client.get(
+        f"/export/files/{body['filename']}", params={"token": _token_of(body["download_url"])}
+    )
+    assert download.status_code == 200
+    return _pdf_text(download.content)
+
+
+async def test_export_includes_answer_key_by_default(client):
+    """No body (what every existing caller sends) keeps the old behaviour."""
+    paper, _ = await _paper(client, count=2, marks=3)
+    assert "Answer Key" in await _export_text(client, paper["id"])
+    assert "Answer Key" in await _export_text(client, paper["id"], json={})
+    assert "Answer Key" in await _export_text(
+        client, paper["id"], json={"include_answer_key": True}
+    )
+
+
+async def test_export_can_omit_the_answer_key(client):
+    paper, _ = await _paper(client, count=2, marks=3)
+    text = await _export_text(client, paper["id"], json={"include_answer_key": False})
+    assert "Answer Key" not in text
+    assert paper["title"] in text
+
+
+async def test_export_rejects_a_bad_answer_key_flag(client):
+    paper, _ = await _paper(client, count=1, marks=3)
+    response = await client.post(
+        f"/export/{paper['id']}", json={"include_answer_key": "maybe"}
+    )
+    assert response.status_code == 400
+    response = await client.post(f"/export/{paper['id']}", json={"answers": False})
+    assert response.status_code == 400
+
+
 async def test_export_handles_a_large_paper(client):
     """test-plan.md Section 5: export shouldn't break on a long paper."""
     questions = await generate_questions(client, type="MCQ", marks=1, count=25)

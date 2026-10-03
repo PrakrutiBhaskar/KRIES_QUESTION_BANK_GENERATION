@@ -96,6 +96,17 @@ These live in code as a single registry — `generation_engine/subject_formats.p
 - **Science:** encourage diagram references in explanation text even though no actual diagram is generated.
 - **English / Kannada:** questions must be self-contained — any passage or sentence the question asks about is included in the question text, since there is no external passage the student can see. Kannada additionally asks for Kannada script and uses relaxed word-count bounds, because whitespace word counts don't map cleanly onto the script. Still to confirm against real syllabus data once PDF parsing lands.
 
+## Figure questions (optional)
+
+When a request carries figures (`GenerationRequest.figures`), a block is added to the prompt listing each as
+`F1 - Caption: ... Topic: ... Labelled parts: A: ...; B: ...` (code: `prompts._figure_block`). The model sees text only and
+is told to treat it as complete, ask only what it supports, never invent parts, labels or positions, refer to the
+diagram in the question, and never put the answer in the question. Each question returns a `"figure_ref"` (`F1`...); the
+engine maps it to the real figure id, so an unknown reference is rejected rather than guessed. After parsing,
+`validation.check_figure_question` rejects a question that never mentions the figure, points at a label the figure does
+not have, or contains its own answer; the reason goes into the retry prompt. The answer-key verifier receives the same
+description, and is told to treat it as uncertain rather than guess when the description is not enough.
+
 ## Where the marks rules live
 Numeric thresholds (point counts, word counts, whether an explanation is allowed) are **not** hardcoded in the validators. They live in `DEFAULT_MARKS_RULES` and per-subject overrides in `subject_formats.py`, derived from the mark-scheme reference table in spec.md Section 7.
 

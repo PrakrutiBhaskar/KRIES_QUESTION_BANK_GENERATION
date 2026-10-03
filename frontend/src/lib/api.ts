@@ -5,6 +5,8 @@
 import { UNAUTHORIZED_EVENT, clearSession, getToken } from './auth';
 import type {
   BlueprintInput,
+  Figure,
+  LibraryFigure,
   BlueprintPlan,
   ChapterInfo,
   Difficulty,
@@ -17,6 +19,8 @@ import type {
   QuestionType,
   Subject,
   User,
+  AppSettings,
+  VerificationStatus,
 } from '../types';
 
 export const API_BASE: string = (import.meta.env.VITE_API_BASE_URL ?? '/api/v1').replace(/\/$/, '');
@@ -56,7 +60,9 @@ async function request<T>(
   { auth = true }: { auth?: boolean } = {},
 ): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (init.body) headers['Content-Type'] = 'application/json';
+  // A FormData body (file upload) needs the browser to set its own multipart
+  // Content-Type, boundary included, so only JSON bodies get one here.
+  if (init.body && !(init.body instanceof FormData)) headers['Content-Type'] = 'application/json';
   const token = auth ? getToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
 
@@ -106,6 +112,42 @@ async function request<T>(
 // ------------------------------------------------------------
 // Wire types (snake_case, as the backend sends them)
 // ------------------------------------------------------------
+interface FigureWire {
+  id: string;
+  caption: string;
+  mime: string;
+  width: number;
+  height: number;
+  size_bytes: number;
+  // Only present on figure-library endpoints, and only filled in for administrators and teachers.
+  subject?: Subject | null;
+  chapter?: string | null;
+  topic?: string;
+  labels?: string[];
+}
+
+function toLibraryFigure(f: FigureWire): LibraryFigure {
+  return {
+    ...toFigure(f)!,
+    subject: f.subject ?? undefined,
+    chapter: f.chapter ?? undefined,
+    topic: f.topic ?? '',
+    labels: f.labels ?? [],
+  };
+}
+
+function toFigure(f: FigureWire | null | undefined): Figure | undefined {
+  if (!f) return undefined;
+  return {
+    id: f.id,
+    caption: f.caption,
+    mime: f.mime,
+    width: f.width,
+    height: f.height,
+    sizeBytes: f.size_bytes,
+  };
+}
+
 interface QuestionWire {
   id: string;
   subject: Subject;
@@ -120,6 +162,11 @@ interface QuestionWire {
   difficulty: QuestionDifficulty;
   topic: string;
   tags: string[];
+  verification_status?: VerificationStatus;
+  verification_note?: string | null;
+  /** Present only when a figure is attached. */
+  figure?: FigureWire | null;
+  answer_figure?: FigureWire | null;
 }
 
 interface PaperWire {
@@ -160,6 +207,10 @@ function toQuestion(q: QuestionWire, index: number): Question {
     answer: q.answer,
     explanation: q.explanation,
     tags: q.tags,
+    verificationStatus: q.verification_status ?? 'unverified',
+    verificationNote: q.verification_note ?? undefined,
+    figure: toFigure(q.figure),
+    answerFigure: toFigure(q.answer_figure),
   };
 }
 
@@ -207,11 +258,54 @@ export interface SignUpInput {
 export interface AuthResult {
   token: string;
   user: User;
+  /** The user's saved preferences (defaults for an account that never saved any). */
+  settings: AppSettings;
+}
+
+interface PreferencesWire {
+  theme: AppSettings['theme'];
+  notifications: boolean;
+  default_question_count: number;
+  default_difficulty: AppSettings['defaultDifficulty'];
+  default_question_type: AppSettings['defaultQuestionType'];
+  default_marks: AppSettings['defaultMarks'];
+}
+
+interface UserWire extends User {
+  preferences: PreferencesWire;
 }
 
 interface TokenWire {
   access_token: string;
-  user: User;
+  user: UserWire;
+}
+
+function settingsFromWire(p: PreferencesWire): AppSettings {
+  return {
+    theme: p.theme,
+    notifications: p.notifications,
+    defaultQuestionCount: p.default_question_count,
+    defaultDifficulty: p.default_difficulty,
+    defaultQuestionType: p.default_question_type,
+    defaultMarks: p.default_marks,
+  };
+}
+
+function settingsToWire(s: Partial<AppSettings>): Partial<PreferencesWire> {
+  const out: Partial<PreferencesWire> = {};
+  if (s.theme !== undefined) out.theme = s.theme;
+  if (s.notifications !== undefined) out.notifications = s.notifications;
+  if (s.defaultQuestionCount !== undefined) out.default_question_count = s.defaultQuestionCount;
+  if (s.defaultDifficulty !== undefined) out.default_difficulty = s.defaultDifficulty;
+  if (s.defaultQuestionType !== undefined) out.default_question_type = s.defaultQuestionType;
+  if (s.defaultMarks !== undefined) out.default_marks = s.defaultMarks;
+  return out;
+}
+
+/** Split the server's user object into the account (cached for the session) and the preferences. */
+function splitUser(w: UserWire): { user: User; settings: AppSettings } {
+  const { preferences, ...user } = w;
+  return { user, settings: settingsFromWire(preferences) };
 }
 
 export async function signUp(input: SignUpInput): Promise<AuthResult> {
@@ -221,7 +315,7 @@ export async function signUp(input: SignUpInput): Promise<AuthResult> {
     15000,
     { auth: false },
   );
-  return { token: r.access_token, user: r.user };
+  return { token: r.access_token, ...splitUser(r.user) };
 }
 
 export async function signIn(email: string, password: string): Promise<AuthResult> {
@@ -231,7 +325,7 @@ export async function signIn(email: string, password: string): Promise<AuthResul
     15000,
     { auth: false },
   );
-  return { token: r.access_token, user: r.user };
+  return { token: r.access_token, ...splitUser(r.user) };
 }
 
 /** Ask for a password-reset email. The reply is the same whether or not the account exists. */
@@ -257,8 +351,27 @@ export async function resetPassword(token: string, password: string): Promise<st
 }
 
 /** The signed-in user; also how a stored token is validated on page load. */
-export async function fetchMe(): Promise<User> {
-  return request<User>('/auth/me', {}, 15000);
+export async function fetchMe(): Promise<{ user: User; settings: AppSettings }> {
+  return splitUser(await request<UserWire>('/auth/me', {}, 15000));
+}
+
+export interface ProfileChanges {
+  name?: string;
+  role?: 'Teacher' | 'Student';
+  settings?: Partial<AppSettings>;
+}
+
+/** Save profile and/or preference changes to the database. The email can't be changed. */
+export async function updateProfile(
+  changes: ProfileChanges,
+): Promise<{ user: User; settings: AppSettings }> {
+  const body: Record<string, unknown> = {};
+  if (changes.name !== undefined) body.name = changes.name;
+  if (changes.role !== undefined) body.role = changes.role;
+  if (changes.settings !== undefined) body.preferences = settingsToWire(changes.settings);
+  return splitUser(
+    await request<UserWire>('/auth/me', { method: 'PATCH', body: JSON.stringify(body) }, 15000),
+  );
 }
 
 // ------------------------------------------------------------
@@ -300,6 +413,10 @@ export interface GenerateParams {
   count: number;
   topic?: string;
   refresh?: boolean;
+  /** Write the questions about figures from your library (matched on subject + chapter). */
+  useFigures?: boolean;
+  /** Or name exact figures; implies useFigures. */
+  figureIds?: string[];
 }
 
 export interface GenerateResult {
@@ -320,6 +437,8 @@ export async function generateQuestions(p: GenerateParams): Promise<GenerateResu
     refresh: p.refresh ?? false,
   };
   if (p.topic?.trim()) body.topic = p.topic.trim();
+  if (p.figureIds?.length) body.figure_ids = p.figureIds;
+  else if (p.useFigures) body.use_figures = true;
 
   const res = await request<GenerateWire>('/generate', { method: 'POST', body: JSON.stringify(body) });
   return {
@@ -334,13 +453,16 @@ export async function generateQuestions(p: GenerateParams): Promise<GenerateResu
 // ------------------------------------------------------------
 export interface QuestionEdit {
   text?: string;
-  answer?: string;
+  // No `answer`: the answer key is read-only (it is verified at generation time).
   explanation?: string;
   options?: string[];
   marks?: number;
   difficulty?: QuestionDifficulty;
   topic?: string;
   tags?: string[];
+  /** Attach a figure from the library, or null to detach. Sent as-is (snake_case). */
+  figure_id?: string | null;
+  answer_figure_id?: string | null;
 }
 
 export async function updateQuestion(id: string, changes: QuestionEdit): Promise<Question> {
@@ -349,6 +471,88 @@ export async function updateQuestion(id: string, changes: QuestionEdit): Promise
     body: JSON.stringify(changes),
   });
   return toQuestion(q, 0);
+}
+
+// ------------------------------------------------------------
+// Figures (diagrams attached to questions / answer keys)
+// ------------------------------------------------------------
+/** The shared figure library, newest first; optionally only figures tagged with a subject / chapter. */
+export async function fetchFigureLibrary(
+  filter: { subject?: Subject; chapter?: string } = {},
+): Promise<LibraryFigure[]> {
+  const q = new URLSearchParams({ page_size: '100' });
+  if (filter.subject) q.set('subject', filter.subject);
+  if (filter.chapter) q.set('chapter', filter.chapter);
+  const page = await request<{ results: FigureWire[] }>(`/figures?${q}`);
+  return page.results.map(toLibraryFigure);
+}
+
+/** What an administrator fills in when adding or editing a figure. */
+export interface FigureInput {
+  caption: string;
+  subject: Subject | '';
+  chapter: string;
+  topic: string;
+  /** One labelled part per entry, e.g. "A: nucleus". */
+  labels: string[];
+}
+
+/** Add a diagram to the library (administrators only; anyone else gets a 403). */
+export async function uploadFigure(file: File, meta: FigureInput): Promise<LibraryFigure> {
+  const body = new FormData();
+  body.append('file', file);
+  body.append('caption', meta.caption);
+  body.append('subject', meta.subject);
+  body.append('chapter', meta.chapter);
+  body.append('topic', meta.topic);
+  body.append('labels', meta.labels.join('\n'));
+  // Uploads can be several MB, so allow longer than the default timeout.
+  return toLibraryFigure(await request<FigureWire>('/figures', { method: 'POST', body }, 60000));
+}
+
+/** Change a figure's caption / tags / labelled parts (administrators only). */
+export async function updateFigure(id: string, meta: FigureInput): Promise<LibraryFigure> {
+  return toLibraryFigure(
+    await request<FigureWire>(`/figures/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        caption: meta.caption,
+        subject: meta.subject || null,
+        chapter: meta.chapter,
+        topic: meta.topic,
+        labels: meta.labels,
+      }),
+    }),
+  );
+}
+
+/** Remove a figure nothing uses (administrators only; 409 while a question still prints it). */
+export async function deleteFigure(id: string): Promise<void> {
+  await request<void>(`/figures/${id}`, { method: 'DELETE' });
+  figureUrlCache.delete(id);
+}
+
+// An <img src> cannot send the Authorization header, so the bytes are fetched
+// with it and shown through an object URL. A figure's bytes never change, so
+// each one is fetched once per session.
+const figureUrlCache = new Map<string, Promise<string>>();
+
+export function fetchFigureUrl(id: string): Promise<string> {
+  let cached = figureUrlCache.get(id);
+  if (!cached) {
+    cached = (async () => {
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/figures/${id}/file`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new ApiError(res.status, 'figure_unavailable', 'Could not load the figure.');
+      return URL.createObjectURL(await res.blob());
+    })();
+    figureUrlCache.set(id, cached);
+    // Don't cache a failure: let the next render try again.
+    cached.catch(() => figureUrlCache.delete(id));
+  }
+  return cached;
 }
 
 export async function discardQuestion(id: string): Promise<void> {
@@ -498,10 +702,18 @@ export interface ExportResult {
   sizeBytes: number;
 }
 
-export async function exportBank(id: string): Promise<ExportResult> {
+export interface ExportOptions {
+  /** Append the Answer Key pages. Defaults to true, matching the server. */
+  includeAnswerKey?: boolean;
+}
+
+export async function exportBank(id: string, opts: ExportOptions = {}): Promise<ExportResult> {
   const r = await request<{ download_url: string; filename: string; size_bytes: number }>(
     `/export/${id}`,
-    { method: 'POST' },
+    {
+      method: 'POST',
+      body: JSON.stringify({ include_answer_key: opts.includeAnswerKey ?? true }),
+    },
   );
   return { downloadUrl: r.download_url, filename: r.filename, sizeBytes: r.size_bytes };
 }

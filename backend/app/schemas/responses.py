@@ -4,11 +4,11 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_serializer
 
 from generation_engine.schemas import QuestionType, Subject
 
-from .common import MaskedQuestionOut, QuestionOut
+from .common import FigureOut, MaskedQuestionOut, QuestionOut, _drop_empty_figures
 
 
 class GenerateOut(BaseModel):
@@ -102,6 +102,11 @@ class RevealOut(BaseModel):
     question_id: uuid.UUID
     answer: str
     explanation: str = ""
+    answer_figure: FigureOut | None = None
+
+    @model_serializer(mode="wrap")
+    def _serialize(self, handler):
+        return _drop_empty_figures(handler(self))
 
 
 class ExportOut(BaseModel):

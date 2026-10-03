@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { QuestionBank, User, AppSettings } from '../types';
 import {
   UNAUTHORIZED_EVENT,
@@ -18,8 +18,11 @@ import {
   errorMessage,
   signIn,
   signUp,
+  updateProfile,
+  type ProfileChanges,
   type SignUpInput,
 } from '../lib/api';
+import { applyTheme, watchSystemTheme } from '../lib/theme';
 
 // ============================================================
 // Context shape
@@ -43,9 +46,10 @@ interface AppContextValue {
   upsertBank: (bank: QuestionBank) => void;
   deleteQuestionBank: (id: string) => Promise<void>;
 
-  // Settings
+  // Profile + preferences (saved to the database through PATCH /auth/me)
   settings: AppSettings;
-  updateSettings: (s: AppSettings) => void;
+  /** Persists the changes, then updates the app. Rejects with an ApiError if the server refuses. */
+  saveProfile: (changes: ProfileChanges) => Promise<void>;
 
   // Toast
   toast: Toast | null;
@@ -91,15 +95,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isLoggedIn, refreshBanks]);
 
   const login = useCallback(async (email: string, password: string, remember = true) => {
-    const { token, user: signedIn } = await signIn(email, password);
+    const { token, user: signedIn, settings: saved } = await signIn(email, password);
     saveSession(token, signedIn, remember);
     setUser(signedIn);
+    setSettings(saved);
+    saveSettings(saved);
   }, []);
 
   const signUpUser = useCallback(async (input: SignUpInput, remember = true) => {
-    const { token, user: created } = await signUp(input);
+    const { token, user: created, settings: saved } = await signUp(input);
     saveSession(token, created, remember);
     setUser(created);
+    setSettings(saved);
+    saveSettings(saved);
   }, []);
 
   const logout = useCallback(() => {
@@ -124,9 +132,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!getToken()) return;
     fetchMe()
-      .then((fresh) => {
+      .then(({ user: fresh, settings: saved }) => {
         updateStoredUser(fresh);
         setUser(fresh);
+        setSettings(saved);
+        saveSettings(saved);
       })
       .catch(() => {
         /* 401 -> handled by the UNAUTHORIZED_EVENT listener; anything else: keep the cached user */
@@ -147,12 +157,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setQuestionBanks((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
-  const updateSettings = useCallback((s: AppSettings) => {
-    setSettings(s);
-    saveSettings(s);
+  const saveProfile = useCallback(async (changes: ProfileChanges) => {
+    const { user: saved, settings: savedSettings } = await updateProfile(changes);
+    updateStoredUser(saved);
+    setUser(saved);
+    setSettings(savedSettings);
+    saveSettings(savedSettings); // local cache, so the theme is right before the next page load
   }, []);
 
+  // The theme lives on <html>; 'system' follows the OS and re-applies when it changes.
+  useEffect(() => {
+    applyTheme(settings.theme);
+    return settings.theme === 'system' ? watchSystemTheme(() => applyTheme('system')) : undefined;
+  }, [settings.theme]);
+
+  // "In-app Notifications" off silences the success/info toasts; errors and warnings always show.
+  const notificationsOn = useRef(settings.notifications);
+  useEffect(() => {
+    notificationsOn.current = settings.notifications;
+  }, [settings.notifications]);
+
   const showToast = useCallback((message: string, type: Toast['type'] = 'success') => {
+    if (message && !notificationsOn.current && (type === 'success' || type === 'info')) return;
     const id = Math.random().toString(36).slice(2);
     setToast({ id, message, type });
     setTimeout(() => setToast(null), 4000);
@@ -171,7 +197,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     upsertBank,
     deleteQuestionBank,
     settings,
-    updateSettings,
+    saveProfile,
     toast,
     showToast,
   };

@@ -3,7 +3,8 @@ Authentication.
 
   POST /auth/signup   create an account, returns a token (auto sign-in)
   POST /auth/login    exchange email + password for a token
-  GET  /auth/me       the signed-in user (also validates a stored token)
+  GET  /auth/me       the signed-in user, with their saved preferences (also validates a stored token)
+  PATCH /auth/me      save profile (name, role) and preference changes; the email can't be changed
   POST /auth/forgot-password   email a password-reset link (same reply whether or not the account exists)
   POST /auth/reset-password    choose a new password using that link
 """
@@ -21,6 +22,7 @@ from ..schemas import (
     ForgotPasswordIn,
     LoginIn,
     MessageOut,
+    ProfileUpdateIn,
     ResetPasswordIn,
     SignUpIn,
     TokenOut,
@@ -124,4 +126,23 @@ async def reset_password(
     responses={401: {"model": ErrorOut}},
 )
 async def me(user: User = Depends(get_current_user)) -> UserOut:
+    return UserOut.model_validate(user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserOut,
+    summary="Update the signed-in user's profile and preferences",
+    responses={
+        400: {"model": ErrorOut},
+        401: {"model": ErrorOut},
+        403: {"model": ErrorOut},
+    },
+)
+async def update_me(
+    body: ProfileUpdateIn,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> UserOut:
+    user = await auth_service.update_profile(session, user, body)
     return UserOut.model_validate(user)

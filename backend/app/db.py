@@ -45,12 +45,29 @@ def build_engine(url: str | None = None, echo: bool | None = None) -> AsyncEngin
 # created by an older version would be missing these. ensure_schema() adds them
 # (additive and idempotent). Alembic migration 0003 does the same for
 # deployments that use migrations instead of AUTO_CREATE_TABLES (0003 for
-# questions.created_by, 0004 for paper_questions.section).
-_ADDED_COLUMNS = [("questions", "created_by"), ("paper_questions", "section")]
+# questions.created_by, 0004 for paper_questions.section, 0005 for
+# users.preferences, 0006 for the figures table and questions.figure_id /
+# answer_figure_id, 0007 for questions.verification_status / verification_note,
+# 0008 for the figure metadata used by figure-based generation).
+_ADDED_COLUMNS = [
+    ("questions", "created_by"),
+    ("paper_questions", "section"),
+    ("users", "preferences"),
+    ("questions", "figure_id"),
+    ("questions", "answer_figure_id"),
+    ("questions", "verification_status"),
+    ("questions", "verification_note"),
+    ("figures", "subject"),
+    ("figures", "chapter"),
+    ("figures", "topic"),
+    ("figures", "labels"),
+]
 _ADDED_INDEXES = [
     ("ix_questions_created_by", "questions", "created_by"),
     ("ix_papers_user_id", "papers", "user_id"),
     ("ix_practice_sessions_user_id", "practice_sessions", "user_id"),
+    ("ix_questions_figure_id", "questions", "figure_id"),
+    ("ix_questions_answer_figure_id", "questions", "answer_figure_id"),
 ]
 
 

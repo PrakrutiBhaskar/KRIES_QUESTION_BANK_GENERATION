@@ -18,7 +18,13 @@ import {
   TypeBadge,
   EmptyState,
   ConfirmModal,
+  ExportModal,
+  VerificationBadge,
+  VerificationNote,
+  VerificationWarning,
 } from '../components/ui';
+import { BankDetailSkeleton } from '../components/Skeleton';
+import { FigureImage } from '../components/FigureImage';
 import { formatDate } from '../lib/utils';
 import {
   errorMessage,
@@ -58,10 +64,15 @@ function QuestionRow({ question, onDelete }: QuestionRowProps) {
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
               {question.marks} mark{question.marks > 1 ? 's' : ''}
             </span>
+            <VerificationBadge question={question} />
           </div>
 
           {/* Question text */}
           <p className="text-sm font-medium text-slate-900 leading-snug">{question.text}</p>
+          <VerificationWarning question={question} />
+
+          {/* Diagram printed with the question */}
+          {question.figure && <FigureImage figure={question.figure} className="mt-2" />}
 
           {/* MCQ options */}
           {question.options && question.options.length > 0 && (
@@ -102,6 +113,10 @@ function QuestionRow({ question, onDelete }: QuestionRowProps) {
               <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
                 <p className="text-xs font-semibold text-emerald-700 mb-1">Answer</p>
                 <p className="text-xs text-emerald-800 whitespace-pre-wrap">{question.answer}</p>
+                {/* Diagram printed in the answer key: the answer figure, else the question's own */}
+                {(question.answerFigure ?? question.figure) && (
+                  <FigureImage figure={(question.answerFigure ?? question.figure)!} className="mt-2" />
+                )}
               </div>
               {question.explanation && (
                 <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
@@ -109,6 +124,7 @@ function QuestionRow({ question, onDelete }: QuestionRowProps) {
                   <p className="text-xs text-blue-800">{question.explanation}</p>
                 </div>
               )}
+              <VerificationNote question={question} />
             </div>
           )}
 
@@ -299,6 +315,7 @@ export default function QuestionBankDetailPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addingQuestion, setAddingQuestion] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -316,12 +333,7 @@ export default function QuestionBankDetailPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center gap-2 py-24 text-sm text-slate-500">
-        <Loader2 className="w-4 h-4 animate-spin" />
-        Loading question bank…
-      </div>
-    );
+    return <BankDetailSkeleton />;
   }
 
   if (!bank) {
@@ -353,16 +365,22 @@ export default function QuestionBankDetailPage() {
   };
 
   const handleAddQuestion = async (q: Question) => {
+    // A paper can't hold the same question twice (the generator may return one it already stored).
+    if (bank.questions.some((x) => x.id === q.id)) {
+      showToast('That question is already in this bank. Try again for a different one.', 'warning');
+      return;
+    }
     commit(await setBankQuestions(bank.id, renumber([...bank.questions, q])));
     showToast('Question added.', 'success');
   };
 
-  const handleExport = async () => {
+  const handleExport = async (includeAnswerKey: boolean) => {
     setExporting(true);
     try {
-      const res = await exportBank(bank.id);
+      const res = await exportBank(bank.id, { includeAnswerKey });
       window.open(res.downloadUrl, '_blank', 'noopener');
-      showToast('PDF exported.', 'success');
+      setExportOpen(false);
+      showToast(includeAnswerKey ? 'PDF exported with answer key.' : 'PDF exported without answer key.', 'success');
     } catch (err) {
       showToast(errorMessage(err), 'error');
     } finally {
@@ -400,7 +418,7 @@ export default function QuestionBankDetailPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => void handleExport()}
+              onClick={() => setExportOpen(true)}
               disabled={exporting || bank.questions.length === 0}
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-60 transition-colors"
             >
@@ -468,7 +486,10 @@ export default function QuestionBankDetailPage() {
                     </span>
                   </div>
                 )}
-                <QuestionRow question={q} onDelete={(qId) => setDeleteId(qId)} />
+                <QuestionRow
+                  question={q}
+                  onDelete={(qId) => setDeleteId(qId)}
+                />
               </div>
             ))}
           </div>
@@ -493,6 +514,14 @@ export default function QuestionBankDetailPage() {
         danger
         onConfirm={() => deleteId && void handleRemove(deleteId)}
         onCancel={() => setDeleteId(null)}
+      />
+
+      <ExportModal
+        open={exportOpen}
+        name={bank.name}
+        exporting={exporting}
+        onConfirm={(includeAnswerKey) => void handleExport(includeAnswerKey)}
+        onCancel={() => setExportOpen(false)}
       />
     </div>
   );

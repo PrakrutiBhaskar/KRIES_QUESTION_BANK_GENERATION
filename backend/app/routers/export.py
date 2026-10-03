@@ -22,7 +22,7 @@ from ..db import get_session
 from ..deps import get_current_user
 from ..errors import UnauthorizedError
 from ..models import User
-from ..schemas import ErrorOut, ExportOut
+from ..schemas import ErrorOut, ExportIn, ExportOut
 from ..security import create_download_token, verify_download_token
 from ..services import export as export_service
 from ..services import papers as paper_service
@@ -38,11 +38,16 @@ router = APIRouter(prefix="/export", tags=["export"])
 )
 async def export_paper(
     paper_id: uuid.UUID,
+    body: ExportIn | None = None,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
 ) -> ExportOut:
     paper = await paper_service.get_paper(session, paper_id, user.id)
-    path, size = export_service.export_paper(paper)
+    # No body at all means the historical behaviour: questions + answer key.
+    include_answer_key = body.include_answer_key if body is not None else True
+    path, size = export_service.export_paper(
+        paper, include_answer_key=include_answer_key
+    )
     return ExportOut(
         download_url=export_service.public_url(
             path.name, token=create_download_token(path.name)

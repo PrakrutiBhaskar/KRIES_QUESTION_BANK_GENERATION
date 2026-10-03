@@ -54,6 +54,12 @@ PROTECTED = [
     ("GET", f"/practice/sessions/{uuid.uuid4()}/reveal/{uuid.uuid4()}"),
     ("GET", "/subjects"),
     ("GET", "/auth/me"),
+    ("POST", "/figures"),
+    ("GET", "/figures"),
+    ("GET", f"/figures/{uuid.uuid4()}"),
+    ("GET", f"/figures/{uuid.uuid4()}/file"),
+    ("PATCH", f"/figures/{uuid.uuid4()}"),
+    ("DELETE", f"/figures/{uuid.uuid4()}"),
 ]
 
 

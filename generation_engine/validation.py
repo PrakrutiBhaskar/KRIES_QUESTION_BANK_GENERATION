@@ -28,6 +28,7 @@ from .schemas import (
     QuestionType,
     VALID_GRADES,
     VALID_MARKS_BY_TYPE,
+    figure_ref_map,
 )
 from .subject_formats import compile_required_pattern, get_marks_rule
 
@@ -127,6 +128,26 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
             raw={},
         )
 
+    figure_id: str | None = None
+    figure_context: str | None = None
+    refs = figure_ref_map(request.figures)
+    if refs:
+        # The model names a figure by its short reference; the real id is
+        # attached here, so a made-up or mis-copied reference is rejected
+        # rather than silently pointing at the wrong (or no) diagram.
+        ref = str(raw.get("figure_ref") or "").strip().upper()
+        if ref not in refs:
+            return BuildResult(
+                question=None,
+                error=(
+                    f'figure_ref must be one of {", ".join(refs)}, got '
+                    f'{raw.get("figure_ref")!r}'
+                ),
+                raw=raw,
+            )
+        figure_id = refs[ref].id
+        figure_context = refs[ref].describe()
+
     try:
         payload = {
             "subject": request.subject,
@@ -141,6 +162,8 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
             "explanation": raw.get("explanation", "") or "",
             "topic": raw.get("topic", "") or "",
             "tags": raw.get("tags") or [],
+            "figure_id": figure_id,
+            "figure_context": figure_context,
         }
         question = Question(**payload)
     except PydanticValidationError as e:
@@ -174,23 +197,28 @@ def find_duplicates(
     """
     threshold = similarity_threshold or settings.near_duplicate_similarity_threshold
     normalized = [_normalize(q.text) for q in questions]
-    seen_exact: set[str] = set()
-    kept_normalized: list[str] = []
+    # "Identify the part labelled A" about two different diagrams is two
+    # questions, so a question is only compared with earlier ones that use the
+    # same figure (or none).
+    seen_exact: set[tuple[str | None, str]] = set()
+    kept_normalized: list[tuple[str | None, str]] = []
     drop: set[int] = set()
 
     for i, norm in enumerate(normalized):
-        if norm in seen_exact:
+        fig = questions[i].figure_id
+        if (fig, norm) in seen_exact:
             drop.add(i)
             continue
         is_near_dup = any(
-            difflib.SequenceMatcher(None, norm, prior).ratio() >= threshold
-            for prior in kept_normalized
+            prior_fig == fig
+            and difflib.SequenceMatcher(None, norm, prior).ratio() >= threshold
+            for prior_fig, prior in kept_normalized
         )
         if is_near_dup:
             drop.add(i)
             continue
-        seen_exact.add(norm)
-        kept_normalized.append(norm)
+        seen_exact.add((fig, norm))
+        kept_normalized.append((fig, norm))
 
     return drop
 
@@ -514,6 +542,78 @@ def check_answer_relevance(question: Question) -> list[str]:
             f"an MCQ question, not inside a {question.type.value} "
             f"question's text"
         )
+
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# 3b. Figure checks (only for questions written about a stored figure)
+# ---------------------------------------------------------------------------
+
+# The question is printed beside its figure, so it should point at it.
+_FIGURE_WORD_RE = re.compile(
+    r"\b(figure|diagram|picture|illustration|image|sketch|drawing|shown|"
+    r"labell?ed|marked|depicted)\b",
+    re.IGNORECASE,
+)
+# A label entry as the teacher typed it: "A: nucleus", "3 - evaporation", "B) root".
+_LABEL_ENTRY_RE = re.compile(r"^\s*([A-Za-z]|\d{1,2})\s*[:=).\-\u2013\u2014]\s*(.+?)\s*$")
+# "the part labelled A", "marked 3", "indicated by B" -> the key being pointed at.
+_LABEL_REF_RE = re.compile(
+    r"(?:[Ll]abell?ed|[Mm]arked(?: as)?|[Ii]ndicated by|[Pp]ointed (?:out )?by|"
+    r"[Ss]hown by|[Ll]abel)\s*[:\-]?\s*[\"'(]?([A-Z]|\d{1,2})(?![A-Za-z0-9])"
+)
+
+
+def label_keys(labels: list[str]) -> dict[str, str]:
+    """{"A": "nucleus", "3": "evaporation"} from entries like "A: nucleus".
+
+    Entries without a letter/number key (a plain "nucleus") are skipped; a
+    figure with no keyed labels simply gets no label-reference check.
+    """
+    keys: dict[str, str] = {}
+    for entry in labels:
+        m = _LABEL_ENTRY_RE.match(entry or "")
+        if m:
+            keys.setdefault(m.group(1).upper(), m.group(2))
+    return keys
+
+
+def check_figure_question(question: Question, request: GenerationRequest) -> list[str]:
+    """Checks a figure question against the figure's text metadata.
+
+    The model works from a description, not the image, so these catch the ways
+    that goes wrong: a label that is not in the description, a question that
+    never mentions the figure, and a question that states its own answer.
+    Returns problems (empty = fine); non-figure questions always pass.
+    """
+    if not question.figure_id:
+        return []
+    problems: list[str] = []
+    fig = next((f for f in (request.figures or []) if f.id == question.figure_id), None)
+
+    if not _FIGURE_WORD_RE.search(question.text):
+        problems.append(
+            "figure question never refers to the figure (say e.g. \"In the figure shown ...\")"
+        )
+
+    keys = label_keys(fig.labels) if fig else {}
+    if keys:
+        for ref in dict.fromkeys(_LABEL_REF_RE.findall(question.text)):
+            if ref.upper() not in keys:
+                problems.append(
+                    f'question refers to a part labelled "{ref}", but the figure only has '
+                    f'the labels {", ".join(sorted(keys))} - do not invent labels'
+                )
+
+    answer = _normalize(question.answer)
+    text = _normalize(question.text)
+    if (
+        len(answer) >= 4
+        and len(answer.split()) <= 4
+        and re.search(rf"\b{re.escape(answer)}\b", text)
+    ):
+        problems.append("the question text contains its own answer")
 
     return problems
 

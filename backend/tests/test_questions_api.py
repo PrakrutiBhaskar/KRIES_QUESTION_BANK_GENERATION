@@ -124,14 +124,66 @@ async def test_edit_persists(client):
 
 
 async def test_edit_rejects_a_marks_format_violation(client):
-    """A 3-mark answer must keep exactly 3 points — truncating it is a 400."""
+    """The stored 3-point answer can't satisfy a 1-mark question — a 400."""
     created = (await generate_questions(client, marks=3, count=1))[0]
 
+    response = await client.patch(f"/questions/{created['id']}", json={"marks": 1})
+    assert response.status_code == 400
+    assert set(response.json()) == {"error", "detail"}
+    assert (await client.get(f"/questions/{created['id']}")).json()["marks"] == 3
+
+
+async def test_the_answer_cannot_be_edited(client):
+    created = (await generate_questions(client, count=1))[0]
+
     response = await client.patch(
-        f"/questions/{created['id']}", json={"answer": "Because it does."}
+        f"/questions/{created['id']}", json={"answer": "A different answer."}
     )
     assert response.status_code == 400
     assert set(response.json()) == {"error", "detail"}
+    assert "answer cannot be edited" in response.json()["detail"]
+    # Nothing was changed.
+    assert (await client.get(f"/questions/{created['id']}")).json()["answer"] == created["answer"]
+
+
+async def test_the_answer_cannot_be_edited_even_alongside_other_changes(client):
+    created = (await generate_questions(client, count=1))[0]
+
+    response = await client.patch(
+        f"/questions/{created['id']}",
+        json={"topic": "revised", "answer": "A different answer."},
+    )
+    assert response.status_code == 400
+    stored = (await client.get(f"/questions/{created['id']}")).json()
+    assert stored["answer"] == created["answer"]
+    assert stored["topic"] == created["topic"]  # the whole edit is refused
+
+
+@pytest.mark.parametrize("value", ["", None, "   "])
+async def test_an_empty_answer_field_is_refused_too(client, value):
+    created = (await generate_questions(client, count=1))[0]
+    response = await client.patch(f"/questions/{created['id']}", json={"answer": value})
+    assert response.status_code == 400
+
+
+async def test_a_verified_badge_survives_edits_to_other_fields(client, db_session):
+    from sqlalchemy import update
+
+    from app.models import Question
+
+    created = (await generate_questions(client, count=1))[0]
+    await db_session.execute(
+        update(Question)
+        .where(Question.id == uuid.UUID(created["id"]))
+        .values(verification_status="verified", verification_note="Checked by a rule.")
+    )
+    await db_session.commit()
+
+    response = await client.patch(f"/questions/{created['id']}", json={"topic": "revised"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["verification_status"] == "verified"
+    assert body["answer"] == created["answer"]
 
 
 async def test_edit_rejects_blank_text(client):
@@ -148,12 +200,16 @@ async def test_edit_rejects_unknown_field(client):
     assert response.status_code == 400
 
 
-async def test_edit_rejects_an_mcq_answer_outside_its_options(client):
+async def test_edit_rejects_mcq_options_that_drop_the_correct_answer(client):
+    """With the answer fixed, the options can't be edited out from under it."""
     created = (await generate_questions(client, type="MCQ", marks=1, count=1))[0]
+    wrong_only = [o for o in created["options"] if o != created["answer"]]
     response = await client.patch(
-        f"/questions/{created['id']}", json={"answer": "Something not in the options"}
+        f"/questions/{created['id']}",
+        json={"options": wrong_only + ["Another wrong option"]},
     )
     assert response.status_code == 400
+    assert (await client.get(f"/questions/{created['id']}")).json()["options"] == created["options"]
 
 
 async def test_edit_unknown_question_returns_404(client):

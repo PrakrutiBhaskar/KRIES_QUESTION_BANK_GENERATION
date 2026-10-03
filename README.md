@@ -6,6 +6,12 @@ answer — complete with answer keys, difficulty tagging, and marks-aware answer
 formatting. Teachers use it to assemble question papers; students use it for
 self-study practice. Built by a 3-person team, one module per person.
 
+**Status:** all three modules work end to end — generation engine, FastAPI backend,
+and a React web app with sign-up/sign-in, password reset, question banks,
+blueprint-based question papers, PDF export (including Kannada), per-user settings
+and a dark theme. See [Current status](#current-status) for what is verified and
+what is still open.
+
 ## What problem this solves
 
 Setting good practice questions per chapter, per grade, per mark value is slow
@@ -23,11 +29,11 @@ into a self-check practice session with answers withheld until revealed.
 | Subjects | Math, Science, Social Science, English, Kannada |
 | Question types | MCQ, Short answer, Long answer |
 | LLM API for generation | Groq |
-| Frontend | React Native — single codebase for Web + Android |
+| Frontend | **React + TypeScript + Vite + Tailwind web app** (built). The original plan was React Native for Web + Android; the web app shipped first and an Android build is still open |
 | Backend | Python, FastAPI |
 | Database | PostgreSQL |
-| Auth | Sign-up / sign-in with JWT bearer tokens; papers and practice sessions are private to their owner; per-user and per-IP rate limits (see `docs/api-contract.md`) |
-| Syllabus data source | Parsed from textbook PDFs (not yet built) |
+| Auth | Sign-up / sign-in with JWT bearer tokens; password reset by emailed single-use link; papers and practice sessions are private to their owner; per-user and per-IP rate limits (see `docs/api-contract.md` and `backend/README.md`) |
+| Syllabus data source | Parsed from textbook PDFs. The ingestion CLI is built; the shipped chapter list (194 chapters) is still hand-curated |
 | Hosting | AWS preferred, Render as fallback |
 
 ## Architecture — three modules, one per team member
@@ -43,7 +49,7 @@ scripts/              Standalone CLIs: live smoke test, syllabus PDF ingestion
 They compose like this:
 
 ```
-React Native app
+React web app (frontend/)
       │  REST (see docs/api-contract.md)
       ▼
 FastAPI backend (backend/)
@@ -101,8 +107,9 @@ derivations, Social Science's need labeled sections (causes/effects), Science
 should reference diagrams where relevant. MCQs always get one correct option
 plus a 1-line justification, regardless of marks. This rule is enforced by
 `generation_engine/subject_formats.py` and re-checked server-side whenever a
-question is edited (`PATCH /questions/{id}`), so a hand-edit can't drop a
-3-mark answer down to one line.
+question is edited (`PATCH /questions/{id}`), so a hand-edit (for example
+changing the marks) can't leave an answer that no longer fits. The answer
+itself is read-only.
 
 ## Strictly Karnataka State Board, from the textbook
 
@@ -117,8 +124,11 @@ book. Details: `generation_engine/README.md`.
 ```
 generation_engine/   Module A — see generation_engine/README.md
 backend/              Module B — see backend/README.md
+frontend/             Module C — see frontend/README.md
 docs/                 Full spec, API contract, DB schema, ADRs, test plan
-scripts/              Live smoke-test script (hits real Groq, not mocked)
+scripts/              smoke_generate.py (hits real Groq, not mocked), ingest_syllabus.py,
+                      ingest_textbooks.py, make_admin.py, upload_figure.py
+tests/                Module A's test suite (the backend's lives in backend/tests/)
 ```
 
 Start with `docs/project-context.md` for a condensed brief, or the individual
@@ -143,7 +153,7 @@ docs below for full detail:
 cd generation_engine
 pip install -r requirements.txt
 cp .env.example .env        # add your GROQ_API_KEY
-pytest                      # 236 tests, no network required — fully mocked
+pytest                      # 210 tests, no network required — fully mocked
 ```
 
 Sanity-check against the **real** Groq API (not mocked) before trusting it:
@@ -154,7 +164,7 @@ python scripts/smoke_generate.py --all-subjects --json
 ```
 
 **Syllabus data:** `backend/data/syllabus.json` ships with a manually-curated
-interim chapter list (134 chapters, 5 subjects) so the chapter picker isn't
+interim chapter list (194 chapters, 5 subjects) so the chapter picker isn't
 empty on a fresh install — see `backend/data/README.md`. To ingest real
 chapter lists from actual textbook PDFs instead:
 ```bash
@@ -172,33 +182,53 @@ cd backend
 python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r ../requirements.txt -r requirements.txt
 
-cp .env.example .env        # set DATABASE_URL — see gotchas below
-alembic upgrade head        # creates the 7 tables
+cp .env.example .env        # local dev: the default SQLite DATABASE_URL works as-is
+alembic upgrade head        # creates the 8 tables (SQLite dev databases create themselves on startup)
 uvicorn app.main:app --reload
 ```
 
 Interactive API docs: `http://localhost:8000/docs`. Health check: `/health`.
 
 ```bash
-pytest    # 137 tests, in-memory SQLite + a stubbed Groq client — no network, no real DB needed
+pytest    # 592 tests, in-memory SQLite + a stubbed Groq client — no network, no real DB needed
 ```
 
-**Database:** any PostgreSQL works, including a free [Supabase](https://supabase.com)
-project — no local Postgres install required. Use the **direct connection**
-or **session pooler** (port `5432`), not the transaction pooler (port
-`6543`) — the app's `asyncpg` driver uses prepared statements, which the
-transaction pooler doesn't support without extra config this project doesn't
-set.
+**Database:** for local development use SQLite (`DATABASE_URL=sqlite+aiosqlite:///./question_bank.db`),
+no server needed. For production use any PostgreSQL, including a free
+[Supabase](https://supabase.com) project. Use the **direct connection** or **session
+pooler** (port `5432`), not the transaction pooler (port `6543`) — the app's `asyncpg`
+driver uses prepared statements, which the transaction pooler doesn't support without
+extra config this project doesn't set.
+
+**Set `JWT_SECRET`** (see `backend/.env.example`) in any real deployment; otherwise a
+random key is generated per process and everyone is signed out on every restart.
 
 ### 3. Frontend (Module C)
 
-Not built yet. See `docs/ui-wireframes.md` for the planned screens and
-`docs/api-contract.md` for what the backend already exposes.
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm run dev                 # http://localhost:5173 — Vite proxies /api to the backend on :8000
+```
+
+Pages: sign in / sign up / forgot password / reset password, Dashboard, Generate,
+Question Papers (blueprint builder), Question Banks (+ detail), Settings. See
+`frontend/README.md` for how each screen maps to the API.
+
+### Sending password-reset emails
+
+`POST /auth/forgot-password` emails a link that is valid for 30 minutes and works once.
+With `SMTP_HOST` empty (the default) no email is sent: the link is **printed in the backend
+log**, which is all you need locally. For real email set `SMTP_HOST`, `SMTP_PORT`,
+`SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_SECURITY` and `FRONTEND_URL` in
+`backend/.env` (a Gmail app password works; details in `backend/README.md`).
 
 ## CI
 
-`.github/workflows/tests.yml` runs both test suites (generation-engine and
-backend, as two parallel jobs) on every push and PR to `main`. No secrets
+`.github/workflows/tests.yml` runs both Python test suites (generation-engine and
+backend, as two parallel jobs) on every push and PR to `main`. The frontend is not part
+of CI yet (`npm run build` and `npm run lint` are run by hand). No secrets
 are configured for it, deliberately — both suites are fully mocked (fake
 Groq HTTP responses) or run against in-memory SQLite, so a passing local run
 should mean a passing CI run and vice versa. If a test ever starts requiring
@@ -229,6 +259,11 @@ re-discovers them the hard way:
   `backend/app/services/export/renderer.py` by normalizing to plain ASCII
   before layout, so it's correct regardless of which font ends up registered
   on a given machine.
+- **Reset links point at `FRONTEND_URL`.** It defaults to `http://localhost:5173`; if you
+  deploy and leave it, users get a reset link that opens localhost. Set it to the real
+  frontend origin.
+- **Rate limits are per process.** Counters live in memory, so with several workers or
+  instances each keeps its own counts. Move the store to Redis before scaling out.
 - **PowerShell isn't bash.** `createdb`/`psql` are PostgreSQL client binaries,
   not shell builtins — need PostgreSQL's `bin` folder on `PATH`, or skip them
   entirely by using a hosted Postgres (Supabase). Inline env vars
@@ -236,6 +271,23 @@ re-discovers them the hard way:
   on its own line first. `curl` is aliased to `Invoke-WebRequest`, which
   takes different flags than real curl — use `Invoke-RestMethod` for JSON
   APIs, or call `curl.exe` explicitly for the real thing.
+
+## Accounts and settings
+
+- **Sign-up / sign-in** — JWT bearer tokens (`POST /auth/signup`, `/auth/login`, `GET /auth/me`).
+  Roles are `Teacher` or `Student`; `Admin` can never be self-assigned. Wrong passwords
+  are rate-limited per (IP, email) and lock that pair out for 15 minutes.
+- **Forgot / reset password** — `POST /auth/forgot-password` always answers the same way, whether or
+  not the email has an account, and sends the email after responding, so it can't be used to find
+  out who is registered. `POST /auth/reset-password` takes the emailed token plus a new password. The
+  token is bound to the current password hash, so it is single-use and needs no extra table.
+- **Settings** — `PATCH /auth/me` saves the profile (name, role) and preferences (theme, in-app
+  notifications, default question count / difficulty / type / marks) to the `users` table
+  (`users.preferences`, migration `0005`). They follow the user across devices. The **email can't be
+  changed**: the endpoint answers 403. Choosing a theme previews it immediately and it is applied
+  app-wide (Light, Dark, or System), before first paint.
+- **Ownership** — papers and practice sessions are private to their owner; the question pool is
+  shared (anyone signed in can reuse stored questions, only the creator can edit or discard one).
 
 ## Question Papers (blueprint-based papers)
 
@@ -275,60 +327,53 @@ have no sections and render exactly as before. A blueprint paper may have at mos
 questions, and `POST /papers/blueprint` shares the per-user `RATE_LIMIT_GENERATE` budget
 with `/generate` because it can make many LLM calls.
 
-## Current verified status
+## Current status
 
-As of the last setup pass, confirmed working end-to-end against a live Groq
-key and a live Supabase Postgres instance (not mocks):
+**Built and covered by tests** (no network or database needed to run them):
 
-- ✅ Migrations apply cleanly (`alembic upgrade head`) — all 7 tables created
-- ✅ Backend test suite passes (137 tests) against in-memory SQLite + stubbed Groq
-- ✅ Live generation via `scripts/smoke_generate.py` — real Groq output, schema-valid
-- ✅ Full request cycle proven with real data: `POST /generate` → rows land in
-  Supabase's `subjects`/`chapters`/`questions` tables
-- ✅ Paper creation (`POST /papers`) — `total_marks` correctly server-computed
-- ✅ PDF export (`POST /export/{paper_id}`) — verified visually, including the
-  character-encoding fix above
-- ✅ Syllabus seeding at startup — verified on a fresh, empty DB: `seed_from_index`
-  populated all 134 chapters/5 subjects with zero prior generation activity
-- ✅ Syllabus PDF-ingestion CLI — verified against a real synthetic PDF
-  (cover + contents + chapter-body pages), including that narrowing `--pages`
-  correctly avoids false positives from numbered lines in body text
-- ✅ CI — both jobs verified in completely fresh virtualenvs with zero
-  secrets configured (159 + 137 tests passing)
+- ✅ Generation engine — prompts, Groq client with retry/backoff, validation, marks-aware checks (210 tests)
+- ✅ Backend — every endpoint in `docs/api-contract.md`, plus papers list, blueprint papers, auth,
+  password reset and profile/preferences (592 tests)
+- ✅ Frontend — sign-in/up, forgot/reset password, dashboard, generate, blueprint question papers,
+  question banks, settings, light/dark/system theme (builds with `npm run build`; no automated UI tests)
+- ✅ PDF export — WeasyPrint, ReportLab and fpdf renderers; Kannada papers export correctly via
+  WeasyPrint or fpdf (fonts bundled in `backend/assets/fonts`)
+- ✅ Migrations `0001`–`0008`, plus `ensure_schema` for SQLite databases created by an older version
+- ✅ CI — both Python suites, in fresh environments, with no secrets configured
 
-Still open (see `docs/task-tracker.md` for the full board):
+**Verified by hand against live services** (a real Groq key and a Supabase Postgres, in an earlier pass):
+`POST /generate` writing real rows, paper creation, PDF export (including the character-encoding fix),
+syllabus seeding on an empty database, and the syllabus PDF-ingestion CLI. The auth, password-reset,
+settings and blueprint features were tested with the automated suite only.
 
-- ⬜ Frontend (React Native) — not started
-- ⬜ `backend/data/syllabus.json`'s chapter list is still manually-curated,
-  not parsed from real textbook PDFs — the ingestion pipeline
-  (`scripts/ingest_syllabus.py`) is built and tested, just not yet pointed
-  at actual textbook files
-- ⬜ WeasyPrint not installed on the current dev machine — PDF export is
-  running on the ReportLab fallback, which cannot render Kannada script at
-  all (refuses with a 503 rather than emitting blank boxes). Needed before
-  Kannada papers can be exported.
-- ⬜ Answer key is currently *always* included in the exported PDF, with no
-  way to request a student-facing version without answers — worth deciding
-  before the frontend's export flow assumes one or the other
-- ⬜ Backend test suite has never actually been run against a live PostgreSQL
-  database (only in-memory SQLite) — worth doing once before considering the
-  DB layer fully proven, since SQLite masks Postgres-only behavior (native
-  enums, `jsonb`, `text[]`). CI runs the same in-memory suite, so this gap
-  applies there too.
-- ⬜ Production hosting target (AWS vs. Render) not yet decided
+**Still open** (`docs/task-tracker.md` has the full board, and may lag behind this list):
+
+- ⬜ Android build — only the web app exists; React Native was the original plan
+- ⬜ Frontend has no automated tests and is not in CI
+- ⬜ `backend/data/syllabus.json` is still hand-curated (194 chapters), not parsed from real textbook
+  PDFs — the ingestion pipeline (`scripts/ingest_syllabus.py`) is built and tested, just not yet
+  pointed at actual textbook files
+- ⬜ Answer key is *always* included in the exported PDF — there is no way to request a student-facing
+  version without answers (the renderer supports it; the API doesn't expose it yet)
+- ⬜ The backend suite has never been run against a live PostgreSQL database (only in-memory SQLite,
+  which masks Postgres-only behaviour such as native enums, `jsonb` and `text[]`). CI runs the same suite
+- ⬜ Rate limiting is in-memory (single process); needs a shared store before running several instances
+- ⬜ Password-reset email has been tested with a stubbed sender, not against a real SMTP server
+- ⬜ Production hosting target (AWS vs. Render) not decided; the frontend is not deployed
 - ⬜ Export files are never cleaned up — no retention policy yet
+- ⬜ Chapter weighting and generation quality: duplicate-similarity threshold (0.90) and word-count
+  bounds are first estimates, and answers have not been fact-checked per subject
 
 ## Tech stack summary
 
 - **Generation:** Python, Groq API (`openai/gpt-oss-120b`), Pydantic schemas
 - **Syllabus ingestion:** `pypdf` (text extraction) + regex line-parsing,
   `scripts/ingest_syllabus.py`
-- **Backend:** FastAPI, SQLAlchemy (async, `asyncpg`), Alembic, PostgreSQL
-- **PDF export:** WeasyPrint (preferred, Unicode/Kannada-capable) or ReportLab
+- **Backend:** FastAPI, SQLAlchemy (async; `asyncpg` for PostgreSQL, `aiosqlite` for local dev), Alembic,
+  PyJWT, scrypt password hashing
+- **PDF export:** WeasyPrint (preferred), fpdf2 + HarfBuzz (pure pip, Kannada-capable), or ReportLab
   (no system dependencies, Latin scripts only)
-- **Frontend (planned):** React Native, single codebase for Web + Android
-- **Testing:** pytest, in-memory SQLite + stubbed Groq client for the backend
-  suite (no network/DB required to run it); a separate live smoke-test script
-  for real-API verification
-- **CI:** GitHub Actions, two jobs (generation-engine, backend), on every
-  push/PR to `main` — no secrets required
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS 4, React Router, lucide-react
+- **Testing:** pytest, in-memory SQLite + stubbed Groq client (no network/DB required); a separate live
+  smoke-test script for real-API verification
+- **CI:** GitHub Actions, two jobs (generation-engine, backend), on every push/PR to `main` — no secrets required

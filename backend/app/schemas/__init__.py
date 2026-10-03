@@ -4,16 +4,28 @@ from .auth import (
     ForgotPasswordIn,
     LoginIn,
     MessageOut,
+    PreferencesOut,
+    PreferencesPatch,
+    ProfileUpdateIn,
     ResetPasswordIn,
     SignUpIn,
     TokenOut,
     UserOut,
 )
-from .common import ErrorOut, MaskedQuestionOut, Page, QuestionOut
+from .common import (
+    ErrorOut,
+    FigureDetailOut,
+    FigureOut,
+    MaskedQuestionOut,
+    Page,
+    QuestionOut,
+)
 from .requests import (
     BlueprintChapterIn,
     BlueprintIn,
     BlueprintSectionIn,
+    ExportIn,
+    FigurePatch,
     GenerateIn,
     PaperIn,
     PaperItemPatch,
@@ -38,6 +50,9 @@ from .responses import (
 )
 
 __all__ = [
+    "PreferencesOut",
+    "PreferencesPatch",
+    "ProfileUpdateIn",
     "ForgotPasswordIn",
     "MessageOut",
     "ResetPasswordIn",
@@ -47,12 +62,16 @@ __all__ = [
     "BlueprintIn",
     "BlueprintPlanOut",
     "BlueprintSectionIn",
+    "ExportIn",
     "BlueprintSectionPlanOut",
     "LoginIn",
     "SignUpIn",
     "TokenOut",
     "UserOut",
     "ErrorOut",
+    "FigureDetailOut",
+    "FigureOut",
+    "FigurePatch",
     "MaskedQuestionOut",
     "Page",
     "QuestionOut",

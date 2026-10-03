@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, FileText, Loader2, Plus, Scale, Trash2, Wand2 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
+import { ChapterListSkeleton } from '../components/Skeleton';
 import {
   createBlueprintPaper,
   errorMessage,
@@ -331,11 +332,7 @@ export default function QuestionPapersPage() {
               </div>
             </div>
 
-            {chaptersLoading && (
-              <p className="flex items-center gap-2 text-xs text-slate-500">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading chapters…
-              </p>
-            )}
+            {chaptersLoading && <ChapterListSkeleton />}
             {!chaptersLoading && chaptersError && (
               <p className="text-xs text-red-600">
                 {chaptersError}{' '}

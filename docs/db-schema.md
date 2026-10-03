@@ -35,9 +35,29 @@ Database: **PostgreSQL**
 | difficulty | enum | `easy`, `medium`, `hard` |
 | topic | text | tag describing the sub-topic within the chapter — lives on the answer key, not the syllabus hierarchy |
 | tags | text[] | |
+| figure_id | uuid (nullable, FK → figures.id, ON DELETE SET NULL) | diagram printed with the question |
+| answer_figure_id | uuid (nullable, FK → figures.id, ON DELETE SET NULL) | diagram printed only in the answer key |
 | created_at | timestamptz | |
 
 **Indexes:** on `(subject_id, chapter_id, type, grade, marks, difficulty)` for fast filtering.
+
+### `figures`
+Metadata for an uploaded diagram. The image itself is a file in `FIGURE_DIR` named `filename`.
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid (PK) | |
+| owner_id | uuid (nullable) | the administrator who uploaded it (`users.id`); informational. The library is shared: any admin can edit or delete a figure, any user can attach it |
+| filename | text (unique) | server-generated `<uuid>.png` / `.jpg`, never the client's name |
+| mime | text | `image/png` or `image/jpeg` |
+| width, height | int | pixels, after re-encoding |
+| size_bytes | int | |
+| caption | text | printed under the figure |
+| subject | text (nullable) | canonical subject name; with `chapter`, how `use_figures` finds it |
+| chapter | text (nullable) | matched case-insensitively |
+| topic | text (nullable) | optional sub-topic; empty = whole chapter |
+| labels | text[] / json (nullable) | labelled parts, e.g. `["A: nucleus", "B: cell wall"]`; owner-visible only |
+| created_at | timestamptz | |
 
 ### `papers`
 | Column | Type | Notes |

@@ -6,7 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import get_session
-from .errors import UnauthorizedError
+from .errors import ForbiddenError, UnauthorizedError
 from .models import User
 from .security import decode_access_token
 from .services import auth as auth_service
@@ -34,5 +34,20 @@ async def get_current_user(
         raise UnauthorizedError(
             "Your session is invalid or has expired. Please sign in again.",
             error="invalid_token",
+        )
+    return user
+
+
+async def require_admin(user: User = Depends(get_current_user)) -> User:
+    """Gate for admin-only actions (managing the shared figure library).
+
+    The role lives on the account (`users.role == "Admin"`). It can't be chosen
+    at sign-up or changed through PATCH /auth/me; an administrator is made on the
+    server with `scripts/make_admin.py`.
+    """
+    if user.role != "Admin":
+        raise ForbiddenError(
+            "Only administrators can change the figure library.",
+            error="admin_required",
         )
     return user

@@ -88,6 +88,63 @@ class MessageOut(BaseModel):
     message: str
 
 
+Theme = Literal["light", "dark", "system"]
+Difficulty = Literal["easy", "medium", "hard", "mixed"]
+QuestionTypeChoice = Literal["MCQ", "Short", "Long", "Mixed"]
+Marks = Literal[1, 2, 3, 5]
+
+
+class PreferencesOut(BaseModel):
+    """What the Settings page edits. Missing keys fall back to these defaults."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    theme: Theme = "light"
+    notifications: bool = True
+    default_question_count: int = Field(default=10, ge=3, le=30)
+    default_difficulty: Difficulty = "mixed"
+    default_question_type: QuestionTypeChoice = "Mixed"
+    default_marks: Marks = 2
+
+
+class PreferencesPatch(BaseModel):
+    """Any subset of the preferences; omitted keys are left as they are."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    theme: Theme | None = None
+    notifications: bool | None = None
+    default_question_count: int | None = Field(default=None, ge=3, le=30)
+    default_difficulty: Difficulty | None = None
+    default_question_type: QuestionTypeChoice | None = None
+    default_marks: Marks | None = None
+
+
+class ProfileUpdateIn(BaseModel):
+    """PATCH /auth/me. Only the fields that are sent change.
+
+    `email` is declared only so the endpoint can answer it with a clear 403:
+    an account's email address is its identity and can't be edited.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, max_length=100)
+    role: Literal["Teacher", "Student"] | None = None
+    preferences: PreferencesPatch | None = None
+    email: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _strip_name(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        v = " ".join(v.split())
+        if not v:
+            raise ValueError("name must not be blank")
+        return v
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -95,6 +152,12 @@ class UserOut(BaseModel):
     name: str
     email: str
     role: Literal["Teacher", "Student", "Admin"]
+    preferences: PreferencesOut = Field(default_factory=PreferencesOut)
+
+    @field_validator("preferences", mode="before")
+    @classmethod
+    def _default_preferences(cls, v):
+        return {} if v is None else v
 
 
 class TokenOut(BaseModel):

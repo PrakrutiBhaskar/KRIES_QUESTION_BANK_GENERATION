@@ -15,6 +15,7 @@ Three layers, all configured in config.py / .env (see the RATE_LIMIT_* keys):
          POST /practice/sessions,
          POST /papers/blueprint      per user   (these can call the LLM)
          POST /export/{id}           per user
+         POST /figures               per user   (image uploads)
 
   2. A failed-login lockout (services/auth.py): too many wrong passwords for
      the same (IP, email) locks that pair out for a while, even if the next
@@ -158,6 +159,8 @@ def _rules_for(method: str, path: str) -> list[tuple[str, str, str]]:
             rules.append(("generate", settings.rate_limit_generate, "user"))
         elif rel.startswith("/export/") and not rel.startswith("/export/files/"):
             rules.append(("export", settings.rate_limit_export, "user"))
+        elif rel == "/figures":
+            rules.append(("upload", settings.rate_limit_upload, "user"))
     if path != "/health":
         rules.append(("global", settings.rate_limit_default, "user"))
     return rules

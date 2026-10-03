@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_session
 from ..deps import get_current_user
 from ..models import User
-from ..schemas import ErrorOut, PracticeSessionIn, PracticeSessionOut, RevealOut
+from ..schemas import ErrorOut, FigureOut, PracticeSessionIn, PracticeSessionOut, RevealOut
 from ..services import practice as practice_service
 
 router = APIRouter(prefix="/practice", tags=["practice"])
@@ -73,4 +73,9 @@ async def reveal(
         question_id=question.id,
         answer=question.answer,
         explanation=question.explanation or "",
+        answer_figure=(
+            FigureOut.from_model(question.answer_figure)
+            if question.answer_figure is not None
+            else None
+        ),
     )

@@ -145,7 +145,7 @@ async def test_render_pdf_auto_prefers_weasyprint_when_available(
 
     monkeypatch.setattr(renderer_service, "weasyprint_available", lambda: True)
     monkeypatch.setattr(
-        renderer_service, "_render_weasyprint", lambda p: b"%PDF-fake-weasyprint"
+        renderer_service, "_render_weasyprint", lambda p, include_answer_key=True: b"%PDF-fake-weasyprint"
     )
     renderer_service.settings.pdf_renderer = "auto"
     out = renderer_service.render_pdf(paper)
@@ -157,7 +157,7 @@ async def test_render_pdf_auto_falls_back_when_weasyprint_raises(
 ):
     paper = await _load_paper(client, db_session, count=1, marks=3, type="Short")
 
-    def _boom(_paper):
+    def _boom(_paper, include_answer_key=True):
         raise RuntimeError("weasyprint blew up")
 
     monkeypatch.setattr(renderer_service, "weasyprint_available", lambda: True)
@@ -199,3 +199,53 @@ async def test_reportlab_refuses_kannada_without_a_unicode_font(
     )
     with pytest.raises(ServiceUnavailableError):
         renderer_service._render_reportlab(paper)
+
+
+# --- answer key toggle ----------------------------------------------------
+
+
+def _pdf_text(pdf: bytes) -> str:
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    return "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(pdf)).pages)
+
+
+@pytest.mark.parametrize("choice", ["reportlab", "fpdf"])
+async def test_render_pdf_answer_key_is_optional(client, db_session, monkeypatch, choice):
+    """Both pure-pip backends honour include_answer_key, and default to including it."""
+    from app.services.export.fpdf_renderer import fpdf_available
+
+    if choice == "fpdf" and not fpdf_available():
+        pytest.skip("fpdf2/uharfbuzz not installed")
+    monkeypatch.setattr(renderer_service.settings, "pdf_renderer", choice)
+    monkeypatch.setattr(renderer_service, "weasyprint_available", lambda: False)
+    paper = await _load_paper(client, db_session, count=2, marks=3, type="Short")
+
+    with_key = renderer_service.render_pdf(paper)
+    explicit = renderer_service.render_pdf(paper, include_answer_key=True)
+    without_key = renderer_service.render_pdf(paper, include_answer_key=False)
+
+    assert "Answer Key" in _pdf_text(with_key)
+    assert "Answer Key" in _pdf_text(explicit)
+    assert "Answer Key" not in _pdf_text(without_key)
+    # The questions themselves are still there.
+    assert "Rendering Test Paper" in _pdf_text(without_key)
+    assert without_key.startswith(b"%PDF-")
+
+
+async def test_render_pdf_passes_flag_to_weasyprint(client, db_session, monkeypatch):
+    paper = await _load_paper(client, db_session, count=1, marks=3, type="Short")
+    seen = []
+
+    def _fake(p, include_answer_key=True):
+        seen.append(include_answer_key)
+        return b"%PDF-fake"
+
+    monkeypatch.setattr(renderer_service, "weasyprint_available", lambda: True)
+    monkeypatch.setattr(renderer_service, "_render_weasyprint", _fake)
+    monkeypatch.setattr(renderer_service.settings, "pdf_renderer", "auto")
+    renderer_service.render_pdf(paper)
+    renderer_service.render_pdf(paper, include_answer_key=False)
+    assert seen == [True, False]

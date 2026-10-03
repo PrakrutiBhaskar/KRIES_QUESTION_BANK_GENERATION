@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
 import type { Subject, Difficulty } from '../types';
-import { DifficultyBadge, SubjectDot, EmptyState, ConfirmModal } from '../components/ui';
+import { DifficultyBadge, SubjectDot, EmptyState, ConfirmModal, ExportModal } from '../components/ui';
+import { BankGridSkeleton, BankListSkeleton } from '../components/Skeleton';
 import { formatDate } from '../lib/utils';
 import { errorMessage, exportBank } from '../lib/api';
 
@@ -33,6 +34,8 @@ export default function QuestionBanksPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  // The bank whose export dialog is open (asks about the answer key first).
+  const [exportTarget, setExportTarget] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = useMemo(() => {
     let banks = [...questionBanks];
@@ -70,12 +73,16 @@ export default function QuestionBanksPage() {
     }
   };
 
-  const handleExport = async (id: string, name: string) => {
+  const handleExport = async (id: string, name: string, includeAnswerKey: boolean) => {
     setExportingId(id);
     try {
-      const res = await exportBank(id);
+      const res = await exportBank(id, { includeAnswerKey });
       window.open(res.downloadUrl, '_blank', 'noopener');
-      showToast(`"${name}" exported as PDF.`, 'success');
+      setExportTarget(null);
+      showToast(
+        `"${name}" exported as PDF${includeAnswerKey ? ' with answer key' : ' without answer key'}.`,
+        'success',
+      );
     } catch (err) {
       showToast(errorMessage(err), 'error');
     } finally {
@@ -197,10 +204,7 @@ export default function QuestionBanksPage() {
 
       {/* Results */}
       {banksLoading && questionBanks.length === 0 ? (
-        <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading question banks…
-        </div>
+        view === 'grid' ? <BankGridSkeleton /> : <BankListSkeleton />
       ) : banksError ? (
         <EmptyState
           icon={<BookOpen className="w-7 h-7" />}
@@ -273,7 +277,7 @@ export default function QuestionBanksPage() {
                   View
                 </button>
                 <button
-                  onClick={() => void handleExport(bank.id, bank.name)}
+                  onClick={() => setExportTarget({ id: bank.id, name: bank.name })}
                   disabled={exportingId === bank.id}
                   className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded-lg transition-colors"
                   aria-label="Export PDF"
@@ -329,7 +333,7 @@ export default function QuestionBanksPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => navigate(`/question-banks/${bank.id}`)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => void handleExport(bank.id, bank.name)} disabled={exportingId === bank.id} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded transition-colors" title="Export"><Download className="w-4 h-4" /></button>
+                        <button onClick={() => setExportTarget({ id: bank.id, name: bank.name })} disabled={exportingId === bank.id} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded transition-colors" title="Export"><Download className="w-4 h-4" /></button>
                         <button onClick={() => setDeleteId(bank.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
@@ -349,6 +353,16 @@ export default function QuestionBanksPage() {
         danger
         onConfirm={() => deleteId && void handleDelete(deleteId)}
         onCancel={() => setDeleteId(null)}
+      />
+
+      <ExportModal
+        open={exportTarget !== null}
+        name={exportTarget?.name}
+        exporting={exportTarget !== null && exportingId === exportTarget.id}
+        onConfirm={(includeAnswerKey) =>
+          exportTarget && void handleExport(exportTarget.id, exportTarget.name, includeAnswerKey)
+        }
+        onCancel={() => setExportTarget(null)}
       />
     </div>
   );

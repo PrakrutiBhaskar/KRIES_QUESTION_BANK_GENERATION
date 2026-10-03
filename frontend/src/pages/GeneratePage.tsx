@@ -10,14 +10,17 @@ import {
   RefreshCw,
   GripVertical,
   ChevronUp,
+  TriangleAlert,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
+import { QuestionCardsSkeleton } from '../components/Skeleton';
 import {
   createBank,
   discardQuestion,
   errorMessage,
   fetchChapters,
   fetchCombinations,
+  fetchFigureLibrary,
   generateQuestions,
   planBatches,
   renumber,
@@ -33,7 +36,15 @@ import type {
   Question,
   ChapterInfo,
 } from '../types';
-import { DifficultyBadge, TypeBadge, ConfirmModal } from '../components/ui';
+import {
+  DifficultyBadge,
+  TypeBadge,
+  ConfirmModal,
+  VerificationBadge,
+  VerificationNote,
+  VerificationWarning,
+} from '../components/ui';
+import { FigureImage } from '../components/FigureImage';
 
 const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const GRADES: Grade[] = [7, 8, 9];
@@ -76,10 +87,13 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
               {question.marks} mark{question.marks > 1 ? 's' : ''}
             </span>
+            <VerificationBadge question={question} />
           </div>
 
           {/* Question text */}
           <p className="text-sm font-medium text-slate-900 mb-1 leading-snug">{question.text}</p>
+          {question.figure && <FigureImage figure={question.figure} className="my-2" />}
+          <VerificationWarning question={question} />
 
           {/* MCQ options */}
           {question.options && question.options.length > 0 && (
@@ -115,6 +129,7 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
                   <p className="text-xs text-blue-800">{question.explanation}</p>
                 </div>
               )}
+              <VerificationNote question={question} />
             </div>
           )}
 
@@ -169,7 +184,7 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
 // Generate Page
 // ============================================================
 export default function GeneratePage() {
-  const { upsertBank, showToast, settings } = useApp();
+  const { upsertBank, showToast, settings, user } = useApp();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<GenerateFormData>({
@@ -181,6 +196,7 @@ export default function GeneratePage() {
     difficulty: settings.defaultDifficulty,
     marksPerQuestion: settings.defaultMarks,
     fresh: false,
+    useFigures: false,
   });
 
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
@@ -188,8 +204,15 @@ export default function GeneratePage() {
   const [chaptersError, setChaptersError] = useState<string | null>(null);
   const [chaptersReload, setChaptersReload] = useState(0);
   const [marksByType, setMarksByType] = useState<MarksByType>(DEFAULT_MARKS_BY_TYPE);
+  // How many library figures are tagged with the chosen subject + chapter
+  // (null = not asked yet / unknown). Only fetched while "use figures" is on.
+  const [figureResult, setFigureResult] = useState<{ key: string; n: number } | null>(null);
+  const figureKey = `${form.subject}|${form.chapter}`;
+  const figureCount = form.useFigures && figureResult?.key === figureKey ? figureResult.n : null;
 
   const [loading, setLoading] = useState(false);
+  // Questions created so far in the current run (updates as each batch finishes).
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [busyId, setBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [generated, setGenerated] = useState<Question[]>([]);
@@ -228,6 +251,28 @@ export default function GeneratePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.subject, form.grade, chaptersReload]);
 
+  // The figures a figure request would draw on. A figure counts only if it has a
+  // caption or labelled parts, the same rule the backend applies.
+  useEffect(() => {
+    if (!form.useFigures || !form.chapter) return;
+    let cancelled = false;
+    fetchFigureLibrary({ subject: form.subject, chapter: form.chapter })
+      .then((rows) => {
+        if (!cancelled) {
+          setFigureResult({
+            key: `${form.subject}|${form.chapter}`,
+            n: rows.filter((f) => f.caption.trim() || f.labels.length > 0).length,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFigureResult(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.useFigures, form.subject, form.chapter]);
+
   const setField = <K extends keyof GenerateFormData>(key: K, val: GenerateFormData[K]) =>
     setForm((p) => ({ ...p, [key]: val }));
 
@@ -254,6 +299,10 @@ export default function GeneratePage() {
   const generateBatches = async (count: number, refresh: boolean) => {
     const batches = planBatches({ ...form, questionCount: count }, marksByType);
     const out: Question[] = [];
+    setProgress({ done: 0, total: count });
+    // The generator can hand back a question it already stored (same text, same
+    // id). A paper can't contain one question twice, so keep the first of each.
+    const seen = new Set<string>();
     try {
       // Sequential: each call hits the LLM and stores into the shared question pool.
       for (const b of batches) {
@@ -266,8 +315,14 @@ export default function GeneratePage() {
           difficulty: b.difficulty,
           count: b.count,
           refresh,
+          useFigures: form.useFigures,
         });
-        out.push(...res.questions);
+        for (const q of res.questions) {
+          if (seen.has(q.id)) continue;
+          seen.add(q.id);
+          out.push(q);
+        }
+        setProgress((p) => ({ ...p, done: out.length }));
       }
     } catch (err) {
       if (out.length === 0) throw err;
@@ -285,7 +340,16 @@ export default function GeneratePage() {
     try {
       const questions = await generateBatches(form.questionCount, form.fresh);
       setGenerated(renumber(questions));
-      showToast(`Generated ${questions.length} questions.`, 'success');
+      if (questions.length < form.questionCount) {
+        showToast(
+          `Generated ${questions.length} unique questions (asked for ${form.questionCount}). ` +
+            'Some repeated an existing question' +
+            (form.useFigures ? '; adding more figures for this chapter gives more variety.' : '.'),
+          'warning',
+        );
+      } else {
+        showToast(`Generated ${questions.length} questions.`, 'success');
+      }
     } catch (err) {
       showToast(errorMessage(err), 'error');
     } finally {
@@ -319,9 +383,16 @@ export default function GeneratePage() {
         difficulty: old.difficulty,
         count: 1,
         refresh: true,
+        // A figure question is replaced by another about the same figure.
+        figureIds: old.figure ? [old.figure.id] : undefined,
       });
       const [fresh] = res.questions;
       if (!fresh) throw new Error('No question was returned.');
+      if (fresh.id === old.id || generated.some((q) => q.id === fresh.id)) {
+        // Discarding `old` here would delete the very question just returned.
+        showToast('The generator returned a question that is already in your list. Try again.', 'warning');
+        return;
+      }
       await discardQuestion(old.id).catch(() => undefined);
       setGenerated((prev) => prev.map((q) => (q.id === id ? { ...fresh, questionNumber: old.questionNumber } : q)));
       showToast('Question regenerated.', 'success');
@@ -335,7 +406,12 @@ export default function GeneratePage() {
   const handleAddQuestion = async () => {
     setLoading(true);
     try {
-      const added = await generateBatches(1, true);
+      const have = new Set(generated.map((q) => q.id));
+      const added = (await generateBatches(1, true)).filter((q) => !have.has(q.id));
+      if (added.length === 0) {
+        showToast('The generator returned a question that is already in your list. Try again.', 'warning');
+        return;
+      }
       setGenerated((prev) => renumber([...prev, ...added]));
       showToast('New question added.', 'success');
     } catch (err) {
@@ -369,7 +445,7 @@ export default function GeneratePage() {
     if (generated.length === 0 || saving) return;
     setSaving(true);
     try {
-      const bank = await createBank(`${form.subject} – ${form.chapter} (Grade ${form.grade})`, form.subject, generated.map((q) => q.id));
+      const bank = await createBank(`${form.subject} – ${form.chapter} (Grade ${form.grade})`, form.subject, [...new Set(generated.map((q) => q.id))]);
       upsertBank(bank);
       setSaved(true);
       showToast('Question bank saved!', 'success');
@@ -552,6 +628,30 @@ export default function GeneratePage() {
                 )}
               </div>
 
+              <div>
+                <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.useFigures}
+                    onChange={(e) => setField('useFigures', e.target.checked)}
+                    className="mt-0.5 accent-indigo-600"
+                  />
+                  <span>
+                    Write questions about figures
+                    <span className="block text-slate-400">
+                      Each question is about one diagram from the figure library for this chapter, and the diagram is printed in the answer key.
+                    </span>
+                  </span>
+                </label>
+                {form.useFigures && figureCount !== null && (
+                  <p className={`mt-1.5 ml-6 text-xs ${figureCount === 0 ? 'text-amber-600' : 'text-slate-500'}`}>
+                    {figureCount === 0
+                      ? `The figure library has nothing for ${form.subject} / ${form.chapter} yet. ${user?.role === 'Admin' ? 'Add one on the Figure Library page.' : 'Ask an administrator to add one.'}`
+                      : `${figureCount} figure${figureCount === 1 ? '' : 's'} available for this chapter.`}
+                  </p>
+                )}
+              </div>
+
               <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
                 <input
                   type="checkbox"
@@ -572,13 +672,13 @@ export default function GeneratePage() {
           {/* Generate button */}
           <button
             type="submit"
-            disabled={loading || chaptersLoading || !form.chapter.trim()}
+            disabled={loading || chaptersLoading || !form.chapter.trim() || (form.useFigures && figureCount === 0)}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm"
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Generating questions…
+                Generating… {progress.done}/{progress.total}
               </>
             ) : (
               <>
@@ -597,20 +697,33 @@ export default function GeneratePage() {
         {/* Generated questions panel */}
         <div className="lg:col-span-3 space-y-4">
           {loading && (
-            <div className="bg-white rounded-xl border border-slate-200 p-8 shadow-sm flex flex-col items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+            <div role="status" aria-busy="true" className="space-y-4">
+              <div className="bg-white rounded-xl border border-slate-200 px-5 py-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-900">Generating questions…</p>
+                    <p className="text-xs text-slate-500 truncate">{form.chapter}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap">
+                    {progress.done} <span className="font-normal text-slate-500">of {progress.total} created</span>
+                  </p>
+                </div>
+                <div
+                  className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={progress.total}
+                  aria-valuenow={progress.done}
+                  aria-label="Questions created"
+                >
+                  <div
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                    style={{ width: `${progress.total ? Math.min(100, Math.max(4, (progress.done / progress.total) * 100)) : 0}%` }}
+                  />
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold text-slate-900">Generating questions…</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  AI is crafting {form.questionCount} {form.difficulty} {form.questionType} questions for{' '}
-                  <span className="font-medium">{form.chapter}</span>.
-                </p>
-              </div>
-              <div className="w-48 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-500 rounded-full animate-pulse" style={{ width: '70%' }} />
-              </div>
+              <QuestionCardsSkeleton count={Math.min(Math.max(progress.total - progress.done, 1), 4)} />
             </div>
           )}
 
@@ -652,6 +765,22 @@ export default function GeneratePage() {
                   </button>
                 </div>
               </div>
+
+              {generated.some((q) => q.verificationStatus === 'flagged') && (
+                <div
+                  role="alert"
+                  className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
+                >
+                  <TriangleAlert className="w-4 h-4 shrink-0" />
+                  <p>
+                    {generated.filter((q) => q.verificationStatus === 'flagged').length} question
+                    {generated.filter((q) => q.verificationStatus === 'flagged').length > 1 ? 's have' : ' has'} an
+                    answer our checks think is wrong, and a replacement could not be generated. Regenerate or
+                    delete {generated.filter((q) => q.verificationStatus === 'flagged').length > 1 ? 'them' : 'it'}{' '}
+                    before saving.
+                  </p>
+                </div>
+              )}
 
               {/* Question cards */}
               <div className="space-y-3">

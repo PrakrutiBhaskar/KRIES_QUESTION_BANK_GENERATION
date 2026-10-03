@@ -14,6 +14,7 @@ one transaction per test.
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import re
 import sys
@@ -36,9 +37,15 @@ for _p in (str(REPO_ROOT), str(BACKEND_ROOT)):
 # Set before app.config is imported: exported PDFs go to a scratch directory
 # rather than the repo's var/exports.
 os.environ.setdefault("EXPORT_DIR", tempfile.mkdtemp(prefix="qb-test-exports-"))
+# Uploaded figures likewise go to a scratch directory.
+os.environ.setdefault("FIGURE_DIR", tempfile.mkdtemp(prefix="qb-test-figures-"))
 # Rate limits would trip over the many requests a test suite makes. The tests in
 # test_rate_limiting.py switch them back on explicitly.
 os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+# The second AI pass adds a Groq call per batch, which would change every
+# existing test's call count. Rule checks stay on (they make no calls); the
+# tests in test_answer_verification.py switch the AI pass on explicitly.
+os.environ.setdefault("ENABLE_LLM_ANSWER_VERIFICATION", "false")
 
 from app.db import Base, get_session  # noqa: E402
 from app.main import app as fastapi_app  # noqa: E402
@@ -101,14 +108,66 @@ class FakeGroqClient:
     single template with a varying id is well above that threshold.
     """
 
-    def __init__(self, *, raise_error: bool = False, bad_payload: bool = False):
+    def __init__(
+        self,
+        *,
+        raise_error: bool = False,
+        bad_payload: bool = False,
+        verifier: str = "agree",
+    ):
         self.raise_error = raise_error
         self.bad_payload = bad_payload
+        # How the answer-key verifier (second AI pass) behaves:
+        #   "agree"     confirms every key
+        #   "disagree"  contradicts every key
+        #   "uncertain" is never confident
+        #   "error"     the verification call itself fails
+        #   "garbage"   returns unusable output
+        #   "disagree_first"  contradicts only the first question of each call
+        self.verifier = verifier
         self.calls: list[tuple[str, str]] = []
         self._served = 0
 
+    @property
+    def generation_calls(self) -> list[tuple[str, str]]:
+        return [c for c in self.calls if "answer-key verifier" not in c[0]]
+
+    @property
+    def verification_calls(self) -> list[tuple[str, str]]:
+        return [c for c in self.calls if "answer-key verifier" in c[0]]
+
+    def _verify(self, user_prompt: str) -> list[dict]:
+        """Answer a verifier prompt (see generation_engine/answer_verification.py)."""
+        if self.verifier == "error":
+            raise GroqAPIError("stubbed verifier failure")
+        if self.verifier == "garbage":
+            return [{"nonsense": True}, "bad"]
+        items = json.loads(re.search(r"^\[.*\]$", user_prompt, re.M | re.S).group(0))
+        results = []
+        for n, item in enumerate(items):
+            wrong = self.verifier == "disagree" or (self.verifier == "disagree_first" and n == 0)
+            if "options" in item:  # MCQ: solved blind
+                options = item["options"]
+                # the stub always writes the correct option first ("The correct choice ...")
+                right = next(k for k, v in options.items() if v.startswith("The correct choice"))
+                choice = next(k for k in options if k != right) if wrong else right
+                confidence = "low" if self.verifier == "uncertain" else "high"
+                results.append(
+                    {"index": item["index"], "choice": choice, "confidence": confidence,
+                     "reasoning": "stub reasoning"}
+                )
+            else:  # descriptive: judged
+                verdict = (
+                    "uncertain" if self.verifier == "uncertain"
+                    else "incorrect" if wrong else "correct"
+                )
+                results.append({"index": item["index"], "verdict": verdict, "reason": "stub reason"})
+        return results
+
     async def complete_json(self, system_prompt: str, user_prompt: str) -> list[dict]:
         self.calls.append((system_prompt, user_prompt))
+        if "answer-key verifier" in system_prompt:
+            return self._verify(user_prompt)
         if self.raise_error:
             raise GroqAPIError("stubbed Groq failure")
         if self.bad_payload:
@@ -116,9 +175,17 @@ class FakeGroqClient:
 
         count = _extract_count(user_prompt)
         q_type, marks = _extract_type_and_marks(user_prompt)
+        # "Generate with figures": the prompt lists the figures as "F1 - ...",
+        # "F2 - ...". Answer the way a model following those rules would: one
+        # figure per question, spread round-robin, text pointing at the figure.
+        refs = re.findall(r"^(F\d+) - ", user_prompt, re.M)
         items = []
         for _ in range(count):
-            items.append(self._item(self._served, q_type, marks))
+            item = self._item(self._served, q_type, marks)
+            if refs:
+                item["figure_ref"] = refs[self._served % len(refs)]
+                item["text"] = f"In the figure shown, {item['text'][0].lower()}{item['text'][1:]}"
+            items.append(item)
             self._served += 1
         return items
 
@@ -310,6 +377,27 @@ async def bob_client(client):
     async with AsyncClient(transport=transport, base_url="http://test/api/v1") as bob:
         await sign_up(bob, name="Bob Teacher", email="bob@school.test")
         yield bob
+
+
+@pytest_asyncio.fixture
+async def admin_client(client, session_factory):
+    """An administrator (the only role that can change the figure library).
+
+    Admin can't be chosen at sign-up, so the account is created normally and
+    then promoted directly in the database, the way scripts/make_admin.py does.
+    """
+    from sqlalchemy import update
+
+    from app.models import User
+
+    transport = ASGITransport(app=fastapi_app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://test/api/v1") as admin:
+        user = await sign_up(admin, name="Ada Admin", email="ada@school.test")
+        async with session_factory() as session:
+            await session.execute(update(User).where(User.email == "ada@school.test").values(role="Admin"))
+            await session.commit()
+        assert (await admin.get("/auth/me")).json()["role"] == "Admin"
+        yield admin
 
 
 @pytest_asyncio.fixture

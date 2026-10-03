@@ -109,13 +109,21 @@ def _classify(point: str) -> str:
     return "Explanation"
 
 
-def marks_split(points: list[str], reference: str, marks: int, qtype: str) -> list[tuple[str, int]]:
+def marks_split(
+    points: list[str],
+    reference: str,
+    marks: int,
+    qtype: str,
+    has_figure: bool = False,
+) -> list[tuple[str, int]]:
     """
     Distribute ``marks`` over Diagram / Equation / Explanation.
 
     Rules (deterministic, so the split always sums to the question's marks):
       * 1-mark and MCQ questions carry no split.
-      * A diagram mention (in a point or the trailing reference) earns 1 mark.
+      * A diagram mention (in a point or the trailing reference) earns 1 mark,
+        and so does an answer-key figure attached to the question (``has_figure``):
+        the diagram printed there is the diagram being marked.
       * Each equation/formula point earns 1 mark, keeping at least 1 mark for
         explanation.
       * Everything left is Explanation.
@@ -124,7 +132,11 @@ def marks_split(points: list[str], reference: str, marks: int, qtype: str) -> li
         return []
 
     kinds = [_classify(p) for p in points]
-    has_diagram = "Diagram" in kinds or bool(reference and _DIAGRAM_WORDS.search(reference))
+    has_diagram = (
+        has_figure
+        or "Diagram" in kinds
+        or bool(reference and _DIAGRAM_WORDS.search(reference))
+    )
     n_equations = kinds.count("Equation")
 
     diagram = 1 if has_diagram else 0
@@ -142,13 +154,15 @@ def marks_split(points: list[str], reference: str, marks: int, qtype: str) -> li
     return out
 
 
-def format_answer(answer: str, marks: int, qtype: str) -> FormattedAnswer:
+def format_answer(
+    answer: str, marks: int, qtype: str, has_figure: bool = False
+) -> FormattedAnswer:
     lead, points, reference = split_points(answer)
     return FormattedAnswer(
         lead=lead,
         points=points,
         reference=reference,
-        split=marks_split(points, reference, marks, qtype),
+        split=marks_split(points, reference, marks, qtype, has_figure),
     )
 
 

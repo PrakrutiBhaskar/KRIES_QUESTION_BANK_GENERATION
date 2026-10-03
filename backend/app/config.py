@@ -119,6 +119,32 @@ class Settings(BaseSettings):
     public_base_url: str = Field(
         default="http://localhost:8000", alias="PUBLIC_BASE_URL"
     )
+    # --- Textbook corpus (strict Karnataka State Board mode) ---
+    # Folder of corpus JSON produced by scripts/ingest_textbooks.py from the
+    # KTBS textbook PDFs. Chapters, grades and topics are derived from these;
+    # questions are written from their text.
+    textbooks_dir: Path = Field(
+        default=BACKEND_DIR / "data" / "textbooks", alias="TEXTBOOKS_DIR"
+    )
+    # true  -> generate ONLY for (subject, grade) pairs with an ingested textbook;
+    #          the bundled syllabus.json is ignored (nothing hardcoded).
+    # false -> textbooks are used where present; anything else falls back to
+    #          syllabus.json / free chapter names.
+    require_textbook: bool = Field(default=False, alias="REQUIRE_TEXTBOOK")
+
+    # --- Figures (diagrams attached to questions / answer keys) ---
+    # Uploaded images are re-encoded and stored here, one file per figure.
+    # Local disk, like EXPORT_DIR: on a multi-instance deployment move it to
+    # object storage (only services/figures.py touches the filesystem).
+    figure_dir: Path = Field(default=REPO_ROOT / "var" / "figures", alias="FIGURE_DIR")
+    # Largest upload accepted, in bytes (default 5 MB).
+    max_figure_bytes: int = Field(default=5 * 1024 * 1024, alias="MAX_FIGURE_BYTES", ge=1024)
+    # Most figures described to the model in one "generate with figures" call.
+    # Each adds a few lines to the prompt, and fewer figures per call keeps the
+    # questions from spreading too thin across them.
+    max_generation_figures: int = Field(
+        default=6, alias="MAX_GENERATION_FIGURES", ge=1, le=20
+    )
     # auto -> WeasyPrint if installed (correct Kannada/Indic shaping via
     # HarfBuzz), else ReportLab. See services/export/renderer.py.
     pdf_renderer: Literal["auto", "weasyprint", "reportlab", "fpdf"] = Field(
@@ -132,19 +158,6 @@ class Settings(BaseSettings):
     syllabus_json_path: Path | None = Field(
         default=BACKEND_DIR / "data" / "syllabus.json", alias="SYLLABUS_JSON_PATH"
     )
-
-    # --- Textbook corpus (strict Karnataka State Board mode) ---
-    # Folder of corpus JSON produced by scripts/ingest_textbooks.py from the
-    # KTBS textbook PDFs. Chapters, grades and topics are derived from these;
-    # questions are written from their text.
-    textbooks_dir: Path = Field(
-        default=BACKEND_DIR / "data" / "textbooks", alias="TEXTBOOKS_DIR"
-    )
-    # true  -> generate ONLY for (subject, grade) pairs with an ingested textbook;
-    #          the bundled syllabus.json is ignored (nothing hardcoded).
-    # false -> textbooks are used where present; anything else falls back to
-    #          syllabus.json / free chapter names.
-    require_textbook: bool = Field(default=False, alias="REQUIRE_TEXTBOOK")
 
     # --- Practice mode ---
     # If a practice session can't be filled from stored questions, generate the
@@ -202,6 +215,8 @@ class Settings(BaseSettings):
     rate_limit_generate: str = Field(default="30/60", alias="RATE_LIMIT_GENERATE")
     # POST /export/{id}, per user.
     rate_limit_export: str = Field(default="10/60", alias="RATE_LIMIT_EXPORT")
+    # POST /figures (image uploads), per user.
+    rate_limit_upload: str = Field(default="20/60", alias="RATE_LIMIT_UPLOAD")
     # Wrong passwords allowed per (IP, email) before that pair is locked out.
     login_max_failures: str = Field(default="5/900", alias="LOGIN_MAX_FAILURES")
     # Read the client IP from X-Forwarded-For. Turn on ONLY behind a reverse
@@ -216,6 +231,7 @@ class Settings(BaseSettings):
         "rate_limit_password_reset",
         "rate_limit_generate",
         "rate_limit_export",
+        "rate_limit_upload",
         "login_max_failures",
         mode="after",
     )
@@ -224,7 +240,9 @@ class Settings(BaseSettings):
         parse_rule(v)  # raises ValueError with a readable message
         return v
 
-    @field_validator("syllabus_json_path", "export_dir", "textbooks_dir", mode="after")
+    @field_validator(
+        "syllabus_json_path", "export_dir", "figure_dir", "textbooks_dir", mode="after"
+    )
     @classmethod
     def anchor_relative_paths(cls, v: Path | None) -> Path | None:
         return _anchor(v) if v is not None else None

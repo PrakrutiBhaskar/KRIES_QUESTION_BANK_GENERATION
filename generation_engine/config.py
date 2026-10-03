@@ -134,6 +134,22 @@ class Settings:
         default_factory=_env_bool("ENABLE_LLM_RELEVANCE_CHECK", False)
     )
 
+    # --- Answer-key verification (see answer_verification.py) ---
+    # Rule checks: free, deterministic, Maths and Science only.
+    enable_answer_rule_checks: bool = field(
+        default_factory=_env_bool("ENABLE_ANSWER_RULE_CHECKS", True)
+    )
+    # Second AI pass: one extra Groq call per batch (per chunk of questions).
+    enable_llm_answer_verification: bool = field(
+        default_factory=_env_bool("ENABLE_LLM_ANSWER_VERIFICATION", True)
+    )
+    # Optional different model for the verifier (an independent second opinion is
+    # stronger than the same model checking itself). Empty = same as GROQ_MODEL.
+    verifier_model: str = field(default_factory=_env_str("VERIFIER_MODEL", ""))
+    verification_chunk_size: int = field(
+        default_factory=_env_int("VERIFICATION_CHUNK_SIZE", 10)
+    )
+
 
 settings = Settings()
 

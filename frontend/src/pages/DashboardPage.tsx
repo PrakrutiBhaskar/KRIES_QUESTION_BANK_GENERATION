@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Wand2, Loader2 } from 'lucide-react';
+import { Wand2 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
 import { DifficultyBadge, SubjectDot } from '../components/ui';
+import { BankTableRowsSkeleton } from '../components/Skeleton';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -13,6 +14,7 @@ function getGreeting() {
 export default function DashboardPage() {
   const { user, questionBanks, banksLoading, banksError, refreshBanks } = useApp();
   const recentBanks = [...questionBanks].slice(0, 5);
+  const showSkeleton = banksLoading && recentBanks.length === 0;
 
   return (
     <div className="space-y-6">
@@ -44,6 +46,7 @@ export default function DashboardPage() {
           </Link>
         </div>
         <div className="overflow-x-auto scrollbar-thin">
+          {showSkeleton && <span role="status" className="sr-only">Loading question banks…</span>}
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50">
@@ -54,6 +57,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
+              {showSkeleton && <BankTableRowsSkeleton rows={5} columns={4} />}
               {recentBanks.map((bank) => (
                 <tr key={bank.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-5 py-3">
@@ -78,12 +82,6 @@ export default function DashboardPage() {
               ))}
             </tbody>
           </table>
-          {banksLoading && recentBanks.length === 0 && (
-            <div className="flex items-center justify-center gap-2 py-10 text-sm text-slate-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading…
-            </div>
-          )}
           {banksError && (
             <div className="py-8 text-center text-sm text-slate-500">
               {banksError}{' '}

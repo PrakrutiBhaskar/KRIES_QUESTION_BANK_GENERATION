@@ -100,6 +100,44 @@ class Chapter(Base):
     subject: Mapped[Subject] = relationship(back_populates="chapters", lazy="joined")
 
 
+class Figure(Base, TimestampMixin):
+    """An uploaded diagram that can be attached to questions.
+
+    The image itself lives on disk (`settings.figure_dir / filename`); this row
+    holds what the API and the PDF renderers need without opening the file.
+    A figure is attached through `Question.figure_id` (printed with the
+    question) and/or `Question.answer_figure_id` (printed in the answer key).
+    """
+
+    __tablename__ = "figures"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    # The administrator who uploaded it (users.id). Informational: the library is
+    # shared, so any admin can edit or delete a figure and any user can attach it.
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
+    # Server-generated name on disk ("<uuid>.png"); never the client's filename.
+    filename: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    # "image/png" | "image/jpeg" - the type the stored bytes really are.
+    mime: Mapped[str] = mapped_column(Text, nullable=False)
+    width: Mapped[int] = mapped_column(Integer, nullable=False)
+    height: Mapped[int] = mapped_column(Integer, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    caption: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Metadata for question generation (all optional, all text). The generator
+    # never sees the image: it writes questions from the caption plus these.
+    #   subject / chapter  where the figure belongs; the library lookup for
+    #                      "generate with figures" matches on both
+    #   topic              narrows to a sub-topic; empty = whole chapter
+    #   labels             the labelled parts, e.g. ["A: nucleus", "B: cell wall"]
+    # Nullable (and unset on older rows) so the columns can be added in place.
+    subject: Mapped[str | None] = mapped_column(Text, nullable=True)
+    chapter: Mapped[str | None] = mapped_column(Text, nullable=True)
+    topic: Mapped[str | None] = mapped_column(Text, nullable=True)
+    labels: Mapped[list[str] | None] = mapped_column(TagsType, nullable=True)
+
+
 class Question(Base, TimestampMixin):
     __tablename__ = "questions"
     __table_args__ = (
@@ -140,6 +178,16 @@ class Question(Base, TimestampMixin):
     topic: Mapped[str] = mapped_column(Text, nullable=False, default="")
     tags: Mapped[list[str]] = mapped_column(TagsType, nullable=False, default=list)
 
+    # Optional diagrams. `figure` is printed with the question in the paper;
+    # `answer_figure` only appears in the answer key (and is never sent to a
+    # practice student before they reveal the answer).
+    figure_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("figures.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    answer_figure_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("figures.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     # Soft delete: DELETE /questions/{id} flips this rather than removing the
     # row, so papers and practice sessions that already reference the question
     # stay intact. Every read path filters on it.
@@ -155,6 +203,15 @@ class Question(Base, TimestampMixin):
         Uuid(as_uuid=True), nullable=True, index=True
     )
 
+    # Result of answer-key verification at generation time (see
+    # generation_engine/answer_verification.py): "verified" (a rule check or an
+    # independent AI pass confirmed the key), "unverified" (could not be
+    # checked), or "flagged" (the key looked wrong and could not be replaced).
+    # NULL for questions created before verification existed; read as
+    # "unverified". Flagged questions are never served from the cache.
+    verification_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verification_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # `content_hash` backs the duplicate guard on insert — see
     # services/questions.py. Module A already de-duplicates within a batch;
     # this catches collisions across batches.
@@ -162,6 +219,12 @@ class Question(Base, TimestampMixin):
 
     subject: Mapped[Subject] = relationship(lazy="joined")
     chapter: Mapped[Chapter] = relationship(lazy="joined")
+    figure: Mapped[Figure | None] = relationship(
+        foreign_keys=[figure_id], lazy="joined"
+    )
+    answer_figure: Mapped[Figure | None] = relationship(
+        foreign_keys=[answer_figure_id], lazy="joined"
+    )
 
 
 class Paper(Base, TimestampMixin):
@@ -280,9 +343,14 @@ class User(TimestampMixin, Base):
     # so the plain unique constraint is case-insensitive in practice.
     email: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    # "Teacher" | "Student" — "Admin" exists in the frontend's type but can
-    # never be self-assigned through sign-up.
+    # "Teacher" | "Student" | "Admin". Admin manages the figure library and can
+    # never be self-assigned: sign-up and PATCH /auth/me refuse it, and it is
+    # granted on the server with scripts/make_admin.py.
     role: Mapped[str] = mapped_column(Text, nullable=False, default="Teacher")
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=func.true()
     )
+    # The user's saved preferences (theme, notifications, generation defaults),
+    # edited on the Settings page. NULL until the user first saves; the API then
+    # reports the defaults (see schemas/auth.PreferencesOut).
+    preferences: Mapped[dict | None] = mapped_column(JSONBType, nullable=True)

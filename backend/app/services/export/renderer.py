@@ -26,6 +26,7 @@ from pathlib import Path
 
 from ...config import settings
 from ...errors import ServiceUnavailableError
+from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
 from .answer_format import format_answer, split_label
 from .fpdf_renderer import fpdf_available, render_fpdf
 from .html import item_section, render_paper_html, section_totals
@@ -90,19 +91,21 @@ def _register_fonts() -> dict[str, str]:
     return mapping
 
 
-def _render_weasyprint(paper) -> bytes:
+def _render_weasyprint(paper, include_answer_key: bool = True) -> bytes:
     from weasyprint import HTML
 
-    html = render_paper_html(paper)
+    html = render_paper_html(paper, include_answer_key=include_answer_key)
     return HTML(string=html).write_pdf()
 
 
-def _render_reportlab(paper) -> bytes:
+def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
     from reportlab.lib.enums import TA_CENTER
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import mm
     from reportlab.platypus import (
+        Image as RLImage,
+        KeepTogether,
         PageBreak,
         Paragraph,
         SimpleDocTemplate,
@@ -173,7 +176,33 @@ def _render_reportlab(paper) -> bytes:
             "qb-expl", parent=base["Normal"], fontName=body_font, fontSize=9.5,
             textColor="#444444", leftIndent=22,
         ),
+        "cap": ParagraphStyle(
+            "qb-cap", parent=base["Normal"], fontName=body_font, fontSize=9,
+            textColor="#555555", leading=11, spaceBefore=2,
+        ),
     }
+
+    def figure_flowables(figure, indent_mm: float) -> list:
+        """The figure (and its caption) as one indented block; [] if unavailable."""
+        data = read_figure_bytes(figure)
+        if data is None:
+            return []
+        w_mm, h_mm = fit_size_mm(figure.width, figure.height)
+        img = RLImage(BytesIO(data), width=w_mm * mm, height=h_mm * mm)
+        img.hAlign = "LEFT"
+        cells = [[img]]
+        if figure.caption:
+            cells.append([Paragraph(_esc(figure.caption), styles["cap"])])
+        col = max(w_mm, 90.0) * mm
+        block = Table(cells, colWidths=[col + indent_mm * mm], hAlign="LEFT")
+        block.setStyle(TableStyle([
+            ("LEFTPADDING", (0, 0), (-1, -1), indent_mm * mm),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        return [Spacer(1, 3), block]
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -240,42 +269,65 @@ def _render_reportlab(paper) -> bytes:
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ]))
-        flow.append(row)
+        block = [row]
+        fig_block = figure_flowables(loaded_figure(q, "figure"), 8)
+        block.extend(fig_block)
         if q.options:
             for label, option in zip(_OPTION_LABELS, q.options):
-                flow.append(Paragraph(f"({label}) {_esc(str(option))}", styles["opt"]))
+                block.append(Paragraph(f"({label}) {_esc(str(option))}", styles["opt"]))
+        # A figure must stay on the same page as the question it belongs to.
+        # Questions without one flow exactly as before.
+        if fig_block:
+            flow.append(KeepTogether(block))
+        else:
+            flow.extend(block)
         flow.append(Spacer(1, 7))
 
-    flow.append(PageBreak())
-    flow.append(Paragraph("Answer Key", styles["h2"]))
-    for n, item in enumerate(ordered, start=1):
-        q = item.question
-        if q.type.value == "MCQ":
-            flow.append(Paragraph(f"{n}. {_esc(q.answer)}", styles["q"]))
-            if q.explanation:
-                flow.append(Paragraph(_esc(q.explanation), styles["expl"]))
-        else:
-            fa = format_answer(q.answer, item.effective_marks, q.type.value)
-            if len(fa.points) > 1:
-                head = f"{n}. {_esc(fa.lead)}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
-                flow.append(Paragraph(head, styles["q"]))
-                for i, point in enumerate(fa.points, start=1):
-                    flow.append(Paragraph(f"{i}.&nbsp;&nbsp;{_esc(point)}", styles["pt"]))
+    if include_answer_key:
+        flow.append(PageBreak())
+        flow.append(Paragraph("Answer Key", styles["h2"]))
+        for n, item in enumerate(ordered, start=1):
+            q = item.question
+            answer_fig = answer_key_figure(q)
+            block = []
+            if q.type.value == "MCQ":
+                block.append(Paragraph(f"{n}. {_esc(q.answer)}", styles["q"]))
+                if q.explanation:
+                    block.append(Paragraph(_esc(q.explanation), styles["expl"]))
             else:
-                text = fa.points[0] if fa.points else q.answer
-                flow.append(Paragraph(f"{n}. {_esc(text)}", styles["q"]))
-            if fa.reference:
-                flow.append(Paragraph(f"<i>{_esc(fa.reference)}</i>", styles["expl"]))
-            if fa.split:
-                flow.append(Paragraph(_esc(split_label(fa.split)), styles["split"]))
-        flow.append(Spacer(1, 6))
+                fa = format_answer(
+                    q.answer, item.effective_marks, q.type.value,
+                    has_figure=answer_fig is not None,
+                )
+                if len(fa.points) > 1:
+                    head = f"{n}. {_esc(fa.lead)}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
+                    block.append(Paragraph(head, styles["q"]))
+                    for i, point in enumerate(fa.points, start=1):
+                        block.append(Paragraph(f"{i}.&nbsp;&nbsp;{_esc(point)}", styles["pt"]))
+                else:
+                    text = fa.points[0] if fa.points else q.answer
+                    block.append(Paragraph(f"{n}. {_esc(text)}", styles["q"]))
+                if fa.reference:
+                    block.append(Paragraph(f"<i>{_esc(fa.reference)}</i>", styles["expl"]))
+                if fa.split:
+                    block.append(Paragraph(_esc(split_label(fa.split)), styles["split"]))
+            fig_block = figure_flowables(answer_fig, 22)
+            block.extend(fig_block)
+            if fig_block:
+                flow.append(KeepTogether(block))
+            else:
+                flow.extend(block)
+            flow.append(Spacer(1, 6))
 
     doc.build(flow)
     return buf.getvalue()
 
 
-def render_pdf(paper) -> bytes:
-    """Render a paper to PDF bytes using the configured backend."""
+def render_pdf(paper, *, include_answer_key: bool = True) -> bytes:
+    """Render a paper to PDF bytes using the configured backend.
+
+    With `include_answer_key=False` the PDF holds the question paper only.
+    """
     choice = settings.pdf_renderer
     if choice == "weasyprint":
         if not weasyprint_available():
@@ -283,20 +335,20 @@ def render_pdf(paper) -> bytes:
                 "PDF_RENDERER=weasyprint but WeasyPrint is not importable. "
                 "Install it and its system libraries, or set PDF_RENDERER=auto."
             )
-        return _render_weasyprint(paper)
+        return _render_weasyprint(paper, include_answer_key)
     if choice == "fpdf":
         if not fpdf_available():
             raise ServiceUnavailableError(_FPDF_HELP)
-        return render_fpdf(paper)
+        return render_fpdf(paper, include_answer_key=include_answer_key)
     if choice == "reportlab":
-        return _render_reportlab_or_fpdf(paper)
+        return _render_reportlab_or_fpdf(paper, include_answer_key)
 
     if weasyprint_available():
         try:
-            return _render_weasyprint(paper)
+            return _render_weasyprint(paper, include_answer_key)
         except Exception as exc:  # pragma: no cover - runtime-specific
             logger.warning("WeasyPrint failed, falling back: %s", exc)
-    return _render_reportlab_or_fpdf(paper)
+    return _render_reportlab_or_fpdf(paper, include_answer_key)
 
 
 _FPDF_HELP = (
@@ -306,13 +358,13 @@ _FPDF_HELP = (
 )
 
 
-def _render_reportlab_or_fpdf(paper) -> bytes:
+def _render_reportlab_or_fpdf(paper, include_answer_key: bool = True) -> bytes:
     """ReportLab can't shape Kannada, so Kannada papers go to fpdf2 instead."""
     if _needs_kannada(paper):
         if not fpdf_available():
             raise ServiceUnavailableError(_FPDF_HELP)
-        return render_fpdf(paper)
-    return _render_reportlab(paper)
+        return render_fpdf(paper, include_answer_key=include_answer_key)
+    return _render_reportlab(paper, include_answer_key)
 
 
 def active_renderer() -> str:

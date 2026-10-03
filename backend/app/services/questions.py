@@ -28,12 +28,18 @@ from generation_engine.validation import check_marks_format
 
 from ..errors import BadRequestError, ForbiddenError, NotFoundError
 from ..models import Chapter, Question, Subject
+from . import figures as figure_service
 from .syllabus import resolve_chapter
 
 _WS = re.compile(r"\s+")
 
 
-def content_hash(subject: str, chapter_id: uuid.UUID, text: str) -> str:
+def content_hash(
+    subject: str,
+    chapter_id: uuid.UUID,
+    text: str,
+    figure_id: uuid.UUID | None = None,
+) -> str:
     """
     Stable fingerprint for exact-duplicate detection across batches.
 
@@ -44,7 +50,17 @@ def content_hash(subject: str, chapter_id: uuid.UUID, text: str) -> str:
     """
     normalized = _WS.sub(" ", text.strip().lower())
     raw = f"{subject}|{chapter_id}|{normalized}"
+    if figure_id is not None:
+        # "Label the diagram" with two different diagrams is two questions.
+        # Questions without a figure hash exactly as they always did.
+        raw += f"|fig:{figure_id}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _as_uuid(value: str | uuid.UUID | None) -> uuid.UUID | None:
+    if value is None or value == "":
+        return None
+    return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
 
 
 async def persist_batch(
@@ -63,7 +79,11 @@ async def persist_batch(
         return []
 
     subject_name = questions[0].subject.value
-    hashes = {q.id: content_hash(subject_name, chapter.id, q.text) for q in questions}
+    figure_ids = {q.id: _as_uuid(q.figure_id) for q in questions}
+    hashes = {
+        q.id: content_hash(subject_name, chapter.id, q.text, figure_ids[q.id])
+        for q in questions
+    }
 
     existing_rows = (
         await session.scalars(
@@ -84,6 +104,15 @@ async def persist_batch(
         if prior is not None:
             if not prior.is_active:
                 prior.is_active = True  # resurrect a previously discarded twin
+            # Same question, same key, and this time it was verified: upgrade
+            # the stored status (a different key would be a different question).
+            if (
+                q.verification_status == "verified"
+                and prior.verification_status != "verified"
+                and prior.answer.strip() == q.answer.strip()
+            ):
+                prior.verification_status = "verified"
+                prior.verification_note = q.verification_note
             stored.append(prior)
             continue
 
@@ -103,6 +132,9 @@ async def persist_batch(
             tags=list(q.tags or []),
             content_hash=h,
             created_by=created_by,
+            verification_status=q.verification_status,
+            verification_note=q.verification_note,
+            figure_id=figure_ids[q.id],
         )
         session.add(row)
         stored.append(row)
@@ -110,7 +142,9 @@ async def persist_batch(
     await session.flush()
     for row in stored:
         # Populate subject/chapter relationships for serialization.
-        await session.refresh(row, attribute_names=["subject", "chapter"])
+        await session.refresh(
+            row, attribute_names=["subject", "chapter", "figure", "answer_figure"]
+        )
     return stored
 
 
@@ -216,8 +250,15 @@ async def update_question(
     if row.created_by != user_id:
         raise ForbiddenError("You can only edit questions you generated.")
 
-    applied = {k: v for k, v in changes.items() if v is not None}
-    if not applied:
+    # figure_id / answer_figure_id are the one place where an explicit null
+    # means something ("detach"), so they are read from `changes` directly.
+    figure_keys = [k for k in ("figure_id", "answer_figure_id") if k in changes]
+    applied = {
+        k: v
+        for k, v in changes.items()
+        if v is not None and k not in ("figure_id", "answer_figure_id")
+    }
+    if not applied and not figure_keys:
         return row
 
     candidate = {
@@ -228,7 +269,7 @@ async def update_question(
         "grade": row.grade,
         "text": applied.get("text", row.text),
         "options": applied.get("options", row.options),
-        "answer": applied.get("answer", row.answer),
+        "answer": row.answer,  # read-only: see QuestionPatch
         "explanation": applied.get("explanation", row.explanation),
         "marks": applied.get("marks", row.marks),
         "difficulty": applied.get("difficulty", row.difficulty),
@@ -247,15 +288,25 @@ async def update_question(
 
     row.text = validated.text
     row.options = list(validated.options) if validated.options else None
-    row.answer = validated.answer
     row.explanation = validated.explanation or ""
     row.marks = validated.marks
     row.difficulty = validated.difficulty
     row.topic = validated.topic or ""
     row.tags = list(validated.tags or [])
-    row.content_hash = content_hash(row.subject.name, row.chapter_id, row.text)
+
+    for key in figure_keys:
+        new_id = changes[key]
+        if new_id is not None:
+            await figure_service.resolve_attachable(session, new_id)
+        setattr(row, key, new_id)
+
+    row.content_hash = content_hash(
+        row.subject.name, row.chapter_id, row.text, row.figure_id
+    )
 
     await session.flush()
+    if figure_keys:
+        await session.refresh(row, attribute_names=["figure", "answer_figure"])
     return row
 
 

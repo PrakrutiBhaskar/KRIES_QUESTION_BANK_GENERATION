@@ -14,6 +14,25 @@ export type Marks = 1 | 2 | 3 | 5;
 // ============================================================
 // Question (UI view of the backend's QuestionOut)
 // ============================================================
+/** A diagram attached to a question. The image itself is fetched with the user's token. */
+export interface Figure {
+  id: string;
+  caption: string;
+  mime: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
+}
+
+/** A figure in the shared library: the image info plus what question generation writes from. */
+export interface LibraryFigure extends Figure {
+  subject?: Subject;
+  chapter?: string;
+  topic: string;
+  /** The labelled parts, e.g. "A: nucleus". Students never receive these (they are an answer key). */
+  labels: string[];
+}
+
 export interface Question {
   id: string;
   questionNumber: number;   // 1-based position within the list being shown
@@ -31,7 +50,15 @@ export interface Question {
   answer: string;
   explanation: string;
   tags: string[];
+  // Answer-key check done at generation time (rule check or an independent AI pass).
+  verificationStatus?: VerificationStatus;
+  verificationNote?: string;
+  figure?: Figure;          // printed with the question in the paper
+  answerFigure?: Figure;    // printed only in the answer key
 }
+
+/** verified: confirmed · unverified: could not be checked · flagged: the key looked wrong */
+export type VerificationStatus = 'verified' | 'unverified' | 'flagged';
 
 // ============================================================
 // Question Bank
@@ -64,6 +91,7 @@ export interface GenerateFormData {
   difficulty: Difficulty;
   marksPerQuestion: Marks;
   fresh: boolean;           // skip stored questions and force new generation
+  useFigures: boolean;      // write the questions about figures from the shared library
 }
 
 // ============================================================

@@ -252,6 +252,10 @@ class GroqClient:
 
         if "text" in parsed or "answer" in parsed:
             return [parsed]
+        # A verifier/relevance reply for a batch of one can also arrive as the
+        # bare result object, {"index": 0, ...}, rather than inside a list.
+        if "index" in parsed and not any(isinstance(v, list) for v in parsed.values()):
+            return [parsed]
 
         lists = [v for v in parsed.values() if isinstance(v, list)]
         # Prefer a list of question objects over any other list in the wrapper.

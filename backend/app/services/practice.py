@@ -16,7 +16,7 @@ from __future__ import annotations
 import random
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from generation_engine.schemas import QuestionType
@@ -41,6 +41,8 @@ async def _stored_pool(
         Question.is_active.is_(True),
         Question.chapter_id == chapter_id,
         Question.grade == payload.grade,
+        # Students shouldn't practise against an answer key that looked wrong.
+        or_(Question.verification_status.is_(None), Question.verification_status != "flagged"),
     )
     if payload.type is not None:
         stmt = stmt.where(Question.type == payload.type)
@@ -76,7 +78,13 @@ async def create_session(
             user_id=user_id,
         )
         chosen_ids = {row.id for row in chosen}
-        chosen.extend(row for row in generated if row.id not in chosen_ids)
+        # A freshly generated question whose answer key still looked wrong after
+        # every retry comes back flagged; students don't practise against those.
+        chosen.extend(
+            row
+            for row in generated
+            if row.id not in chosen_ids and row.verification_status != "flagged"
+        )
         chosen = chosen[: payload.count]
 
     if not chosen:

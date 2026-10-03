@@ -58,9 +58,12 @@ def resolve_download(filename: str) -> Path:
     return path
 
 
-def export_paper(paper) -> tuple[Path, int]:
-    """Render `paper` to a PDF on disk. Returns (path, size_bytes)."""
-    pdf_bytes = render_pdf(paper)
+def export_paper(paper, *, include_answer_key: bool = True) -> tuple[Path, int]:
+    """Render `paper` to a PDF on disk. Returns (path, size_bytes).
+
+    `include_answer_key=False` produces the student copy: questions only.
+    """
+    pdf_bytes = render_pdf(paper, include_answer_key=include_answer_key)
 
     # The uuid suffix keeps re-exports of the same paper from overwriting a
     # URL the client may still be downloading.
@@ -69,9 +72,10 @@ def export_paper(paper) -> tuple[Path, int]:
     path.write_bytes(pdf_bytes)
 
     logger.info(
-        "Exported paper %s (%d questions) via %s -> %s (%d bytes)",
+        "Exported paper %s (%d questions, answer key %s) via %s -> %s (%d bytes)",
         paper.id,
         len(paper.items),
+        "included" if include_answer_key else "omitted",
         active_renderer(),
         filename,
         len(pdf_bytes),

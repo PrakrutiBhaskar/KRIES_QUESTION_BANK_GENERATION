@@ -7,6 +7,7 @@ import {
   Settings,
   LogOut,
   GraduationCap,
+  Images,
   X,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
@@ -23,6 +24,11 @@ const NAV_ITEMS = [
   { to: '/question-banks', icon: BookOpen, label: 'Question Banks' },
 ];
 
+// Only shown to administrators (the API enforces this too).
+const ADMIN_NAV_ITEMS = [
+  { to: '/figure-library', icon: Images, label: 'Figure Library' },
+];
+
 export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   const { user, logout } = useApp();
   const navigate = useNavigate();
@@ -35,7 +41,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
   return (
     <aside
       className={`
-        flex flex-col h-full bg-slate-900 text-white
+        flex flex-col h-full bg-slate-900 text-white theme-static
         ${mobile ? 'w-64' : 'w-64'}
       `}
     >
@@ -64,7 +70,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
         <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-2">
           Navigation
         </p>
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+        {[...NAV_ITEMS, ...(user?.role === 'Admin' ? ADMIN_NAV_ITEMS : [])].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

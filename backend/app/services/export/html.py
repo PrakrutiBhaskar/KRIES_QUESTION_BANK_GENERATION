@@ -9,8 +9,10 @@ answer key on a fresh page.
 """
 from __future__ import annotations
 
+import base64
 from html import escape
 
+from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
 from .answer_format import format_answer, split_label
 
 
@@ -49,6 +51,10 @@ body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
 .q-num { font-weight: 600; min-width: 22px; }
 .q-text { flex: 1; }
 .q-marks { font-weight: 600; white-space: nowrap; color: #333; }
+.fig { margin: 6px 0 4px 30px; page-break-inside: avoid; }
+.fig img { display: block; }
+.fig .cap { font-size: 9pt; color: #555; font-style: italic; margin-top: 2px; }
+.key .fig { margin-left: 30px; }
 .options { margin: 4px 0 0 30px; padding: 0; list-style: none; }
 .options li { margin: 2px 0; }
 .section-break { page-break-before: always; }
@@ -66,6 +72,26 @@ body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
 """
 
 _OPTION_LABELS = "abcdefgh"
+
+
+def figure_html(figure) -> str:
+    """An inline <img> (data: URI, so the HTML is self-contained) for a figure.
+
+    Returns "" when there is no figure or its file has gone missing, so a lost
+    image never breaks the export. Sized in mm so WeasyPrint prints it at the
+    same size the other two renderers use.
+    """
+    data = read_figure_bytes(figure)
+    if data is None:
+        return ""
+    w, h = fit_size_mm(figure.width, figure.height)
+    uri = f"data:{figure.mime};base64,{base64.b64encode(data).decode('ascii')}"
+    alt = escape(figure.caption or "Figure", quote=True)
+    cap = f"<div class='cap'>{escape(figure.caption)}</div>" if figure.caption else ""
+    return (
+        f"<div class='fig'><img src='{uri}' alt='{alt}' "
+        f"style='width:{w}mm;height:{h}mm'>{cap}</div>"
+    )
 
 
 def _instructions(paper) -> str:
@@ -117,6 +143,7 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
         parts.append(f"<span class='q-text'>{escape(q.text)}</span>")
         parts.append(f"<span class='q-marks'>[{item.effective_marks}]</span>")
         parts.append("</div>")
+        parts.append(figure_html(loaded_figure(q, "figure")))
         if q.options:
             parts.append("<ul class='options'>")
             for label, option in zip(_OPTION_LABELS, q.options):
@@ -128,6 +155,7 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
         parts.append("<div class='section-break key'><h2>Answer Key</h2>")
         for n, item in enumerate(ordered, start=1):
             q = item.question
+            answer_fig = answer_key_figure(q)
             parts.append("<div class='a'>")
             if q.type.value == "MCQ":
                 parts.append(
@@ -136,7 +164,10 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
                 if q.explanation:
                     parts.append(f"<div class='expl'>{escape(q.explanation)}</div>")
             else:
-                fa = format_answer(q.answer, item.effective_marks, q.type.value)
+                fa = format_answer(
+                    q.answer, item.effective_marks, q.type.value,
+                    has_figure=answer_fig is not None,
+                )
                 parts.append(f"<div><span class='label'>{n}.</span>")
                 if len(fa.points) > 1:
                     lead = fa.lead or f"[{item.effective_marks} marks]"
@@ -151,6 +182,8 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
                     parts.append(f"<div class='ref'>{escape(fa.reference)}</div>")
                 if fa.split:
                     parts.append(f"<div class='split'>{escape(split_label(fa.split))}</div>")
+            # After the MCQ/descriptive branch so every question type can show one.
+            parts.append(figure_html(answer_fig))
             parts.append("</div>")
         parts.append("</div>")
 

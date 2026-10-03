@@ -11,10 +11,12 @@ from ..config import parse_rule, settings
 from ..errors import (
     BadRequestError,
     ConflictError,
+    ForbiddenError,
     TooManyRequestsError,
     UnauthorizedError,
 )
 from ..models import User
+from ..schemas.auth import PreferencesOut, ProfileUpdateIn
 from ..ratelimit import limiter
 from ..security import (
     DUMMY_HASH,
@@ -108,5 +110,32 @@ async def reset_password(session: AsyncSession, token: str, new_password: str) -
     if user is None or not user.is_active or not reset_token_matches(token, user.password_hash):
         raise invalid
     user.password_hash = hash_password(new_password)
+    await session.flush()
+    return user
+
+
+async def update_profile(
+    session: AsyncSession, user: User, changes: ProfileUpdateIn
+) -> User:
+    """Apply the Settings page's changes and persist them. Only the fields that
+    were sent are touched. The email address can never be changed here."""
+    if changes.email is not None:
+        raise ForbiddenError(
+            "Your email address can't be changed.", error="email_immutable"
+        )
+    if changes.name is not None:
+        user.name = changes.name
+    if changes.role is not None and changes.role != user.role:
+        if user.role == "Admin":
+            raise ForbiddenError(
+                "An administrator can't change their own role.", error="role_locked"
+            )
+        user.role = changes.role
+    if changes.preferences is not None:
+        merged = PreferencesOut.model_validate(user.preferences or {}).model_dump()
+        merged.update(changes.preferences.model_dump(exclude_none=True))
+        # A fresh dict (not an in-place edit) so SQLAlchemy sees the change.
+        user.preferences = PreferencesOut.model_validate(merged).model_dump()
+    session.add(user)
     await session.flush()
     return user

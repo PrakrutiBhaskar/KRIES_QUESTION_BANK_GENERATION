@@ -16,10 +16,27 @@ revision = "0004"
 down_revision = "0003"
 branch_labels = None
 depends_on = None
+# The app's startup schema sync may already have added these, so each step checks first.
+
+
+def _has_column(table: str, column: str) -> bool:
+    insp = sa.inspect(op.get_bind())
+    return insp.has_table(table) and column in {c["name"] for c in insp.get_columns(table)}
+
+
+def _has_index(table: str, name: str) -> bool:
+    insp = sa.inspect(op.get_bind())
+    return insp.has_table(table) and name in {i["name"] for i in insp.get_indexes(table)}
+
+
+def _has_fk(table: str, name: str) -> bool:
+    insp = sa.inspect(op.get_bind())
+    return insp.has_table(table) and name in {f["name"] for f in insp.get_foreign_keys(table)}
 
 
 def upgrade() -> None:
-    op.add_column("paper_questions", sa.Column("section", sa.Text(), nullable=True))
+    if not _has_column("paper_questions", "section"):
+        op.add_column("paper_questions", sa.Column("section", sa.Text(), nullable=True))
 
 
 def downgrade() -> None:

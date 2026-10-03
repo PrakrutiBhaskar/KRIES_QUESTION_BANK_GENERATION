@@ -40,6 +40,8 @@ async def test_generated_questions_match_the_shared_contract(client):
     assert set(question) == {
         "id", "subject", "chapter", "type", "grade", "text", "options",
         "answer", "explanation", "marks", "difficulty", "topic", "tags",
+        # added by answer-key verification (additive; see docs/api-contract.md)
+        "verification_status", "verification_note",
     }
     assert question["subject"] == "Science"
     assert question["chapter"] == "Photosynthesis"

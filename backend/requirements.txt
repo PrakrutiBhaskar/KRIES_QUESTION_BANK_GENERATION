@@ -17,6 +17,9 @@ pyjwt>=2.8               # signed access tokens for /auth
 # installed. WeasyPrint is preferred (correct Kannada/Indic shaping) but needs
 # system libs — see backend/README.md — so it's an extra, not a hard dep.
 reportlab>=4.1
+# Pillow: validates and re-encodes uploaded figures (also a dependency of
+# reportlab and fpdf2, listed here because the upload path imports it directly).
+pillow>=10.3
 # fpdf2 + uharfbuzz: pure-pip renderer with proper Kannada shaping (fonts are
 # bundled in backend/assets/fonts). Used for Kannada papers when WeasyPrint
 # isn't installed, e.g. on Windows.

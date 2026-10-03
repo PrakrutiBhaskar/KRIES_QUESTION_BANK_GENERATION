@@ -13,8 +13,10 @@ so mixed English/Kannada lines render correctly.
 """
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 
+from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
 from .answer_format import format_answer, split_label
 from .html import item_section, section_totals
 
@@ -48,7 +50,7 @@ def _instruction_lines(types: set[str]) -> list[str]:
     return lines
 
 
-def render_fpdf(paper) -> bytes:
+def render_fpdf(paper, include_answer_key: bool = True) -> bytes:
     from fpdf import FPDF
     from fpdf.enums import XPos, YPos
 
@@ -84,6 +86,24 @@ def render_fpdf(paper) -> bytes:
         pdf.set_text_color(*color)
         pdf.multi_cell(w, h, text, align=align, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
+    def figure_height(figure) -> float:
+        """Vertical space a figure needs (0 if there is nothing to draw)."""
+        if figure is None or read_figure_bytes(figure) is None:
+            return 0.0
+        return fit_size_mm(figure.width, figure.height)[1] + (6 if figure.caption else 2) + 3
+
+    def draw_figure(figure, indent: float) -> None:
+        data = read_figure_bytes(figure)
+        if data is None:
+            return
+        w, h = fit_size_mm(figure.width, figure.height)
+        y = pdf.get_y() + 1.5
+        pdf.image(BytesIO(data), x=_LEFT + indent, y=y, w=w, h=h)
+        pdf.set_y(y + h + 1.5)
+        if figure.caption:
+            pdf.set_x(_LEFT + indent)
+            write(figure.caption, w=epw - indent, style="I", size=9, h=4.6, color=(85, 85, 85))
+
     ordered = sorted(paper.items, key=lambda i: i.order_index)
     grades = sorted({item.question.grade for item in ordered})
     grade_label = ", ".join(str(g) for g in grades) if grades else "-"
@@ -114,7 +134,9 @@ def render_fpdf(paper) -> bytes:
     current_section = None
     for n, item in enumerate(ordered, start=1):
         q = item.question
-        if pdf.will_page_break(28):
+        q_fig = loaded_figure(q, "figure")
+        # Keep the figure on the same page as its question text.
+        if pdf.will_page_break(28 + figure_height(q_fig)):
             pdf.add_page()
         section = item_section(item)
         if section and section != current_section:
@@ -135,6 +157,7 @@ def render_fpdf(paper) -> bytes:
         pdf.cell(_MARKS_W, 5.6, f"[{item.effective_marks}]", align="R")
         pdf.set_xy(_LEFT, y0)
         write(f"{n}. {q.text}", w=epw - _MARKS_W)
+        draw_figure(q_fig, 8)
         if q.options:
             for label, option in zip(_OPTION_LABELS, q.options):
                 pdf.set_x(_LEFT + 8)
@@ -142,39 +165,45 @@ def render_fpdf(paper) -> bytes:
         pdf.ln(3)
 
     # --- answer key ---------------------------------------------------
-    pdf.add_page()
-    write("Answer Key", style="B", size=13, h=7)
-    pdf.set_line_width(0.2)
-    pdf.line(_LEFT, pdf.get_y(), _LEFT + epw, pdf.get_y())
-    pdf.ln(3)
+    if include_answer_key:
+        pdf.add_page()
+        write("Answer Key", style="B", size=13, h=7)
+        pdf.set_line_width(0.2)
+        pdf.line(_LEFT, pdf.get_y(), _LEFT + epw, pdf.get_y())
+        pdf.ln(3)
 
-    for n, item in enumerate(ordered, start=1):
-        q = item.question
-        if pdf.will_page_break(24):
-            pdf.add_page()
-        if q.type.value == "MCQ":
-            write(f"{n}. {q.answer}", w=epw)
-            if q.explanation:
-                pdf.set_x(_LEFT + 6)
-                write(q.explanation, w=epw - 6, size=9.5, h=4.8, color=(68, 68, 68))
-        else:
-            fa = format_answer(q.answer, item.effective_marks, q.type.value)
-            if len(fa.points) > 1:
-                head = f"{n}. {fa.lead}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
-                write(head, w=epw, style="B" if fa.lead else "")
-                for i, point in enumerate(fa.points, start=1):
+        for n, item in enumerate(ordered, start=1):
+            q = item.question
+            a_fig = answer_key_figure(q)
+            if pdf.will_page_break(24 + figure_height(a_fig)):
+                pdf.add_page()
+            if q.type.value == "MCQ":
+                write(f"{n}. {q.answer}", w=epw)
+                if q.explanation:
                     pdf.set_x(_LEFT + 6)
-                    pdf.set_font("Noto", "", 10.5)
-                    pdf.cell(7, 5.4, f"{i}.")
-                    write(point, w=epw - 13, size=10.5, h=5.4)
+                    write(q.explanation, w=epw - 6, size=9.5, h=4.8, color=(68, 68, 68))
             else:
-                write(f"{n}. {fa.points[0] if fa.points else q.answer}", w=epw)
-            if fa.reference:
-                pdf.set_x(_LEFT + 6)
-                write(fa.reference, w=epw - 6, style="I", size=9.5, h=4.8, color=(68, 68, 68))
-            if fa.split:
-                pdf.set_x(_LEFT + 6)
-                write(split_label(fa.split), w=epw - 6, style="B", size=9.5, h=5, color=(43, 58, 103))
-        pdf.ln(2.5)
+                fa = format_answer(
+                    q.answer, item.effective_marks, q.type.value,
+                    has_figure=a_fig is not None,
+                )
+                if len(fa.points) > 1:
+                    head = f"{n}. {fa.lead}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
+                    write(head, w=epw, style="B" if fa.lead else "")
+                    for i, point in enumerate(fa.points, start=1):
+                        pdf.set_x(_LEFT + 6)
+                        pdf.set_font("Noto", "", 10.5)
+                        pdf.cell(7, 5.4, f"{i}.")
+                        write(point, w=epw - 13, size=10.5, h=5.4)
+                else:
+                    write(f"{n}. {fa.points[0] if fa.points else q.answer}", w=epw)
+                if fa.reference:
+                    pdf.set_x(_LEFT + 6)
+                    write(fa.reference, w=epw - 6, style="I", size=9.5, h=4.8, color=(68, 68, 68))
+                if fa.split:
+                    pdf.set_x(_LEFT + 6)
+                    write(split_label(fa.split), w=epw - 6, style="B", size=9.5, h=5, color=(43, 58, 103))
+            draw_figure(a_fig, 12)
+            pdf.ln(2.5)
 
     return bytes(pdf.output())

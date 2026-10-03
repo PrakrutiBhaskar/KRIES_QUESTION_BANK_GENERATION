@@ -11,6 +11,8 @@ import QuestionPapersPage from './pages/QuestionPapersPage';
 import QuestionBanksPage from './pages/QuestionBanksPage';
 import QuestionBankDetailPage from './pages/QuestionBankDetailPage';
 import SettingsPage from './pages/SettingsPage';
+import FigureLibraryPage from './pages/FigureLibraryPage';
+import RequireAdmin from './components/RequireAdmin';
 
 export default function App() {
   return (
@@ -31,6 +33,10 @@ export default function App() {
             <Route path="/question-banks" element={<QuestionBanksPage />} />
             <Route path="/question-banks/:id" element={<QuestionBankDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/figure-library"
+              element={<RequireAdmin><FigureLibraryPage /></RequireAdmin>}
+            />
           </Route>
 
           {/* Default redirect */}

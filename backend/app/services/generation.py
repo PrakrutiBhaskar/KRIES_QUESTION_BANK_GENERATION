@@ -17,13 +17,21 @@ Caching semantics: a repeat of an identical request returns the stored
 questions rather than burning a Groq call. Send `"refresh": true` to force
 fresh generation — that's how the teacher's "generate more" action gets new
 questions instead of the same set back.
+
+Figures: with `use_figures` (or explicit `figure_ids`) the questions are written
+about figures from the shared figure library (managed by administrators). The model is given each figure's
+caption, topic and labelled parts as text and names the figure a question is
+about by a short reference; the engine maps that back to the real figure id and
+`persist_batch` stores it, so the model never sees or invents an image or an id.
+A figure request is served from stored questions only when they use one of the
+chosen figures.
 """
 from __future__ import annotations
 
 import logging
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from generation_engine.engine import GenerationEngine
@@ -39,6 +47,7 @@ from ..config import settings
 from ..errors import BadRequestError, UnprocessableError, UpstreamError
 from ..models import Question
 from ..schemas.requests import GenerateIn
+from . import figures as figure_service
 from . import questions as question_service
 from .syllabus import get_corpus, get_syllabus_index, resolve_chapter
 
@@ -72,9 +81,17 @@ def set_engine(engine: GenerationEngine | None) -> None:
 
 
 async def _cached_questions(
-    session: AsyncSession, payload: GenerateIn, chapter_id, limit: int
+    session: AsyncSession,
+    payload: GenerateIn,
+    chapter_id,
+    limit: int,
+    figure_ids: list[uuid.UUID] | None = None,
 ) -> list[Question]:
-    """Stored questions that already satisfy this exact request signature."""
+    """Stored questions that already satisfy this exact request signature.
+
+    For a figure request, `figure_ids` restricts the result to questions about
+    one of those figures.
+    """
     stmt = (
         select(Question)
         .where(
@@ -84,13 +101,49 @@ async def _cached_questions(
             Question.grade == payload.grade,
             Question.marks == payload.marks,
             Question.difficulty == payload.difficulty,
+            # A question whose answer key looked wrong is never reused.
+            or_(
+                Question.verification_status.is_(None),
+                Question.verification_status != "flagged",
+            ),
         )
         .order_by(Question.created_at.desc(), Question.id)
         .limit(limit)
     )
     if payload.topic:
         stmt = stmt.where(func.lower(Question.topic) == payload.topic.strip().lower())
+    if figure_ids is not None:
+        stmt = stmt.where(Question.figure_id.in_(figure_ids))
     return list((await session.scalars(stmt)).all())
+
+
+async def _figures_for(
+    session: AsyncSession, payload: GenerateIn, chapter_name: str
+) -> list:
+    """The figures this request should be about; [] when it does not ask for any."""
+    if not payload.wants_figures:
+        return []
+    limit = settings.max_generation_figures
+    if payload.figure_ids:
+        return await figure_service.resolve_for_generation(
+            session, payload.figure_ids, limit=limit
+        )
+    figures = await figure_service.library_figures_for_generation(
+        session,
+        subject=payload.subject.value,
+        chapter=chapter_name,
+        topic=payload.topic,
+        limit=limit,
+    )
+    if not figures:
+        raise BadRequestError(
+            f"The figure library has no figures for {payload.subject.value} / {chapter_name}"
+            + (f" (topic \"{payload.topic}\")" if payload.topic else "")
+            + " with a caption or labelled parts. Ask an administrator to add one, "
+            "tagged with this subject and chapter, or turn figures off.",
+            error="no_figures",
+        )
+    return figures
 
 
 async def generate_questions(
@@ -143,9 +196,14 @@ async def generate_questions(
 
     chapter = await resolve_chapter(session, payload.subject, payload.chapter)
 
+    figures = await _figures_for(session, payload, chapter.name)
+    figure_ids = [f.id for f in figures] if figures else None
+
     cached: list[Question] = []
     if settings.enable_generation_cache and not payload.refresh:
-        cached = await _cached_questions(session, payload, chapter.id, payload.count)
+        cached = await _cached_questions(
+            session, payload, chapter.id, payload.count, figure_ids
+        )
         if len(cached) >= payload.count:
             logger.info(
                 "Cache hit: %d/%d questions for %s/%s served from storage",
@@ -168,8 +226,6 @@ async def generate_questions(
             f"got {payload.count}"
         )
 
-    # Hand the canonical chapter name to Module A so prompts and any syllabus
-    # check use the syllabus' own spelling, not the caller's.
     # Walk the chapter's textbook passages from where earlier batches stopped,
     # so repeated generation covers the whole chapter.
     coverage_offset = (
@@ -183,6 +239,8 @@ async def generate_questions(
         or 0
     )
 
+    # Hand the canonical chapter name to Module A so prompts and any syllabus
+    # check use the syllabus' own spelling, not the caller's.
     request = GenerationRequest(
         subject=payload.subject,
         chapter=chapter.name,
@@ -192,6 +250,7 @@ async def generate_questions(
         difficulty=payload.difficulty,
         count=shortfall,
         topic=payload.topic,
+        figures=[figure_service.to_context(f) for f in figures] if figures else None,
         coverage_offset=coverage_offset,
     )
 

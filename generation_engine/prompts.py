@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .schemas import GenerationRequest, QuestionType
+from .schemas import GenerationRequest, QuestionType, figure_ref_map
 from .subject_formats import get_prompt_note
 
 # ---------------------------------------------------------------------------
@@ -85,6 +85,41 @@ def _source_block(passages: list, max_chars: int) -> str:
     return "\n".join(parts)
 
 
+def _figure_block(request: GenerationRequest) -> str:
+    """Prompt section describing the stored figures the questions must be about.
+
+    The model is given text only (caption, topic, labelled parts) and is told to
+    treat it as the complete truth about the diagram. The caller attaches the
+    real figure id from the short reference the model returns.
+    """
+    refs = figure_ref_map(request.figures)
+    if not refs:
+        return ""
+    listing = "\n".join(f"{ref} - {fig.describe()}" for ref, fig in refs.items())
+    return f"""
+
+Figures. Every question must be written about exactly ONE of the figures below. You cannot see the images: each description is all you know about its figure, so treat it as complete and correct.
+
+{listing}
+
+Rules for figure questions:
+- Put the reference of the figure the question is about ({", ".join(refs)}) in "figure_ref". Spread the questions over the figures as evenly as you can.
+- Ask only what the description supports, such as identifying a labelled part, stating its function, or explaining a stage or relationship it lists. Do NOT invent parts, labels, numbers, positions or colours that are not in the description, and do not describe what the picture looks like beyond it.
+- Refer to the diagram inside the question ("In the figure shown ...", "the part labelled A ...") so it reads correctly when printed beside the figure. Do not paste the caption or the full list of labels into the question.
+- If a question asks the student to identify a part, refer to that part by its letter or number only. The question must never contain its own answer."""
+
+
+def _json_shape_for(request: GenerationRequest, json_shape: str) -> str:
+    """Add the `figure_ref` field to the JSON shape when figures are in play."""
+    if not request.figures:
+        return json_shape
+    return json_shape.replace(
+        '"text": "string",',
+        '"text": "string",\n  "figure_ref": "string (reference of the figure this question is about, e.g. F1)",',
+        1,
+    )
+
+
 def _scope_block(
     request: GenerationRequest, chapter_topics: Optional[list[str]]
 ) -> str:
@@ -123,6 +158,8 @@ def _footer(
             "{grade}", str(request.grade)
         )
         json_shape = _with_passage_field(json_shape)
+    figure_block = _figure_block(request)
+    json_shape = _json_shape_for(request, json_shape)
     topic_line = (
         f'\nFocus on the sub-topic: "{request.topic}".' if request.topic else ""
     )
@@ -143,7 +180,7 @@ def _footer(
         )
 
     return f"""
-{subject_note}{grade_line}{topic_line}{feedback_block}
+{subject_note}{grade_line}{topic_line}{figure_block}{feedback_block}
 
 Return ONLY a JSON object with a single key "questions", whose value is a JSON array of exactly {request.count} objects (one object per question, even when the count is 1), each matching this shape:
 {{"questions": [{json_shape}, ...]}}

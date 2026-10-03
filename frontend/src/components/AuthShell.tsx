@@ -19,7 +19,7 @@ export function AuthShell({
   return (
     <div className="min-h-screen flex">
       {/* Left — brand panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex-col justify-between p-12">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex-col justify-between p-12 theme-static">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center">
             <GraduationCap className="w-6 h-6 text-white" />

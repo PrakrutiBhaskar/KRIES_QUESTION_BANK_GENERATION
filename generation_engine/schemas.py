@@ -60,6 +60,40 @@ VALID_MARKS_BY_TYPE = {
 }
 
 
+class FigureContext(BaseModel):
+    """What the model is told about one stored figure (a text description only).
+
+    The model never sees the image. It works from the caption and the list of
+    labelled parts the teacher typed in, and the caller attaches `figure_id`
+    itself, so the model cannot invent or mis-copy a figure reference.
+    """
+
+    id: str
+    caption: str = ""
+    labels: List[str] = Field(default_factory=list)
+    topic: str = ""
+
+    def describe(self) -> str:
+        """One plain-text description, shared by the generation prompt and the verifier."""
+        parts = []
+        if self.caption.strip():
+            parts.append(f"Caption: {self.caption.strip()}")
+        if self.topic.strip():
+            parts.append(f"Topic: {self.topic.strip()}")
+        if self.labels:
+            parts.append("Labelled parts: " + "; ".join(l.strip() for l in self.labels if l.strip()))
+        return ". ".join(parts)
+
+
+def figure_ref_map(figures: Optional[List[FigureContext]]) -> dict[str, FigureContext]:
+    """Short references the model uses instead of real ids: F1, F2, ... in list order.
+
+    A short ref is far less likely to be mis-copied than a UUID, and it means
+    the model can only ever name a figure the caller actually offered.
+    """
+    return {f"F{i}": fig for i, fig in enumerate(figures or [], start=1)}
+
+
 class Question(BaseModel):
     """The shared Question object (api-contract.md)."""
 
@@ -76,6 +110,17 @@ class Question(BaseModel):
     difficulty: Difficulty
     topic: str = ""
     tags: List[str] = Field(default_factory=list)
+    # Filled in by the engine's answer-key verification (answer_verification.py):
+    # "verified" | "unverified" | "flagged". None = never checked.
+    verification_status: Optional[str] = None
+    verification_note: Optional[str] = None
+    # Set when the question was written about one of the figures in
+    # `GenerationRequest.figures`. The id is attached by the engine from the
+    # model's short reference ("F1"), never taken from the model verbatim.
+    figure_id: Optional[str] = None
+    # The text description the question was written from. Only used to give the
+    # answer-key verifier the same context; never serialised or stored.
+    figure_context: Optional[str] = Field(default=None, exclude=True)
 
     @field_validator("chapter", "text", "answer")
     @classmethod
@@ -139,6 +184,9 @@ class GenerationRequest(BaseModel):
     difficulty: Difficulty
     count: int = Field(ge=1, le=25)
     topic: Optional[str] = None  # optional narrowing hint fed into the prompt
+    # Optional: stored figures to write questions about (text description only).
+    # When set, every generated question must be about exactly one of them.
+    figures: Optional[List[FigureContext]] = Field(default=None, max_length=20)
     # Where to start walking the chapter's textbook passages. The backend sets
     # this to the number of questions already stored for the chapter so that
     # repeated generation moves through the WHOLE chapter instead of

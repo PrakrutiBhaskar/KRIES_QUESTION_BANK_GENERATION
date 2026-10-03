@@ -79,6 +79,11 @@ class ConflictError(APIError):
     error = "conflict"
 
 
+class PayloadTooLargeError(APIError):
+    status_code = 413
+    error = "payload_too_large"
+
+
 class UnprocessableError(APIError):
     # Written as a literal rather than status.HTTP_422_* — Starlette renamed
     # that constant and the old spelling emits a deprecation warning.
