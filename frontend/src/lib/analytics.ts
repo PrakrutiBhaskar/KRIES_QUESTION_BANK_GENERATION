@@ -30,6 +30,8 @@ export function buildAnalytics(
       { type: 'MCQ', count: byType.get('MCQ') ?? 0 },
       { type: 'Short Answer', count: byType.get('Short') ?? 0 },
       { type: 'Long Answer', count: byType.get('Long') ?? 0 },
+      { type: 'Fill in the Blank', count: byType.get('Fill') ?? 0 },
+      { type: 'Match the Following', count: byType.get('Match') ?? 0 },
     ],
     byGrade: ['Grade 7', 'Grade 8', 'Grade 9'].map((g) => ({ grade: g, count: byGrade.get(g) ?? 0 })),
     byMarks: ['1 mark', '2 marks', '3 marks', '5 marks'].map((m) => ({ marks: m, count: byMarks.get(m) ?? 0 })),

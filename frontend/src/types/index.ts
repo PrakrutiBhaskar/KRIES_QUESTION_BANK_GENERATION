@@ -6,7 +6,7 @@
 
 export type Subject = 'Math' | 'Science' | 'Social Science' | 'English' | 'Kannada';
 export type Grade = 7 | 8 | 9;
-export type QuestionType = 'MCQ' | 'Short' | 'Long';
+export type QuestionType = 'MCQ' | 'Short' | 'Long' | 'Fill' | 'Match';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';
 export type QuestionDifficulty = Exclude<Difficulty, 'mixed'>;
 export type Marks = 1 | 2 | 3 | 5;

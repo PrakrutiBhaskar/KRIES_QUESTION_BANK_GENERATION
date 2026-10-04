@@ -22,6 +22,7 @@ import {
   VerificationBadge,
   VerificationNote,
   VerificationWarning,
+  isKeyOption,
 } from '../components/ui';
 import { BankDetailSkeleton } from '../components/Skeleton';
 import { FigureImage } from '../components/FigureImage';
@@ -68,7 +69,7 @@ function QuestionRow({ question, onDelete }: QuestionRowProps) {
           </div>
 
           {/* Question text */}
-          <p className="text-sm font-medium text-slate-900 leading-snug">{question.text}</p>
+          <p className="text-sm font-medium text-slate-900 leading-snug whitespace-pre-line">{question.text}</p>
           <VerificationWarning question={question} />
 
           {/* Diagram printed with the question */}
@@ -81,14 +82,14 @@ function QuestionRow({ question, onDelete }: QuestionRowProps) {
                 <li
                   key={i}
                   className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${
-                    opt === question.answer
+                    isKeyOption(question, opt)
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-medium'
                       : 'bg-slate-50 border-slate-100 text-slate-600'
                   }`}
                 >
                   <span className="font-semibold">{String.fromCharCode(65 + i)}.</span>
                   {opt}
-                  {opt === question.answer && (
+                  {isKeyOption(question, opt) && (
                     <CheckCircle2 className="w-3.5 h-3.5 ml-auto shrink-0 text-emerald-500" />
                   )}
                 </li>
@@ -269,6 +270,8 @@ function AddQuestionModal({ bank, marksByType, onAdd, onClose }: AddQuestionModa
                 <option value="MCQ">MCQ</option>
                 <option value="Short">Short</option>
                 <option value="Long">Long</option>
+                <option value="Fill">Fill in the blank</option>
+                <option value="Match">Match the following</option>
               </select>
             </div>
             <div>
@@ -310,7 +313,7 @@ export default function QuestionBankDetailPage() {
   const [bank, setBank] = useState<QuestionBank | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [marksByType, setMarksByType] = useState<MarksByType>({ MCQ: [1], Short: [1, 2, 3], Long: [5] });
+  const [marksByType, setMarksByType] = useState<MarksByType>({ MCQ: [1], Short: [1, 2, 3], Long: [5], Fill: [1], Match: [3, 5] });
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addingQuestion, setAddingQuestion] = useState(false);

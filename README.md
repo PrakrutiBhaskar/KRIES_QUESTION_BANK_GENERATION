@@ -1,8 +1,8 @@
 # KRIES Question Bank Generator
 
 An AI-powered question bank generator for the **Karnataka State Board, grades 7–9**.
-It generates syllabus-aligned practice questions — MCQ, short answer, and long
-answer — complete with answer keys, difficulty tagging, and marks-aware answer
+It generates syllabus-aligned practice questions — MCQ, short answer, long
+answer, fill in the blank, and match the following — complete with answer keys, difficulty tagging, and marks-aware answer
 formatting. Teachers use it to assemble question papers; students use it for
 self-study practice. Built by a 3-person team, one module per person.
 
@@ -27,7 +27,7 @@ into a self-check practice session with answers withheld until revealed.
 |---|---|
 | Board / Grades | Karnataka State Board, grades 7–9 |
 | Subjects | Math, Science, Social Science, English, Kannada |
-| Question types | MCQ, Short answer, Long answer |
+| Question types | MCQ, Short answer, Long answer, Fill in the blank, Match the following |
 | LLM API for generation | Groq |
 | Frontend | **React + TypeScript + Vite + Tailwind web app** (built). The original plan was React Native for Web + Android; the web app shipped first and an Android build is still open |
 | Backend | Python, FastAPI |
@@ -73,7 +73,7 @@ after the engine returns a validated batch.
   "id": "uuid",
   "subject": "Math | Science | Social Science | English | Kannada",
   "chapter": "string",
-  "type": "MCQ | Short | Long",
+  "type": "MCQ | Short | Long | Fill | Match",
   "grade": 8,
   "text": "string",
   "options": ["string"],

@@ -47,6 +47,7 @@ REJECTED = "rejected"  # engine-internal: becomes "flagged" if it has to be kept
 FLAGGED = "flagged"
 
 _LETTERS = "ABCD"
+_LETTERS_ALL = "ABCDEFGHIJ"  # Match columns can have up to five options
 _NOTE_LIMIT = 280
 
 VERIFIER_SYSTEM_PROMPT = (
@@ -133,15 +134,29 @@ def build_mcq_prompt(questions: list[Question]) -> tuple[str, str]:
     return VERIFIER_SYSTEM_PROMPT, user
 
 
+_MATCH_NOTE = (
+    'Items with an "options" field are match-the-following questions: the question '
+    "lists numbered items (Column A) and \"options\" is the lettered Column B. The "
+    'answer pairs every number with a letter ("1-C"). Check each pair on its own; '
+    "if any single pair is wrong, the verdict is \"incorrect\".\n\n"
+)
+
+
+def _match_note(questions: list[Question]) -> str:
+    return _MATCH_NOTE if any(q.type == QuestionType.MATCH for q in questions) else ""
+
+
+def _judge_item(i: int, q: Question) -> dict:
+    item = {"index": i, "question": q.text, "marks": q.marks, "answer": q.answer}
+    if q.type == QuestionType.MATCH:
+        item["options"] = {_LETTERS_ALL[j]: opt for j, opt in enumerate(q.options or [])}
+    return _with_figure(item, q)
+
+
 def build_judge_prompt(questions: list[Question]) -> tuple[str, str]:
-    items = [
-        _with_figure(
-            {"index": i, "question": q.text, "marks": q.marks, "answer": q.answer}, q
-        )
-        for i, q in enumerate(questions)
-    ]
+    items = [_judge_item(i, q) for i, q in enumerate(questions)]
     user = (
-        f"{_context_line(questions)}\n\n{_figure_note(questions)}"
+        f"{_context_line(questions)}\n\n{_figure_note(questions)}{_match_note(questions)}"
         "For each question below, judge whether the proposed answer is correct. "
         "Do not take it on trust: re-derive every calculation and check every "
         "factual claim yourself. Ignore style, wording and length. Verdicts: "

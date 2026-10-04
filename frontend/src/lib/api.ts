@@ -395,7 +395,7 @@ export async function fetchChapters(subject: Subject, grade?: number): Promise<C
 /** Which marks values each question type supports (enforced by POST /generate). */
 export async function fetchCombinations(): Promise<MarksByType> {
   const rows = await request<{ type: QuestionType; marks: number[] }[]>('/generation/combinations');
-  const out: MarksByType = { MCQ: [], Short: [], Long: [] };
+  const out: MarksByType = { MCQ: [], Short: [], Long: [], Fill: [], Match: [] };
   for (const r of rows) out[r.type] = r.marks as Marks[];
   return out;
 }
@@ -803,7 +803,7 @@ export function planBatches(
   marksByType: MarksByType,
 ): { type: QuestionType; marks: Marks; difficulty: QuestionDifficulty; count: number }[] {
   const types: QuestionType[] =
-    form.questionType === 'Mixed' ? ['MCQ', 'Short', 'Long'] : [form.questionType];
+    form.questionType === 'Mixed' ? ['MCQ', 'Short', 'Long', 'Fill', 'Match'] : [form.questionType];
   const difficulties: QuestionDifficulty[] =
     form.difficulty === 'mixed' ? ['easy', 'medium', 'hard'] : [form.difficulty];
 

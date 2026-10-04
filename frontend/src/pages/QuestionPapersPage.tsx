@@ -26,10 +26,16 @@ import type {
 
 const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const GRADES: Grade[] = [7, 8, 9];
-const TYPE_LABEL: Record<QuestionType, string> = { MCQ: 'MCQ', Short: 'Short answer', Long: 'Long answer' };
+const TYPE_LABEL: Record<QuestionType, string> = {
+  MCQ: 'MCQ',
+  Short: 'Short answer',
+  Long: 'Long answer',
+  Fill: 'Fill in the blank',
+  Match: 'Match the following',
+};
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 // Used only if GET /generation/combinations can't be reached.
-const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5] };
+const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5], Fill: [1], Match: [3, 5] };
 // Limits enforced by the backend (schemas/requests.py); checked here so the
 // user sees the problem next to the field instead of after a failed request.
 const MAX_QUESTIONS = 100;

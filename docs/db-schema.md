@@ -25,10 +25,10 @@ Database: **PostgreSQL**
 | id | uuid (PK) | |
 | subject_id | uuid (FK → subjects.id) | |
 | chapter_id | uuid (FK → chapters.id) | |
-| type | enum | `MCQ`, `Short`, `Long` |
+| type | enum | `MCQ`, `Short`, `Long`, `Fill`, `Match` (the last two added in migration `0009`) |
 | grade | int | 7, 8, or 9 — the grade this specific question was generated for (see `subjects.grade_range` for the subject-wide span; this is per-question) |
 | text | text | question text |
-| options | jsonb (nullable) | array of strings, MCQ only |
+| options | jsonb (nullable) | array of strings: the 4 choices for MCQ, Column B (one per pair) for Match; null for other types |
 | answer | text | |
 | explanation | text | |
 | marks | int | 1, 2, 3, or 5 |
@@ -118,4 +118,6 @@ practice_sessions *─* questions (via practice_session_questions)
 ## Design notes
 - `user_id` columns are nullable now so auth can be bolted on post-MVP without a schema rewrite.
 - `questions.options` uses `jsonb` rather than a separate table — simpler for MCQ's fixed small option set.
+- Fill and Match need no extra columns. A Fill question's `text` holds one `_____` blank and `answer` the missing word(s). A Match question keeps Column A as numbered lines in `text` (`1. ...`, `2. ...`), Column B in `options`, and its key in `answer` as `1-C, 2-A, 3-B` (letters index into `options`). One mark per pair, so `marks` is 3 or 5 and `options` has `marks` entries.
+- `question_type` is a native PostgreSQL enum; adding a value needs `ALTER TYPE ... ADD VALUE`, done by migration `0009` and by `ensure_schema` at startup. PostgreSQL cannot drop an enum value, so the `0009` downgrade is a no-op.
 - Consider a `generation_requests` log table later if you want to track/cache LLM calls (subject+chapter+type+marks+difficulty → cached result), but not required for MVP.

@@ -21,7 +21,7 @@ import type { AnalyticsData } from '../types';
 
 const SUBJECT_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#f43f5e'];
 const DIFF_COLORS = ['#10b981', '#f59e0b', '#f43f5e'];
-const TYPE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4'];
+const TYPE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#14b8a6', '#f59e0b'];
 const MARKS_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e'];
 const TOOLTIP_STYLE = { borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 };
 

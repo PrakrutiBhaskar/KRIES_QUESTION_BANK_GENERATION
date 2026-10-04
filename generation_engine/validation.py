@@ -15,6 +15,8 @@ the prompt layer and this layer can't drift apart.
 from __future__ import annotations
 
 import difflib
+import hashlib
+import random
 import re
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -23,12 +25,17 @@ from pydantic import ValidationError as PydanticValidationError
 
 from .config import settings
 from .schemas import (
+    BLANK_RE,
     GenerationRequest,
+    MATCH_LETTERS,
     Question,
     QuestionType,
+    Subject,
     VALID_GRADES,
     VALID_MARKS_BY_TYPE,
     figure_ref_map,
+    format_match_answer,
+    match_left_items,
 )
 from .subject_formats import compile_required_pattern, get_marks_rule
 
@@ -115,6 +122,64 @@ class BuildResult:
     raw: dict[str, Any]
 
 
+_DEFAULT_MATCH_STEM = "Match the items in Column A with their correct pairs in Column B."
+# A number the model put in front of a Column A item ("1. Newton") or a
+# bracketed letter in front of a Column B item ("(a) force"); the caller adds
+# the real numbering and lettering, so these are stripped, not trusted.
+_LEFT_NUMBERING_RE = re.compile(r"^\s*\d{1,2}\s*[.)]\s+")
+_RIGHT_LETTERING_RE = re.compile(r"^\s*\(?[A-Ja-j]\)\s+")
+
+
+def _build_match_fields(raw: dict[str, Any], marks: int) -> tuple[dict[str, Any] | None, str | None]:
+    """Turn the model's ordered `pairs` into a Match question's text/options/answer.
+
+    The model only says which item belongs with which; this code does the
+    shuffling and writes the answer key. That way the key cannot disagree with
+    the columns that are printed, which is the usual way a hand-written match
+    key goes wrong.
+    """
+    pairs = raw.get("pairs")
+    if not isinstance(pairs, list):
+        return None, 'Match questions need a "pairs" list of {"left", "right"} objects'
+    if len(pairs) != marks:
+        return None, f"Match question for {marks} marks needs exactly {marks} pairs, got {len(pairs)}"
+
+    lefts: list[str] = []
+    rights: list[str] = []
+    for pair in pairs:
+        if not isinstance(pair, dict):
+            return None, "every Match pair must be an object with \"left\" and \"right\""
+        left = _LEFT_NUMBERING_RE.sub("", str(pair.get("left") or "")).strip()
+        right = _RIGHT_LETTERING_RE.sub("", str(pair.get("right") or "")).strip()
+        if not left or not right:
+            return None, "every Match pair needs a non-empty left and right item"
+        lefts.append(left)
+        rights.append(right)
+    if len({x.lower() for x in lefts}) != len(lefts):
+        return None, "Match Column A items must be distinct"
+    if len({x.lower() for x in rights}) != len(rights):
+        return None, "Match Column B items must be distinct"
+
+    # Shuffle Column B so it is not in answer order. Seeded from the content,
+    # so the same pairs always give the same layout (stable and testable), and
+    # re-drawn if it lands back in the original order.
+    rng = random.Random(hashlib.sha256("\x1f".join(lefts + rights).encode("utf-8")).digest())
+    order = list(range(marks))
+    for _ in range(25):
+        rng.shuffle(order)
+        if order != sorted(order):
+            break
+    options = [rights[i] for i in order]
+    mapping = {left_no + 1: MATCH_LETTERS[order.index(left_no)] for left_no in range(marks)}
+
+    stem = str(raw.get("text") or "").strip().splitlines()
+    stem_line = stem[0].strip() if stem else ""
+    if not stem_line or _LEFT_NUMBERING_RE.match(stem_line):
+        stem_line = _DEFAULT_MATCH_STEM
+    text = stem_line + "\n" + "\n".join(f"{i}. {left}" for i, left in enumerate(lefts, start=1))
+    return {"text": text, "options": options, "answer": format_match_answer(mapping)}, None
+
+
 def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResult:
     """
     Takes one raw dict from the LLM plus the originating request, fills in
@@ -148,6 +213,13 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
         figure_id = refs[ref].id
         figure_context = refs[ref].describe()
 
+    match_fields: dict[str, Any] = {}
+    if request.type == QuestionType.MATCH:
+        built, problem = _build_match_fields(raw, request.marks)
+        if problem:
+            return BuildResult(question=None, error=problem, raw=raw)
+        match_fields = built or {}
+
     try:
         payload = {
             "subject": request.subject,
@@ -165,6 +237,7 @@ def build_question(raw: dict[str, Any], request: GenerationRequest) -> BuildResu
             "figure_id": figure_id,
             "figure_context": figure_context,
         }
+        payload.update(match_fields)
         question = Question(**payload)
     except PydanticValidationError as e:
         return BuildResult(question=None, error=str(e), raw=raw)
@@ -424,6 +497,43 @@ def _split_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?।])\s+", text.strip()) if s.strip()]
 
 
+def _check_match_format(question: Question) -> list[str]:
+    """Match items should be short phrases; the shape itself is checked by the schema."""
+    problems: list[str] = []
+    items = [*match_left_items(question.text), *(question.options or [])]
+    if any(len(item.split()) > 14 for item in items):
+        problems.append(
+            "Match items should be short phrases (at most about 12 words each)"
+        )
+    if question.explanation.strip():
+        problems.append("Match questions should not include an explanation")
+    return problems
+
+
+def _check_fill_format(question: Question) -> list[str]:
+    """A fill-in-the-blank needs a real sentence around the blank and must not give itself away."""
+    problems: list[str] = []
+    around = BLANK_RE.sub(" ", question.text)
+    if len(re.findall(r"\w+", around)) < 4:
+        problems.append("fill-in-the-blank has too little sentence around the blank")
+    answer = question.answer.strip()
+    if len(answer.split()) > 6:
+        problems.append(
+            f"fill-in-the-blank answer is too long ({len(answer.split())} words); "
+            "a blank holds a word or a short phrase"
+        )
+    # Word-boundary matching is unreliable for Kannada script (combining
+    # vowel signs are not word characters), so the leak check skips it.
+    if (
+        question.subject != Subject.KANNADA
+        and len(answer) >= 4
+        and len(answer.split()) <= 4
+        and re.search(rf"\b{re.escape(answer)}\b", around, re.IGNORECASE)
+    ):
+        problems.append("the sentence already contains the word that fills the blank")
+    return problems
+
+
 def check_marks_format(question: Question) -> list[str]:
     """
     Returns a list of format problems for the given question's answer,
@@ -448,6 +558,11 @@ def check_marks_format(question: Question) -> list[str]:
                 "MCQ justification should be a single line, not a multi-point answer"
             )
         return problems
+
+    if question.type == QuestionType.MATCH:
+        return _check_match_format(question)
+    if question.type == QuestionType.FILL:
+        problems.extend(_check_fill_format(question))
 
     rule = get_marks_rule(question.subject, question.marks)
     points = _split_points(answer)

@@ -11,7 +11,7 @@ All endpoints return JSON. Base path: `/api/v1`
   "id": "uuid",
   "subject": "Math | Science | Social Science | English | Kannada",
   "chapter": "string",
-  "type": "MCQ | Short | Long",
+  "type": "MCQ | Short | Long | Fill | Match",
   "grade": 8,
   "text": "string",
   "options": ["string"],
@@ -389,8 +389,9 @@ batch is checked before it is returned. Two layers, cheapest first
    unambiguous; anything else is left to layer 2.
 2. **Independent AI pass** (all subjects, one extra Groq call per batch). For MCQs the
    verifier is *not shown* the key: it solves the question itself and its choice is
-   compared with the key. For Short/Long answers it is shown the answer and asked to
-   check it sceptically. Questions a rule already decided are not sent.
+   compared with the key. For Short/Long/Fill answers it is shown the answer and asked to
+   check it sceptically. For Match it is shown the answer and Column B and checks each
+   pair on its own; the arithmetic/science rule checks skip Match. Questions a rule already decided are not sent.
 
 | `verification_status` | Meaning | What happens |
 |---|---|---|

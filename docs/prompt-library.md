@@ -87,6 +87,27 @@ structure implicit.
 
 ---
 
+## Fill in the blank (1 mark)
+
+- **Subject-specific?** No. The same prompt is used for every subject.
+- **Prompt template:** `generation_engine/prompts.py::_prompt_fill_1_mark` — one sentence with exactly one blank written `_____` standing in for a key term; `answer` is only the missing word or short phrase; `explanation` stays empty.
+- **Expected output shape:** the shared descriptive shape: `{"text": "... _____ ...", "answer": "word", "explanation": "", "topic", "tags"}`.
+- **Validation:** exactly one blank (a run of 3+ underscores); at least 4 words of sentence around it; answer at most 6 words; the sentence must not already contain the answer (skipped for Kannada, where `\b` is unreliable on combining vowel signs).
+- **Known issues:** the model sometimes blanks a trivial word or leaves the answer elsewhere in the sentence; both are caught by the checks above and retried.
+- **Last updated:** 2026-10.
+
+## Match the following (3 and 5 marks)
+
+- **Subject-specific?** No.
+- **Prompt template:** `_match_prompt` in `generation_engine/prompts.py`; the number of pairs equals the marks (3 or 5, one mark per pair).
+- **Expected output shape:** `{"text": "<one-line instruction>", "pairs": [{"left": "...", "right": "..."}, ...], "topic", "tags"}`. The model lists pairs in their *correct* order and does **not** number, letter, shuffle or write a key.
+- **How it becomes a question:** `validation._build_match_fields` numbers Column A into `text`, shuffles the rights into `options` (seeded from the content, so the layout is stable, and never left in answer order), and writes the key (`1-C, 2-A, ...`) from the pairs. The key therefore cannot disagree with the printed columns.
+- **Validation:** exactly `marks` pairs; non-empty, distinct items in each column; items at most about 12 words; no explanation. The schema re-checks that the answer is a strict one-to-one mapping, which also protects hand edits through the API.
+- **Known issues:** the model can still produce pairs where a right item fits two left items; the independent AI pass checks each pair, but this is the likeliest failure on real output and the prompt may need tuning once run against live Groq.
+- **Last updated:** 2026-10.
+
+---
+
 ## Subject-specific notes
 
 These live in code as a single registry — `generation_engine/subject_formats.py`. Both the prompt layer and the validation layer read from it, so a subject's prompt guidance and the rule that checks the model's output cannot drift apart. Edit `SUBJECT_FORMATS` there (or call `register_subject_format` at startup) rather than editing prompts and validators separately.

@@ -38,7 +38,7 @@ export function AuthShell({
           <div className="flex flex-col gap-3">
             {[
               { label: 'Subjects', value: '5 Karnataka State Board Subjects' },
-              { label: 'Question Types', value: 'MCQ · Short Answer · Long Answer' },
+              { label: 'Question Types', value: 'MCQ · Short · Long · Fill in the Blank · Match' },
               { label: 'Grades', value: 'Grade 7 · Grade 8 · Grade 9' },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center gap-3">

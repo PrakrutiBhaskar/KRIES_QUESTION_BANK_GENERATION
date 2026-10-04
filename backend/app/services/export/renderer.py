@@ -27,7 +27,7 @@ from pathlib import Path
 from ...config import settings
 from ...errors import ServiceUnavailableError
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import format_answer, split_label
+from .answer_format import format_answer, match_key_label, split_label
 from .fpdf_renderer import fpdf_available, render_fpdf
 from .html import item_section, render_paper_html, section_totals
 
@@ -258,7 +258,7 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
             ))
         row = Table(
             [[
-                Paragraph(f"{n}. {_esc(q.text)}", styles["q"]),
+                Paragraph(f"{n}. {_esc(q.text)}".replace("\n", "<br/>"), styles["q"]),
                 Paragraph(f"[{item.effective_marks}]", styles["marks"]),
             ]],
             colWidths=[doc.width - 18 * mm, 18 * mm],
@@ -294,6 +294,8 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
                 block.append(Paragraph(f"{n}. {_esc(q.answer)}", styles["q"]))
                 if q.explanation:
                     block.append(Paragraph(_esc(q.explanation), styles["expl"]))
+            elif q.type.value == "Match":
+                block.append(Paragraph(f"{n}. {_esc(match_key_label(q.answer))}", styles["q"]))
             else:
                 fa = format_answer(
                     q.answer, item.effective_marks, q.type.value,
@@ -398,6 +400,13 @@ def _instruction_lines(items) -> list[str]:
     if "Long" in types:
         lines.append(
             "Answer long-answer questions in full, showing all steps or points."
+        )
+    if "Fill" in types:
+        lines.append("For fill-in-the-blank questions, write the missing word or phrase.")
+    if "Match" in types:
+        lines.append(
+            "For match-the-following questions, write the letter of the matching "
+            "option against each number."
         )
     return lines
 

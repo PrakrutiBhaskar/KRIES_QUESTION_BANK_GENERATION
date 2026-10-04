@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import Callable
 
-from .schemas import Question, Subject
+from .schemas import Question, QuestionType, Subject
 
 
 @dataclass(frozen=True)
@@ -969,6 +969,10 @@ _SCIENCE_RULES = (
 
 def check_answer_rules(question: Question) -> RuleResult:
     """Run every rule for the question's subject; the first that applies wins."""
+    if question.type == QuestionType.MATCH:
+        # Two columns of text, not a calculation or a single fact: nothing here
+        # is safe to compute, so leave it to the AI pass.
+        return NOT_APPLICABLE
     if question.subject == Subject.MATH:
         rules = _MATH_RULES
     elif question.subject == Subject.SCIENCE:

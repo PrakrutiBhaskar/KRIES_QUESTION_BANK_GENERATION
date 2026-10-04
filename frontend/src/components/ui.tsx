@@ -29,11 +29,26 @@ const TYPE_STYLES: Record<string, string> = {
   MCQ: 'bg-blue-100 text-blue-700 border-blue-200',
   Short: 'bg-violet-100 text-violet-700 border-violet-200',
   Long: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  Fill: 'bg-teal-100 text-teal-700 border-teal-200',
+  Match: 'bg-amber-100 text-amber-700 border-amber-200',
   Mixed: 'bg-pink-100 text-pink-700 border-pink-200',
 };
 
+export const TYPE_LABELS: Record<string, string> = {
+  Short: 'Short Answer',
+  Long: 'Long Answer',
+  Fill: 'Fill in the Blank',
+  Match: 'Match the Following',
+};
+
+/** Whether `opt` is the option to highlight as correct. A Match key pairs every
+ * item with a different option, so no single option is "the answer". */
+export function isKeyOption(question: { type: QuestionType; answer: string }, opt: string): boolean {
+  return question.type !== 'Match' && opt === question.answer;
+}
+
 export function TypeBadge({ type }: { type: QuestionType | 'Mixed' | string }) {
-  const label = type === 'Short' ? 'Short Answer' : type === 'Long' ? 'Long Answer' : type;
+  const label = TYPE_LABELS[type] ?? type;
   return (
     <span
       className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${TYPE_STYLES[type] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}

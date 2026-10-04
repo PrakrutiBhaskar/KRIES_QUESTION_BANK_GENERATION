@@ -42,15 +42,17 @@ import {
   VerificationBadge,
   VerificationNote,
   VerificationWarning,
+  isKeyOption,
+  TYPE_LABELS,
 } from '../components/ui';
 import { FigureImage } from '../components/FigureImage';
 
 const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const GRADES: Grade[] = [7, 8, 9];
-const TYPES: Array<QuestionType | 'Mixed'> = ['MCQ', 'Short', 'Long', 'Mixed'];
+const TYPES: Array<QuestionType | 'Mixed'> = ['MCQ', 'Short', 'Long', 'Fill', 'Match', 'Mixed'];
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 // Fallback used only if GET /generation/combinations can't be reached.
-const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5] };
+const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5], Fill: [1], Match: [3, 5] };
 
 // ============================================================
 // Question Card
@@ -90,18 +92,18 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
           </div>
 
           {/* Question text */}
-          <p className="text-sm font-medium text-slate-900 mb-1 leading-snug">{question.text}</p>
+          <p className="text-sm font-medium text-slate-900 mb-1 leading-snug whitespace-pre-line">{question.text}</p>
           {question.figure && <FigureImage figure={question.figure} className="my-2" />}
           <VerificationWarning question={question} />
 
-          {/* MCQ options */}
+          {/* MCQ options, or Column B of a Match question (no single option is "the answer") */}
           {question.options && question.options.length > 0 && (
             <ol className="list-none space-y-1 my-2">
               {question.options.map((opt, i) => (
-                <li key={i} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${opt === question.answer ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-medium' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                <li key={i} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${isKeyOption(question, opt) ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-medium' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
                   <span className="font-semibold shrink-0">{String.fromCharCode(65 + i)}.</span>
                   {opt}
-                  {opt === question.answer && <CheckCircle2 className="w-3.5 h-3.5 ml-auto shrink-0 text-emerald-500" />}
+                  {isKeyOption(question, opt) && <CheckCircle2 className="w-3.5 h-3.5 ml-auto shrink-0 text-emerald-500" />}
                 </li>
               ))}
             </ol>
@@ -544,7 +546,7 @@ export default function GeneratePage() {
                       onClick={() => handleTypeChange(t)}
                       className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${form.questionType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
                     >
-                      {t === 'Short' ? 'Short Answer' : t === 'Long' ? 'Long Answer' : t}
+                      {TYPE_LABELS[t] ?? t}
                     </button>
                   ))}
                 </div>
@@ -578,7 +580,7 @@ export default function GeneratePage() {
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">Marks per Question</label>
                 {form.questionType === 'Mixed' ? (
                   <p className="text-xs text-slate-500">
-                    Set automatically for each type (MCQ 1, Short 2, Long 5).
+                    Set automatically for each type (MCQ 1, Short 2, Long 5, Fill 1, Match 3).
                   </p>
                 ) : (
                   <div className="flex gap-2">

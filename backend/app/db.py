@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
+from generation_engine.schemas import QuestionType
 from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -73,6 +74,13 @@ _ADDED_INDEXES = [
 
 def ensure_schema(sync_conn) -> None:
     """Bring an older database up to date. Run via `conn.run_sync(...)`."""
+    if sync_conn.dialect.name == "postgresql":
+        # `create_all` never alters an existing enum, so a database made before
+        # Fill / Match existed would reject them. Migration 0009 does the same.
+        for member in QuestionType:
+            sync_conn.execute(
+                text(f"ALTER TYPE question_type ADD VALUE IF NOT EXISTS '{member.value}'")
+            )
     inspector = inspect(sync_conn)
     for table, column in _ADDED_COLUMNS:
         if column not in {c["name"] for c in inspector.get_columns(table)}:

@@ -147,7 +147,7 @@ class FakeGroqClient:
         results = []
         for n, item in enumerate(items):
             wrong = self.verifier == "disagree" or (self.verifier == "disagree_first" and n == 0)
-            if "options" in item:  # MCQ: solved blind
+            if "options" in item and "answer" not in item:  # MCQ: solved blind (no key shown)
                 options = item["options"]
                 # the stub always writes the correct option first ("The correct choice ...")
                 right = next(k for k, v in options.items() if v.startswith("The correct choice"))
@@ -209,6 +209,30 @@ class FakeGroqClient:
                 "tags": ["stub"],
             }
 
+        if q_type == "Fill":
+            return {
+                "text": f"{stem.rstrip('.?')}, which scientists call _____.",
+                "answer": f"Newton {index}",
+                "explanation": "",
+                "topic": "stub-topic",
+                "tags": ["stub"],
+            }
+        if q_type == "Match":
+            # `marks` pairs, in correct order. Left items borrow distinct stems so
+            # two questions never look alike to the near-duplicate check.
+            return {
+                "text": "Match the following terms with their descriptions:",
+                "pairs": [
+                    {
+                        "left": _STEMS[(index * 5 + k) % len(_STEMS)].rstrip(".?"),
+                        "right": f"Description {index}-{k} {uuid.uuid4().hex[:4]}",
+                    }
+                    for k in range(marks)
+                ],
+                "topic": "stub-topic",
+                "tags": ["stub"],
+            }
+
         answer = {
             1: f"Newton {nonce}",
             2: (
@@ -264,6 +288,10 @@ def _extract_type_and_marks(prompt: str) -> tuple[str, int]:
     """
     if "multiple-choice questions for" in prompt:
         return "MCQ", 1
+    if "fill-in-the-blank questions for" in prompt:
+        return "Fill", 1
+    if "match-the-following questions for" in prompt:
+        return "Match", int(re.search(r"exactly (\d+) pairs", prompt).group(1))
     if "one-mark questions for" in prompt:
         return "Short", 1
     if "Each answer must be 1-2 lines long" in prompt:

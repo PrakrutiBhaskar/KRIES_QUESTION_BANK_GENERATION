@@ -41,6 +41,14 @@ _JSON_SHAPE_DESCRIPTIVE = """{
 }"""
 
 
+_JSON_SHAPE_MATCH = """{
+  "text": "string",
+  "pairs": [{"left": "string", "right": "string"}, ...],
+  "topic": "string (short sub-topic tag within the chapter)",
+  "tags": ["string"]
+}"""
+
+
 def _base_system_prompt() -> str:
     return (
         "You are an expert Karnataka State Board (KSEEB / KTBS) question "
@@ -228,6 +236,40 @@ def _prompt_long_5_marks(request: GenerationRequest) -> str:
 Structure the answer explicitly inside the "answer" string — numbered steps each on their own line ("1. ... 2. ... 3. ..."), or labeled sections ("Causes: ... Effects: ...") — rather than leaving the structure implicit in a single paragraph."""
 
 
+def _prompt_fill_1_mark(request: GenerationRequest) -> str:
+    return f"""Generate {request.count} fill-in-the-blank questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}.
+
+Each question is one complete sentence (two short sentences at most) with exactly ONE blank, written as five underscores (_____), standing in for a key word or short phrase that the chapter teaches.
+- "text" is the sentence with the blank in it. It must contain exactly one _____ and enough surrounding words that only one answer fits.
+- "answer" is only the missing word or phrase (one to three words), exactly as it would fill the blank. No explanation, no full sentence.
+- Never leave the answer, or another form of it, elsewhere in the sentence.
+- Do not blank out an article, preposition or other trivial word, and do not use more than one blank or numbered blanks.
+- Leave "explanation" as an empty string."""
+
+
+def _match_prompt(request: GenerationRequest) -> str:
+    n = request.marks
+    return f"""Generate {request.count} match-the-following questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}.
+
+Each question is a pair of columns with exactly {n} pairs (one mark per pair). For each question return:
+- "text": one line of instruction that says what is being matched, e.g. "Match the following scientists with their discoveries:". Do NOT put the items themselves in "text".
+- "pairs": exactly {n} objects, each {{"left": ..., "right": ...}}, where "left" belongs with "right". List the pairs in their CORRECT order. Do not shuffle, number or letter the items; the system numbers Column A, shuffles Column B and writes the answer key.
+
+Rules:
+- Every pair in a question must be the same kind of relationship (term -> definition, person -> work, quantity -> unit, event -> year ...).
+- Each left item has exactly one correct right item, and no right item could reasonably be matched with a different left item.
+- Items are short phrases (ten words or fewer), all distinct within the question.
+- Do not return an "answer" or "explanation"."""
+
+
+def _prompt_match_3_marks(request: GenerationRequest) -> str:
+    return _match_prompt(request)
+
+
+def _prompt_match_5_marks(request: GenerationRequest) -> str:
+    return _match_prompt(request)
+
+
 # (type, marks) -> builder function
 _TEMPLATES = {
     (QuestionType.MCQ, 1): (_prompt_mcq_1_mark, _JSON_SHAPE_MCQ),
@@ -235,6 +277,9 @@ _TEMPLATES = {
     (QuestionType.SHORT, 2): (_prompt_short_2_marks, _JSON_SHAPE_DESCRIPTIVE),
     (QuestionType.SHORT, 3): (_prompt_short_3_marks, _JSON_SHAPE_DESCRIPTIVE),
     (QuestionType.LONG, 5): (_prompt_long_5_marks, _JSON_SHAPE_DESCRIPTIVE),
+    (QuestionType.FILL, 1): (_prompt_fill_1_mark, _JSON_SHAPE_DESCRIPTIVE),
+    (QuestionType.MATCH, 3): (_prompt_match_3_marks, _JSON_SHAPE_MATCH),
+    (QuestionType.MATCH, 5): (_prompt_match_5_marks, _JSON_SHAPE_MATCH),
 }
 
 

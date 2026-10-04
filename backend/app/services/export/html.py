@@ -13,7 +13,7 @@ import base64
 from html import escape
 
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import format_answer, split_label
+from .answer_format import format_answer, match_key_label, split_label
 
 
 def item_section(item) -> str | None:
@@ -49,7 +49,7 @@ body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
 .q { margin: 0 0 12px; page-break-inside: avoid; }
 .q-head { display: flex; gap: 8px; align-items: baseline; }
 .q-num { font-weight: 600; min-width: 22px; }
-.q-text { flex: 1; }
+.q-text { flex: 1; white-space: pre-line; }
 .q-marks { font-weight: 600; white-space: nowrap; color: #333; }
 .fig { margin: 6px 0 4px 30px; page-break-inside: avoid; }
 .fig img { display: block; }
@@ -102,6 +102,13 @@ def _instructions(paper) -> str:
         lines.append("For multiple-choice questions, write the letter of the correct option.")
     if "Long" in types:
         lines.append("Answer long-answer questions in full, showing all steps or points.")
+    if "Fill" in types:
+        lines.append("For fill-in-the-blank questions, write the missing word or phrase.")
+    if "Match" in types:
+        lines.append(
+            "For match-the-following questions, write the letter of the matching "
+            "option against each number."
+        )
     return "".join(f"<div>{escape(line)}</div>" for line in lines)
 
 
@@ -163,6 +170,10 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
                 )
                 if q.explanation:
                     parts.append(f"<div class='expl'>{escape(q.explanation)}</div>")
+            elif q.type.value == "Match":
+                parts.append(
+                    f"<div><span class='label'>{n}.</span> {escape(match_key_label(q.answer))}</div>"
+                )
             else:
                 fa = format_answer(
                     q.answer, item.effective_marks, q.type.value,

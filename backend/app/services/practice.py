@@ -28,10 +28,16 @@ from ..schemas.requests import GenerateIn, PracticeSessionIn
 from . import generation as generation_service
 from .syllabus import get_syllabus_index, resolve_chapter
 
-# Marks to request per type when generating a shortfall. MCQ is fixed at 1
-# (schemas.VALID_MARKS_BY_TYPE); Short defaults to the 2-mark format and Long
-# is only ever 5.
-_DEFAULT_MARKS = {QuestionType.MCQ: 1, QuestionType.SHORT: 2, QuestionType.LONG: 5}
+# Marks to request per type when generating a shortfall. MCQ and Fill are fixed
+# at 1 (schemas.VALID_MARKS_BY_TYPE); Short defaults to the 2-mark format, Long
+# is only ever 5, and Match defaults to its smaller 3-pair format.
+_DEFAULT_MARKS = {
+    QuestionType.MCQ: 1,
+    QuestionType.SHORT: 2,
+    QuestionType.LONG: 5,
+    QuestionType.FILL: 1,
+    QuestionType.MATCH: 3,
+}
 
 
 async def _stored_pool(

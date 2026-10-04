@@ -90,7 +90,7 @@ class MessageOut(BaseModel):
 
 Theme = Literal["light", "dark", "system"]
 Difficulty = Literal["easy", "medium", "hard", "mixed"]
-QuestionTypeChoice = Literal["MCQ", "Short", "Long", "Mixed"]
+QuestionTypeChoice = Literal["MCQ", "Short", "Long", "Fill", "Match", "Mixed"]
 Marks = Literal[1, 2, 3, 5]
 
 

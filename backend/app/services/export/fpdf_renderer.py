@@ -17,7 +17,7 @@ from io import BytesIO
 from pathlib import Path
 
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import format_answer, split_label
+from .answer_format import format_answer, match_key_label, split_label
 from .html import item_section, section_totals
 
 FONT_DIR = Path(__file__).resolve().parents[3] / "assets" / "fonts"
@@ -47,6 +47,13 @@ def _instruction_lines(types: set[str]) -> list[str]:
         lines.append("For multiple-choice questions, write the letter of the correct option.")
     if "Long" in types:
         lines.append("Answer long-answer questions in full, showing all steps or points.")
+    if "Fill" in types:
+        lines.append("For fill-in-the-blank questions, write the missing word or phrase.")
+    if "Match" in types:
+        lines.append(
+            "For match-the-following questions, write the letter of the matching "
+            "option against each number."
+        )
     return lines
 
 
@@ -182,6 +189,8 @@ def render_fpdf(paper, include_answer_key: bool = True) -> bytes:
                 if q.explanation:
                     pdf.set_x(_LEFT + 6)
                     write(q.explanation, w=epw - 6, size=9.5, h=4.8, color=(68, 68, 68))
+            elif q.type.value == "Match":
+                write(f"{n}. {match_key_label(q.answer)}", w=epw)
             else:
                 fa = format_answer(
                     q.answer, item.effective_marks, q.type.value,

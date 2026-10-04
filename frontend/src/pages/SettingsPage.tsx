@@ -345,7 +345,7 @@ function SettingsForm({
                       }
                       className={INPUT}
                     >
-                      {['MCQ', 'Short', 'Long', 'Mixed'].map((t) => (
+                      {['MCQ', 'Short', 'Long', 'Fill', 'Match', 'Mixed'].map((t) => (
                         <option key={t}>{t}</option>
                       ))}
                     </select>

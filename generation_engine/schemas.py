@@ -8,6 +8,7 @@ Frontend) are meant to build against.
 """
 from __future__ import annotations
 
+import re
 import uuid
 from enum import Enum
 from typing import List, Optional
@@ -27,6 +28,8 @@ class QuestionType(str, Enum):
     MCQ = "MCQ"
     SHORT = "Short"
     LONG = "Long"
+    FILL = "Fill"  # fill in the blank
+    MATCH = "Match"  # match the following
 
 
 class Difficulty(str, Enum):
@@ -53,11 +56,72 @@ VALID_GRADES = {7, 8, 9}
 #   force?" -> Newton), and Module A lists "1 mark -> direct one-line answer,
 #   no explanation" as a bullet separate from the MCQ rule.
 # - Long answer is the 5-mark, exam-response format (prompt-library.md).
+# - Fill in the blank is a 1-mark item with exactly one blank.
+# - Match the following is one mark per pair, so a 3-mark question has 3 pairs
+#   and a 5-mark question has 5 (the mark scale has no 4).
 VALID_MARKS_BY_TYPE = {
     QuestionType.MCQ: {1},
     QuestionType.SHORT: {1, 2, 3},
     QuestionType.LONG: {5},
+    QuestionType.FILL: {1},
+    QuestionType.MATCH: {3, 5},
 }
+
+# ---------------------------------------------------------------------------
+# Fill-in-the-blank and match-the-following shapes
+# ---------------------------------------------------------------------------
+
+# A blank is a run of three or more underscores.
+BLANK_RE = re.compile(r"_{3,}")
+
+# Column A lines inside a Match question's `text`: "1. item" or "1) item".
+_MATCH_LEFT_LINE_RE = re.compile(r"^\s*(\d{1,2})\s*[.)]\s+(\S.*?)\s*$", re.MULTILINE)
+# One pair inside a Match answer key: "1-C", "2 - a", "3: B", "4 = D".
+_MATCH_ANSWER_PAIR_RE = re.compile(r"(\d{1,2})\s*[-\u2013\u2014:=]+>?\s*\(?([A-Za-z])\)?")
+
+MATCH_LETTERS = "ABCDEFGHIJ"
+
+
+def count_blanks(text: str) -> int:
+    return len(BLANK_RE.findall(text or ""))
+
+
+def match_left_items(text: str) -> list[str]:
+    """Column A of a Match question: the numbered lines in `text`, in order.
+
+    Returns [] unless the numbers run 1, 2, 3 ... with no gaps, so a stray
+    numbered line in the stem cannot be mistaken for a column entry.
+    """
+    found = _MATCH_LEFT_LINE_RE.findall(text or "")
+    if [int(n) for n, _ in found] != list(range(1, len(found) + 1)):
+        return []
+    return [item for _, item in found]
+
+
+def parse_match_answer(answer: str) -> dict[int, str] | None:
+    """{1: "C", 2: "A", ...} from "1-C, 2-A, ...", or None if it is not just pairs.
+
+    Anything left over once the pairs are removed (other than separators)
+    makes the answer unparseable, so prose such as "1 goes with C because ..."
+    is rejected instead of half-read.
+    """
+    pairs = _MATCH_ANSWER_PAIR_RE.findall(answer or "")
+    if not pairs:
+        return None
+    leftover = _MATCH_ANSWER_PAIR_RE.sub("", answer)
+    if re.sub(r"[\s,;.]+", "", leftover):
+        return None
+    out: dict[int, str] = {}
+    for n, letter in pairs:
+        if int(n) in out:
+            return None  # the same item matched twice
+        out[int(n)] = letter.upper()
+    return out
+
+
+def format_match_answer(mapping: dict[int, str]) -> str:
+    """The canonical answer-key text: "1-C, 2-A, 3-B"."""
+    return ", ".join(f"{n}-{mapping[n]}" for n in sorted(mapping))
 
 
 class FigureContext(BaseModel):
@@ -158,11 +222,20 @@ class Question(BaseModel):
                 )
             if self.marks != 1:
                 raise ValueError("MCQ questions must be worth 1 mark")
+        elif self.type == QuestionType.MATCH:
+            self._check_match_shape()
         else:
             if self.options:
                 raise ValueError(
                     f"{self.type.value} questions must not carry MCQ options"
                 )
+            if self.type == QuestionType.FILL:
+                blanks = count_blanks(self.text)
+                if blanks != 1:
+                    raise ValueError(
+                        "Fill questions must contain exactly one blank "
+                        f"(a run of underscores such as _____), found {blanks}"
+                    )
 
         expected_marks = VALID_MARKS_BY_TYPE[self.type]
         if self.marks not in expected_marks:
@@ -171,6 +244,37 @@ class Question(BaseModel):
                 f"{sorted(expected_marks)}, got {self.marks}"
             )
         return self
+
+    def _check_match_shape(self) -> None:
+        """Match: numbered Column A in `text`, lettered Column B in `options`.
+
+        One mark per pair, so the number of pairs equals the marks. The answer
+        is a strict one-to-one mapping ("1-C, 2-A, 3-B"): every number once,
+        every option letter once.
+        """
+        n = self.marks
+        left = match_left_items(self.text)
+        if len(left) != n:
+            raise ValueError(
+                f"Match questions need {n} numbered items (1., 2., ...) in the "
+                f"text for {n} marks, found {len(left)}"
+            )
+        options = [o.strip() for o in (self.options or [])]
+        if len(options) != n or any(not o for o in options):
+            raise ValueError(f"Match questions must have exactly {n} options (Column B)")
+        if len({o.lower() for o in options}) != n:
+            raise ValueError("Match options must not contain duplicates")
+        mapping = parse_match_answer(self.answer)
+        if mapping is None:
+            raise ValueError(
+                'Match answer must be pairs such as "1-C, 2-A, 3-B" and nothing else'
+            )
+        letters = set(MATCH_LETTERS[:n])
+        if set(mapping) != set(range(1, n + 1)) or set(mapping.values()) != letters:
+            raise ValueError(
+                f"Match answer must pair every item 1-{n} with a different "
+                f"option letter {MATCH_LETTERS[0]}-{MATCH_LETTERS[n - 1]}"
+            )
 
 
 class GenerationRequest(BaseModel):

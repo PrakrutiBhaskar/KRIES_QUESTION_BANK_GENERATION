@@ -131,7 +131,7 @@ FRONTEND_URL=https://your-frontend.example  # where reset links point; default h
 
 **Settings.** `PATCH /auth/me` takes any subset of `{name, role, preferences}`. `preferences` holds
 `theme` (`light|dark|system`), `notifications`, `default_question_count` (3–30), `default_difficulty`,
-`default_question_type` and `default_marks` (1, 2, 3 or 5); unsent keys are left alone, unknown keys are
+`default_question_type` (`MCQ|Short|Long|Fill|Match|Mixed`) and `default_marks` (1, 2, 3 or 5); unsent keys are left alone, unknown keys are
 rejected. They are stored as JSON in `users.preferences` (migration `0005`, also added by `ensure_schema`
 for SQLite). An account that never saved anything is reported with the defaults. Sending `email`, or an
 `Admin` changing their own role, returns 403.
@@ -290,7 +290,7 @@ with a question. Setting: `MAX_GENERATION_FIGURES` (6). Migration `0008`. See `d
 
 Every generated batch is checked before it is returned, because the model that writes a question also writes its
 answer key. Exact **rule checks** (Maths/Science patterns, no LLM) run first, then an **independent AI pass**
-(one extra Groq call per batch; MCQs are solved blind and compared with the key). Each question carries
+(one extra Groq call per batch; MCQs are solved blind and compared with the key; Match keys are checked pair by pair). Each question carries
 `verification_status` (`verified` / `unverified` / `flagged`) and `verification_note`. A key found wrong is
 regenerated; only if that fails is it kept, `flagged`, and a flagged question is never served from the cache or
 used in practice sessions. Settings: `ENABLE_ANSWER_RULE_CHECKS`, `ENABLE_LLM_ANSWER_VERIFICATION`,

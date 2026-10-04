@@ -18,6 +18,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from generation_engine.schemas import parse_match_answer
+
 # Numbered ("1." / "1)") or bulleted markers. Trailing whitespace is required so
 # decimals such as "2.5 kg" are not mistaken for markers.
 _MARKER = re.compile(r"(?:\d+[.)]|[-*\u2022])\s+")
@@ -171,3 +173,16 @@ def split_label(split: list[tuple[str, int]]) -> str:
     if not split:
         return ""
     return "Marks split: " + ", ".join(f"{name} - {m}" for name, m in split)
+
+
+def match_key_label(answer: str) -> str:
+    """A Match answer key as printed: "1 - b, 2 - a, 3 - c".
+
+    The paper prints Column B as (a), (b), (c), so the key uses the same
+    lowercase letters. An answer that is not in pair form is returned as it is
+    rather than hidden.
+    """
+    mapping = parse_match_answer(answer)
+    if not mapping:
+        return answer
+    return ",   ".join(f"{n} - {mapping[n].lower()}" for n in sorted(mapping))
