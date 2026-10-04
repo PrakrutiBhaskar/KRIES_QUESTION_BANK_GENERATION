@@ -208,3 +208,22 @@ def test_social_science_chapters_are_in_their_own_grade_only(index):
                 assert not set(map(str.lower, index.chapters(SS, grade=a))) & set(
                     map(str.lower, index.chapters(SS, grade=b))
                 )
+
+
+# --- English lists from the KTBS contents pages only ---
+
+def test_english_has_only_the_textbook_lessons_for_each_grade(index):
+    E = Subject.ENGLISH
+    assert index.is_grade_scoped(E)
+    assert [len(index.chapters(E, grade=g)) for g in (7, 8, 9)] == [19, 22, 24]
+    assert index.has_chapter(E, "A Tiger in the House", grade=7)
+    assert not index.has_chapter(E, "A Tiger in the House", grade=8)
+    assert index.has_chapter(E, "The Heavenly Parasol", grade=8)
+    assert not index.has_chapter(E, "The Heavenly Parasol", grade=9)
+    assert index.has_chapter(E, "An Astrologer's Day", grade=9)
+    assert index.has_chapter(E, "Letter Writing & Determiners", grade=9)
+    assert not index.has_chapter(E, "Letter Writing & Determiners", grade=7)
+    # topics that are not printed in the textbook contents are not in the syllabus
+    for g in (7, 8, 9):
+        for extra in ("Grammar: Parts of Speech", "Essay Writing", "Precis Writing", "Report Writing"):
+            assert not index.has_chapter(E, extra, grade=g)
