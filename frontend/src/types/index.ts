@@ -87,10 +87,13 @@ export interface GenerateFormData {
   chapter: string;
   grade: Grade;
   questionCount: number;
-  questionType: QuestionType | 'Mixed';
+  /** One or more types; the questions are spread across them. */
+  questionTypes: QuestionType[];
   difficulty: Difficulty;
-  marksPerQuestion: Marks;
+  /** Marks chosen per type; a type with no entry uses its default (see effectiveMarks). */
+  marksChoice: Partial<Record<QuestionType, Marks>>;
   fresh: boolean;           // skip stored questions and force new generation
+  useFigures: boolean;      // write the questions about diagrams from the figure library
 }
 
 // ============================================================

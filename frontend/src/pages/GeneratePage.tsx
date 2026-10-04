@@ -10,6 +10,7 @@ import {
   RefreshCw,
   GripVertical,
   ChevronUp,
+  ShieldCheck,
   TriangleAlert,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
@@ -22,7 +23,10 @@ import {
   fetchCombinations,
   generateQuestions,
   planBatches,
+  effectiveMarks,
+  ALL_QUESTION_TYPES,
   renumber,
+  verifyAnswers,
 } from '../lib/api';
 import type {
   Subject,
@@ -49,10 +53,9 @@ import { FigureImage } from '../components/FigureImage';
 
 const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const GRADES: Grade[] = [7, 8, 9];
-const TYPES: Array<QuestionType | 'Mixed'> = ['MCQ', 'Short', 'Long', 'Fill', 'Match', 'Mixed'];
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 // Fallback used only if GET /generation/combinations can't be reached.
-const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [5], Fill: [1], Match: [3, 5] };
+const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1, 2, 3, 5], Short: [1, 2, 3], Long: [3, 5], Fill: [1, 2, 3, 5], Match: [3, 5] };
 
 // ============================================================
 // Question Card
@@ -193,10 +196,12 @@ export default function GeneratePage() {
     chapter: '',
     grade: 8,
     questionCount: Math.min(settings.defaultQuestionCount, 25),
-    questionType: settings.defaultQuestionType as QuestionType | 'Mixed',
+    questionTypes:
+      settings.defaultQuestionType === 'Mixed' ? [...ALL_QUESTION_TYPES] : [settings.defaultQuestionType],
     difficulty: settings.defaultDifficulty,
-    marksPerQuestion: settings.defaultMarks,
+    marksChoice: {},
     fresh: false,
+    useFigures: false,
   });
 
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
@@ -212,6 +217,7 @@ export default function GeneratePage() {
   const [generated, setGenerated] = useState<Question[]>([]);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   // Which (type, marks) pairs the backend accepts.
   useEffect(() => {
@@ -254,22 +260,26 @@ export default function GeneratePage() {
     setSaved(false);
   };
 
-  const handleTypeChange = (t: QuestionType | 'Mixed') => {
+  /** Add or drop a type; at least one always stays selected. */
+  const toggleType = (t: QuestionType) =>
     setForm((p) => {
-      if (t === 'Mixed') return { ...p, questionType: t };
-      const allowed = marksByType[t];
-      const marks = allowed.includes(p.marksPerQuestion)
-        ? p.marksPerQuestion
-        : ((allowed.includes(2) ? 2 : allowed[0]) as Marks);
-      return { ...p, questionType: t, marksPerQuestion: marks };
+      const has = p.questionTypes.includes(t);
+      if (has && p.questionTypes.length === 1) return p;
+      return { ...p, questionTypes: has ? p.questionTypes.filter((x) => x !== t) : [...p.questionTypes, t] };
     });
-  };
 
-  const marksOptions: Marks[] = form.questionType === 'Mixed' ? [] : marksByType[form.questionType];
+  const allTypesSelected = ALL_QUESTION_TYPES.every((t) => form.questionTypes.includes(t));
+  const selectedTypes = ALL_QUESTION_TYPES.filter((t) => form.questionTypes.includes(t));
+  /** A saved default marks value only applies when a single type is chosen. */
+  const preferredMarks = selectedTypes.length === 1 ? settings.defaultMarks : undefined;
+  const marksFor = (t: QuestionType): Marks =>
+    effectiveMarks(t, marksByType[t], form.marksChoice[t], preferredMarks);
+  const setMarksFor = (t: QuestionType, m: Marks) =>
+    setForm((p) => ({ ...p, marksChoice: { ...p.marksChoice, [t]: m } }));
 
   /** Generate `count` more questions using the current form settings. */
   const generateBatches = async (count: number, refresh: boolean) => {
-    const batches = planBatches({ ...form, questionCount: count }, marksByType);
+    const batches = planBatches({ ...form, questionCount: count }, marksByType, settings.defaultMarks);
     const out: Question[] = [];
     setProgress({ done: 0, total: count });
     // The generator can hand back a question it already stored (same text, same
@@ -287,6 +297,7 @@ export default function GeneratePage() {
           difficulty: b.difficulty,
           count: b.count,
           refresh,
+          useFigures: form.useFigures,
         });
         for (const q of res.questions) {
           if (seen.has(q.id)) continue;
@@ -411,6 +422,38 @@ export default function GeneratePage() {
     });
   };
 
+  /** The "Verify answers" button: check the answer keys of the questions on screen. */
+  const handleVerify = async () => {
+    const pending = generated.filter((q) => q.verificationStatus !== 'verified');
+    if (pending.length === 0 || verifying) return;
+    setVerifying(true);
+    try {
+      const res = await verifyAnswers(pending.map((q) => q.id));
+      const checked = new Map(res.questions.map((q) => [q.id, q]));
+      // Only the check result changes; each card keeps its position, number and marks.
+      setGenerated((prev) =>
+        prev.map((q) => {
+          const c = checked.get(q.id);
+          return c ? { ...q, verificationStatus: c.verificationStatus, verificationNote: c.verificationNote } : q;
+        }),
+      );
+      if (res.flagged > 0) {
+        showToast(
+          `${res.flagged} answer${res.flagged > 1 ? 's look' : ' looks'} wrong. Review ${res.flagged > 1 ? 'them' : 'it'} before saving.`,
+          'warning',
+        );
+      } else if (res.unverified > 0) {
+        showToast(`${res.verified} verified, ${res.unverified} could not be checked.`, 'info');
+      } else {
+        showToast(`All ${res.verified} answers verified.`, 'success');
+      }
+    } catch (err) {
+      showToast(errorMessage(err), 'error');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const handleSaveBank = async () => {
     if (generated.length === 0 || saving) return;
     setSaving(true);
@@ -428,6 +471,8 @@ export default function GeneratePage() {
   };
 
   const totalMarks = generated.reduce((s, q) => s + q.marks, 0);
+  const flaggedCount = generated.filter((q) => q.verificationStatus === 'flagged').length;
+  const allVerified = generated.length > 0 && generated.every((q) => q.verificationStatus === 'verified');
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -537,18 +582,32 @@ export default function GeneratePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Question Type</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Question Types <span className="font-normal text-slate-400">(pick one or more)</span>
+                </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {TYPES.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => handleTypeChange(t)}
-                      className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${form.questionType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
-                    >
-                      {TYPE_LABELS[t] ?? t}
-                    </button>
-                  ))}
+                  {ALL_QUESTION_TYPES.map((t) => {
+                    const on = form.questionTypes.includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleType(t)}
+                        className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
+                      >
+                        {TYPE_LABELS[t] ?? t}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    aria-pressed={allTypesSelected}
+                    onClick={() => setField('questionTypes', [...ALL_QUESTION_TYPES])}
+                    className={`py-1.5 text-xs rounded-lg border font-medium transition-colors ${allTypesSelected ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
+                  >
+                    All types
+                  </button>
                 </div>
               </div>
 
@@ -578,23 +637,32 @@ export default function GeneratePage() {
             <div className="space-y-3.5">
               <div>
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">Marks per Question</label>
-                {form.questionType === 'Mixed' ? (
-                  <p className="text-xs text-slate-500">
-                    Set automatically for each type (MCQ 1, Short 2, Long 5, Fill 1, Match 3).
+                <div className="space-y-2">
+                  {selectedTypes.map((t) => (
+                    <div key={t} className="flex items-center gap-2">
+                      {selectedTypes.length > 1 && (
+                        <span className="w-14 shrink-0 text-xs text-slate-500">{TYPE_LABELS[t] ?? t}</span>
+                      )}
+                      <div className="flex flex-1 gap-2">
+                        {marksByType[t].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            aria-pressed={marksFor(t) === m}
+                            onClick={() => setMarksFor(t, m)}
+                            className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${marksFor(t) === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {selectedTypes.length > 1 && (
+                  <p className="mt-1.5 text-xs text-slate-400">
+                    Questions are spread evenly across the chosen types.
                   </p>
-                ) : (
-                  <div className="flex gap-2">
-                    {marksOptions.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setField('marksPerQuestion', m)}
-                        className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${form.marksPerQuestion === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
-                      >
-                        {m}
-                      </button>
-                    ))}
-                  </div>
                 )}
               </div>
 
@@ -609,6 +677,22 @@ export default function GeneratePage() {
                   Always generate new questions
                   <span className="block text-slate-400">
                     Off: reuse matching questions already stored, and only generate the shortfall.
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.useFigures}
+                  onChange={(e) => setField('useFigures', e.target.checked)}
+                  className="mt-0.5 accent-indigo-600"
+                />
+                <span>
+                  Diagram-based questions
+                  <span className="block text-slate-400">
+                    Write the questions about diagrams for this chapter. The diagram prints with the question and
+                    in the answer key. Needs diagrams tagged to the chapter.
                   </span>
                 </span>
               </label>
@@ -693,7 +777,16 @@ export default function GeneratePage() {
                   </p>
                   <p className="text-xs text-slate-500">{form.chapter} — Grade {form.grade}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => void handleVerify()}
+                    disabled={verifying || allVerified}
+                    title="Check each answer key (calculation rules, then an independent AI pass)"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 disabled:opacity-60 transition-colors"
+                  >
+                    {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                    {verifying ? 'Verifying…' : allVerified ? 'Answers verified' : 'Verify answers'}
+                  </button>
                   <button
                     onClick={handleAddQuestion}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
@@ -712,18 +805,15 @@ export default function GeneratePage() {
                 </div>
               </div>
 
-              {generated.some((q) => q.verificationStatus === 'flagged') && (
+              {flaggedCount > 0 && (
                 <div
                   role="alert"
                   className="mb-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900"
                 >
                   <TriangleAlert className="w-4 h-4 shrink-0" />
                   <p>
-                    {generated.filter((q) => q.verificationStatus === 'flagged').length} question
-                    {generated.filter((q) => q.verificationStatus === 'flagged').length > 1 ? 's have' : ' has'} an
-                    answer our checks think is wrong, and a replacement could not be generated. Regenerate or
-                    delete {generated.filter((q) => q.verificationStatus === 'flagged').length > 1 ? 'them' : 'it'}{' '}
-                    before saving.
+                    {flaggedCount} question{flaggedCount > 1 ? 's have' : ' has'} an answer the check thinks is
+                    wrong. Regenerate or delete {flaggedCount > 1 ? 'them' : 'it'} before saving.
                   </p>
                 </div>
               )}

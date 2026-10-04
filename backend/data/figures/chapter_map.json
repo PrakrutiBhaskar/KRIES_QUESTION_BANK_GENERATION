@@ -1,0 +1,18 @@
+{
+  "_about": "Old chapter name -> current KTBS chapter name, for figures tagged before the syllabus was replaced. Only clear topic matches are listed; figures whose chapter has no counterpart (e.g. Reproduction in Plants, Fibre to Fabric, Forests: Our Lifeline, Water: A Precious Resource) are left alone for you to retag or to add the chapter back.",
+  "Science": {
+    "Nutrition in Plants": "Life Processes in Plants",
+    "Nutrition in Animals": "Life Processes in Animals",
+    "Respiration in Organisms": "Life Processes in Animals",
+    "Transportation in Animals and Plants": "Life Processes in Animals",
+    "Heat": "Heat Transfer in Nature",
+    "Motion and Time": "Measurement of Time and Motion",
+    "Electric Current and Its Effects": "Electricity: Circuits and their Components",
+    "Physical and Chemical Changes": "Changes Around Us: Physical and Chemical",
+    "Cell: Structure and Functions": "The Invisible Living World: Beyond Our Naked Eye",
+    "Microorganisms: Friend and Foe": "The Invisible Living World: Beyond Our Naked Eye",
+    "Force and Pressure": "Exploring Forces",
+    "Friction": "Exploring Forces",
+    "Light": "Light: Mirrors and Lenses"
+  }
+}

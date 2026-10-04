@@ -1,5 +1,6 @@
 """Answer-key verification: the AI pass, the decision logic, the engine's
-retry behaviour, and what reaches the API and the database."""
+on-demand `verify_answers`, the `POST /questions/verify` endpoint, and what
+reaches the database. Generation itself no longer verifies anything."""
 from __future__ import annotations
 
 import dataclasses
@@ -291,76 +292,98 @@ async def test_verify_questions_with_everything_off():
     assert await verify_questions([], client=None) == []
 
 
-# --- the engine: rule checks ----------------------------------------------------------
+# --- generation no longer verifies ---------------------------------------------------------------
 
 
-async def test_a_wrong_key_found_by_a_rule_is_replaced_by_regeneration(monkeypatch):
-    engine_settings(monkeypatch, enable_llm_answer_verification=False)
-    groq = ScriptedGroq(
-        [short1("What is 12 × 15?", "170"), short1("Calculate 144 ÷ 12", "12")],  # 1st key is wrong
-        [short1("What is 25% of 240?", "60")],
+async def test_generation_does_not_verify_answers(ai_pass):
+    groq = FakeGroqClient(verifier="agree")
+    questions, report = await GenerationEngine(groq_client=groq).generate(science_request(3))
+
+    assert [q.verification_status for q in questions] == [None] * 3
+    assert len(groq.generation_calls) == 1 and len(groq.verification_calls) == 0
+    assert not {"answers_verified", "answers_unverified", "dropped_wrong_answer", "flagged_kept"} & set(
+        report.as_dict()
     )
+
+
+async def test_generation_keeps_a_wrong_key_for_the_teacher_to_verify_later(monkeypatch):
+    """A wrong key is no longer regenerated at generation time: it is found by 'Verify answers'."""
+    engine_settings(monkeypatch, enable_llm_answer_verification=False)
+    groq = ScriptedGroq([short1("What is 12 × 15?", "170"), short1("Calculate 144 ÷ 12", "13")])
     questions, report = await GenerationEngine(groq_client=groq).generate(math_request(2))
 
-    assert [q.answer for q in questions] == ["12", "60"]
-    assert all(q.verification_status == "verified" for q in questions)
-    assert all("Checked by calculation" in q.verification_note for q in questions)
-    assert (report.attempts, report.dropped_wrong_answer, report.answers_verified) == (2, 1, 2)
-    assert report.flagged_kept == 0
-    # the retry prompt tells the model what went wrong
-    assert "answer key was wrong" in groq.generation_calls[1][1]
-    assert "170" in groq.generation_calls[1][1]
+    assert [q.answer for q in questions] == ["170", "13"]
+    assert [q.verification_status for q in questions] == [None, None]
+    assert report.attempts == 1 and len(groq.generation_calls) == 1
 
 
-async def test_wrong_keys_that_never_get_fixed_come_back_flagged_not_as_a_failure(monkeypatch):
-    engine_settings(monkeypatch, enable_llm_answer_verification=False)
-    groq = ScriptedGroq(
-        [short1("What is 12 × 15?", "170"), short1("Calculate 144 ÷ 12", "13")],
-        [short1("Find the LCM of 4 and 6", "24"), short1("What is 25% of 240?", "50")],
-        [short1("What is 7 squared?", "42"), short1("Find the HCF of 12 and 18.", "9")],
+# --- the engine: verify_answers (rule checks) ----------------------------------------------------
+
+
+def math_short(text, answer):
+    return Question(
+        subject=Subject.MATH, chapter="Arithmetic", type=QuestionType.SHORT, grade=8,
+        text=text, answer=answer, explanation="", marks=1, difficulty=Difficulty.EASY,
     )
-    questions, report = await GenerationEngine(groq_client=groq).generate(math_request(2))
-
-    assert len(questions) == 2  # the request still succeeds with the full count
-    assert [q.verification_status for q in questions] == ["flagged", "flagged"]
-    assert "170" in questions[0].verification_note
-    assert (report.attempts, report.dropped_wrong_answer, report.flagged_kept) == (3, 6, 2)
 
 
-async def test_flagged_fallback_never_adds_duplicates(monkeypatch):
+async def test_a_wrong_key_found_by_a_rule_is_flagged(monkeypatch):
     engine_settings(monkeypatch, enable_llm_answer_verification=False)
-    same = short1("What is 12 × 15?", "170")
-    groq = ScriptedGroq([same, short1("Calculate 144 ÷ 12", "13")], [same], [same])
-    questions, _ = await GenerationEngine(groq_client=groq).generate(math_request(2))
-    assert len({q.text for q in questions}) == len(questions)
+    asked = [math_short("What is 12 × 15?", "170"), math_short("Calculate 144 ÷ 12", "12")]
+    out = await GenerationEngine(groq_client=ScriptedGroq()).verify_answers(asked)
+
+    assert [q.verification_status for q in out] == ["flagged", "verified"]
+    assert "170" in out[0].verification_note
+    assert "Checked by calculation" in out[1].verification_note
+    # the inputs are left alone; the results are copies
+    assert [q.verification_status for q in asked] == [None, None]
 
 
-async def test_rule_checks_can_be_switched_off(monkeypatch):
+async def test_verify_answers_never_regenerates_anything(monkeypatch):
+    engine_settings(monkeypatch, enable_llm_answer_verification=False)
+    groq = ScriptedGroq()
+    out = await GenerationEngine(groq_client=groq).verify_answers([math_short("What is 12 × 15?", "170")])
+    assert [q.verification_status for q in out] == ["flagged"]
+    assert groq.calls == []  # no generation call, and no AI pass (switched off)
+
+
+async def test_verify_answers_with_nothing_to_check():
+    assert await GenerationEngine(groq_client=ScriptedGroq()).verify_answers([]) == []
+
+
+async def test_with_both_checks_off_every_question_reads_unverified(monkeypatch):
     engine_settings(
         monkeypatch, enable_llm_answer_verification=False, enable_answer_rule_checks=False
     )
-    groq = ScriptedGroq([short1("What is 12 × 15?", "170"), short1("Calculate 144 ÷ 12", "13")])
-    questions, report = await GenerationEngine(groq_client=groq).generate(math_request(2))
-    assert [q.verification_status for q in questions] == [None, None]
-    assert report.dropped_wrong_answer == 0 and len(groq.generation_calls) == 1
+    out = await GenerationEngine(groq_client=FakeGroqClient()).verify_answers(
+        [math_short("What is 12 × 15?", "170")]
+    )
+    assert [q.verification_status for q in out] == ["unverified"]
 
 
-# --- the engine: the AI pass ---------------------------------------------------------------
+# --- the engine: verify_answers (the AI pass) ----------------------------------------------------
+
+
+async def _generated(groq, request):
+    engine = GenerationEngine(groq_client=groq)
+    questions, _ = await engine.generate(request)
+    return engine, questions
 
 
 async def test_ai_pass_confirms_mcq_keys(ai_pass):
     groq = FakeGroqClient(verifier="agree")
-    questions, report = await GenerationEngine(groq_client=groq).generate(science_request(3))
+    engine, questions = await _generated(groq, science_request(3))
+    out = await engine.verify_answers(questions)
 
-    assert [q.verification_status for q in questions] == ["verified"] * 3
-    assert all("second AI pass" in q.verification_note for q in questions)
-    assert (report.answers_verified, report.answers_unverified) == (3, 0)
+    assert [q.verification_status for q in out] == ["verified"] * 3
+    assert all("second AI pass" in q.verification_note for q in out)
     assert len(groq.generation_calls) == 1 and len(groq.verification_calls) == 1  # one call per batch
 
 
 async def test_mcq_verifier_is_never_shown_the_key_in_a_real_run(ai_pass):
     groq = FakeGroqClient()
-    questions, _ = await GenerationEngine(groq_client=groq).generate(science_request(2))
+    engine, questions = await _generated(groq, science_request(2))
+    await engine.verify_answers(questions)
     prompt = groq.verification_calls[0][1]
     assert '"answer"' not in prompt
     assert all(q.explanation not in prompt for q in questions)
@@ -368,53 +391,49 @@ async def test_mcq_verifier_is_never_shown_the_key_in_a_real_run(ai_pass):
 
 async def test_ai_pass_for_descriptive_answers(ai_pass):
     groq = FakeGroqClient(verifier="agree")
-    questions, _ = await GenerationEngine(groq_client=groq).generate(
-        science_request(2, QuestionType.SHORT, 2)
-    )
-    assert [q.verification_status for q in questions] == ["verified"] * 2
+    engine, questions = await _generated(groq, science_request(2, QuestionType.SHORT, 2))
+    out = await engine.verify_answers(questions)
+    assert [q.verification_status for q in out] == ["verified"] * 2
 
 
-async def test_ai_disagreement_is_replaced_then_flagged_as_a_last_resort(ai_pass):
+async def test_ai_disagreement_flags_the_question_without_regenerating(ai_pass):
     groq = FakeGroqClient(verifier="disagree")
-    questions, report = await GenerationEngine(groq_client=groq).generate(science_request(3))
+    engine, questions = await _generated(groq, science_request(3))
+    out = await engine.verify_answers(questions)
 
-    assert len(questions) == 3
-    assert [q.verification_status for q in questions] == ["flagged"] * 3
-    assert all("second AI pass chose" in q.verification_note for q in questions)
-    assert report.flagged_kept == 3
-    assert len(groq.generation_calls) == 3  # it kept trying to find better questions
-    assert "answer key was wrong" in groq.generation_calls[1][1]
+    assert [q.verification_status for q in out] == ["flagged"] * 3
+    assert all("second AI pass chose" in q.verification_note for q in out)
+    assert len(groq.generation_calls) == 1  # nothing was generated to replace them
 
 
 async def test_a_partly_wrong_batch_keeps_the_verified_ones(ai_pass):
     groq = FakeGroqClient(verifier="disagree_first")
-    questions, report = await GenerationEngine(groq_client=groq).generate(science_request(3))
-    statuses = sorted(q.verification_status for q in questions)
-    assert statuses == ["flagged", "verified", "verified"]
-    assert report.answers_verified == 2
+    engine, questions = await _generated(groq, science_request(3))
+    out = await engine.verify_answers(questions)
+    assert sorted(q.verification_status for q in out) == ["flagged", "verified", "verified"]
 
 
-async def test_unconfident_verifier_leaves_questions_unverified_without_regenerating(ai_pass):
+async def test_unconfident_verifier_leaves_questions_unverified(ai_pass):
     groq = FakeGroqClient(verifier="uncertain")
-    questions, report = await GenerationEngine(groq_client=groq).generate(science_request(3))
-    assert [q.verification_status for q in questions] == ["unverified"] * 3
-    assert len(groq.generation_calls) == 1
-    assert (report.dropped_wrong_answer, report.answers_unverified) == (0, 3)
+    engine, questions = await _generated(groq, science_request(3))
+    out = await engine.verify_answers(questions)
+    assert [q.verification_status for q in out] == ["unverified"] * 3
 
 
 @pytest.mark.parametrize("mode", ["error", "garbage"])
-async def test_a_failing_verifier_never_fails_the_request(ai_pass, mode):
+async def test_a_failing_verifier_never_fails_verification(ai_pass, mode):
     groq = FakeGroqClient(verifier=mode)
-    questions, _ = await GenerationEngine(groq_client=groq).generate(science_request(3))
-    assert len(questions) == 3
-    assert [q.verification_status for q in questions] == ["unverified"] * 3
-    assert all("could not be completed" in q.verification_note for q in questions)
+    engine, questions = await _generated(groq, science_request(3))
+    out = await engine.verify_answers(questions)
+    assert [q.verification_status for q in out] == ["unverified"] * 3
+    assert all("could not be completed" in q.verification_note for q in out)
 
 
 async def test_verification_runs_in_chunks(ai_pass):
     ai_pass(verification_chunk_size=3)
     groq = FakeGroqClient()
-    await GenerationEngine(groq_client=groq).generate(science_request(7))
+    engine, questions = await _generated(groq, science_request(7))
+    await engine.verify_answers(questions)
     assert len(groq.verification_calls) == 3
 
 
@@ -422,17 +441,9 @@ async def test_a_separate_verifier_client_is_used_for_the_second_pass(ai_pass):
     generator, verifier = FakeGroqClient(), FakeGroqClient()
     engine = GenerationEngine(groq_client=generator, verifier_client=verifier)
     questions, _ = await engine.generate(science_request(2))
+    out = await engine.verify_answers(questions)
     assert len(generator.verification_calls) == 0 and len(verifier.verification_calls) == 1
-    assert all(q.verification_status == "verified" for q in questions)
-
-
-async def test_without_either_check_nothing_is_stamped(monkeypatch):
-    engine_settings(
-        monkeypatch, enable_llm_answer_verification=False, enable_answer_rule_checks=False
-    )
-    questions, report = await GenerationEngine(groq_client=FakeGroqClient()).generate(science_request(2))
-    assert [q.verification_status for q in questions] == [None, None]
-    assert (report.answers_verified, report.answers_unverified) == (0, 0)
+    assert all(q.verification_status == "verified" for q in out)
 
 
 # --- through the API ---------------------------------------------------------------------------
@@ -443,45 +454,143 @@ BASE = {
 }
 
 
-async def test_api_returns_and_stores_the_verification_result(client, ai_pass):
+async def _verify(client, questions):
+    return await client.post(
+        "/questions/verify", json={"question_ids": [q["id"] for q in questions]}
+    )
+
+
+async def test_api_generation_returns_unverified_questions_and_makes_no_verification_call(
+    client, groq_stub, ai_pass
+):
     body = (await client.post("/generate", json=BASE)).json()
 
+    assert {q["verification_status"] for q in body["questions"]} == {"unverified"}
+    assert groq_stub.verification_calls == []
+    assert "answers_verified" not in body["report"]
+
+
+async def test_verify_endpoint_checks_stores_and_returns_the_result(client, ai_pass):
+    questions = (await client.post("/generate", json=BASE)).json()["questions"]
+    response = await _verify(client, questions)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [q["id"] for q in body["questions"]] == [q["id"] for q in questions]  # same order
     assert [q["verification_status"] for q in body["questions"]] == ["verified"] * 3
     assert all(q["verification_note"] for q in body["questions"])
-    assert body["report"]["answers_verified"] == 3
+    assert (body["verified"], body["unverified"], body["flagged"]) == (3, 0, 0)
 
     listed = (await client.get("/questions", params={"subject": "Science"})).json()
     assert {q["verification_status"] for q in listed["results"]} == {"verified"}
 
 
-async def test_flagged_questions_are_returned_clearly_marked(client, groq_stub, ai_pass):
+async def test_verify_endpoint_flags_a_wrong_key(client, groq_stub, ai_pass):
+    questions = (await client.post("/generate", json=BASE)).json()["questions"]
     groq_stub.verifier = "disagree"
-    response = await client.post("/generate", json=BASE)
+    body = (await _verify(client, questions)).json()
 
-    assert response.status_code == 200
-    body = response.json()
-    assert len(body["questions"]) == 3
     assert {q["verification_status"] for q in body["questions"]} == {"flagged"}
-    assert body["report"]["flagged_kept"] == 3
+    assert (body["verified"], body["unverified"], body["flagged"]) == (0, 0, 3)
+    assert all("second AI pass chose" in q["verification_note"] for q in body["questions"])
+
+
+async def test_verify_endpoint_survives_a_failing_ai_pass(client, groq_stub, ai_pass):
+    questions = (await client.post("/generate", json=BASE)).json()["questions"]
+    groq_stub.verifier = "error"
+    response = await _verify(client, questions)
+    assert response.status_code == 200
+    assert response.json()["unverified"] == 3
+
+
+async def test_verify_endpoint_with_rule_checks_only(client, groq_stub, monkeypatch):
+    """Maths keys are checked by calculation, with no AI pass and no stub that knows the answer."""
+    engine_settings(monkeypatch, enable_llm_answer_verification=False)
+    from app.services import generation as generation_service
+
+    groq = ScriptedGroq([short1("What is 12 × 15?", "170"), short1("What is 25% of 240?", "60")])
+    generation_service.set_engine(GenerationEngine(groq_client=groq))
+    made = await client.post(
+        "/generate",
+        json={"subject": "Math", "chapter": "Arithmetic", "type": "Short", "grade": 8,
+              "marks": 1, "difficulty": "easy", "count": 2},
+    )
+    assert made.status_code == 200, made.text
+    assert {q["verification_status"] for q in made.json()["questions"]} == {"unverified"}
+
+    body = (await _verify(client, made.json()["questions"])).json()
+    by_text = {q["text"]: q for q in body["questions"]}
+    assert by_text["What is 12 × 15?"]["verification_status"] == "flagged"
+    assert by_text["What is 25% of 240?"]["verification_status"] == "verified"
+    assert groq.verification_calls == []
+
+
+async def test_verify_endpoint_unknown_question_is_404(client):
+    response = await client.post("/questions/verify", json={"question_ids": [str(uuid.uuid4())]})
+    assert response.status_code == 404
+
+
+@pytest.mark.parametrize("ids", [[], ["not-a-uuid"]])
+async def test_verify_endpoint_rejects_a_bad_body(client, ids):
+    response = await client.post("/questions/verify", json={"question_ids": ids})
+    assert response.status_code in (400, 422)
+
+
+async def test_verify_endpoint_caps_the_batch_size(client):
+    ids = [str(uuid.uuid4()) for _ in range(51)]
+    response = await client.post("/questions/verify", json={"question_ids": ids})
+    assert response.status_code in (400, 422)
+
+
+async def test_verify_endpoint_requires_sign_in(anon_client):
+    response = await anon_client.post("/questions/verify", json={"question_ids": [str(uuid.uuid4())]})
+    assert response.status_code == 401
+
+
+async def test_verify_endpoint_ignores_repeated_ids(client, ai_pass):
+    [q] = (await client.post("/generate", json={**BASE, "count": 1})).json()["questions"]
+    body = (await _verify(client, [q, q])).json()
+    assert [x["id"] for x in body["questions"]] == [q["id"]]
+
+
+async def test_anyone_signed_in_can_verify_a_question_someone_else_generated(client, bob_client, ai_pass):
+    questions = (await client.post("/generate", json=BASE)).json()["questions"]
+    response = await _verify(bob_client, questions)
+    assert response.status_code == 200
+    assert response.json()["verified"] == 3
+
+
+async def test_a_stored_question_in_an_unexpected_shape_reads_unverified_not_500(
+    client, db_session, ai_pass
+):
+    [q] = (await client.post("/generate", json={**BASE, "count": 1})).json()["questions"]
+    await db_session.execute(update(QuestionRow).values(options=["only one option"]))
+    await db_session.commit()
+
+    response = await _verify(client, [q])
+    assert response.status_code == 200
+    [got] = response.json()["questions"]
+    assert got["verification_status"] == "unverified"
+    assert got["verification_note"].startswith("Could not be checked")
 
 
 async def test_flagged_questions_are_not_served_from_the_cache(client, groq_stub, ai_pass):
-    groq_stub.verifier = "disagree"
     first = (await client.post("/generate", json=BASE)).json()
+    groq_stub.verifier = "disagree"
+    await _verify(client, first["questions"])
     flagged_ids = {q["id"] for q in first["questions"]}
     calls_before = len(groq_stub.generation_calls)
 
-    groq_stub.verifier = "agree"
     second = (await client.post("/generate", json=BASE)).json()
 
     assert second["cached"] == 0  # the flagged ones were not reused
     assert len(groq_stub.generation_calls) > calls_before
     assert not flagged_ids & {q["id"] for q in second["questions"]}
-    assert {q["verification_status"] for q in second["questions"]} == {"verified"}
 
 
 async def test_verified_questions_are_cached_as_before(client, ai_pass):
     first = (await client.post("/generate", json=BASE)).json()
+    await _verify(client, first["questions"])
     second = (await client.post("/generate", json=BASE)).json()
     assert second["cached"] == 3 and second["generated"] == 0
     # same questions (cache order among rows created in the same instant isn't defined)
@@ -489,19 +598,27 @@ async def test_verified_questions_are_cached_as_before(client, ai_pass):
     assert {q["verification_status"] for q in second["questions"]} == {"verified"}
 
 
-async def test_practice_never_serves_flagged_questions(client, groq_stub, ai_pass):
-    groq_stub.verifier = "disagree"
+async def test_practice_never_serves_flagged_questions(client, groq_stub, ai_pass, monkeypatch):
+    from app.services import practice as practice_service
+
+    monkeypatch.setattr(practice_service.settings, "practice_generate_shortfall", False)
+    questions = (await client.post("/generate", json={**BASE, "count": 2})).json()["questions"]
     body = {"subject": "Science", "chapter": "Photosynthesis", "type": "MCQ", "grade": 8, "count": 2}
+
+    groq_stub.verifier = "disagree"
+    await _verify(client, questions)
     response = await client.post("/practice/sessions", json=body)
     assert response.status_code == 422  # nothing trustworthy to practise on
 
     groq_stub.verifier = "agree"
+    await _verify(client, questions)  # re-verifying overwrites the earlier result
     assert (await client.post("/practice/sessions", json=body)).status_code == 201
 
 
 async def test_a_teacher_can_still_put_a_flagged_question_in_a_paper(client, groq_stub, ai_pass):
-    groq_stub.verifier = "disagree"
     questions = (await client.post("/generate", json={**BASE, "count": 1})).json()["questions"]
+    groq_stub.verifier = "disagree"
+    await _verify(client, questions)
     r = await client.post(
         "/papers",
         json={"title": "P", "subject": "Science", "question_ids": [questions[0]["id"]]},
@@ -518,27 +635,6 @@ async def test_questions_from_before_verification_read_as_unverified(client, db_
     await db_session.commit()
     got = (await client.get(f"/questions/{q['id']}")).json()
     assert got["verification_status"] == "unverified" and got["verification_note"] is None
-
-
-async def test_a_wrong_key_in_a_maths_batch_is_replaced_through_the_api(client, monkeypatch):
-    """End to end with a rule check: no AI pass, no stub that knows the answer."""
-    engine_settings(monkeypatch, enable_llm_answer_verification=False)
-    from app.services import generation as generation_service
-
-    groq = ScriptedGroq(
-        [short1("What is 12 × 15?", "170")],
-        [short1("What is 25% of 240?", "60")],
-    )
-    generation_service.set_engine(GenerationEngine(groq_client=groq))
-    response = await client.post(
-        "/generate",
-        json={"subject": "Math", "chapter": "Arithmetic", "type": "Short", "grade": 8,
-              "marks": 1, "difficulty": "easy", "count": 1},
-    )
-    assert response.status_code == 200, response.text
-    [q] = response.json()["questions"]
-    assert q["answer"] == "60" and q["verification_status"] == "verified"
-    assert response.json()["report"]["dropped_wrong_answer"] == 1
 
 
 # --- persistence details ---------------------------------------------------------------------------

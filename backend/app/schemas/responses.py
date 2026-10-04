@@ -12,6 +12,15 @@ from generation_engine.schemas import QuestionType, Subject
 from .common import FigureOut, MaskedQuestionOut, QuestionOut, _drop_empty_figures
 
 
+class VerifyOut(BaseModel):
+    """POST /questions/verify — the same questions, with their answer-key status updated."""
+
+    questions: list[QuestionOut]
+    verified: int = 0
+    unverified: int = 0
+    flagged: int = 0
+
+
 class GenerateOut(BaseModel):
     """POST /generate — the contract's `{"questions": [...]}`.
 

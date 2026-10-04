@@ -4,7 +4,7 @@
     {
       "file": "01-female-anopheles-mosquito.png",
       "subject": "Science",
-      "chapter": "Microorganisms: Friend and Foe",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Disease-carrying insects",
       "caption": "Female Anopheles mosquito, the carrier of the malaria parasite",
       "labels": [
@@ -18,7 +18,7 @@
     {
       "file": "02-nitrogen-fixing-blue-green-algae.png",
       "subject": "Science",
-      "chapter": "Microorganisms: Friend and Foe",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Nitrogen fixation",
       "caption": "The nitrogen-fixing blue-green algae (Anabaena), with its vegetative cells, heterocyst, akinete and filaments",
       "labels": [
@@ -75,7 +75,7 @@
     {
       "file": "06-spring-balance.png",
       "subject": "Science",
-      "chapter": "Force and Pressure",
+      "chapter": "Exploring Forces",
       "topic": "Measuring force",
       "caption": "A spring balance, with an enlarged view of its scale in grams",
       "labels": [
@@ -88,7 +88,7 @@
     {
       "file": "07-friction-on-table.png",
       "subject": "Science",
-      "chapter": "Friction",
+      "chapter": "Exploring Forces",
       "topic": "Frictional force",
       "caption": "A block on a table: the applied force and the opposing frictional force",
       "labels": [
@@ -127,7 +127,7 @@
     {
       "file": "10-nitrogen-cycle.png",
       "subject": "Science",
-      "chapter": "Microorganisms: Friend and Foe",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Nitrogen cycle",
       "caption": "The nitrogen cycle, from atmospheric nitrogen through lightning, bacteria, plants and animals back to the soil",
       "labels": [
@@ -143,7 +143,7 @@
     {
       "file": "11-human-cheek-cells.png",
       "subject": "Science",
-      "chapter": "Cell: Structure and Functions",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Animal cell",
       "caption": "Human cheek cells",
       "labels": [
@@ -156,7 +156,7 @@
     {
       "file": "12-onion-peel-cells.png",
       "subject": "Science",
-      "chapter": "Cell: Structure and Functions",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Plant cell",
       "caption": "Cells observed in an onion peel",
       "labels": [
@@ -167,7 +167,7 @@
     {
       "file": "13-plant-and-animal-cell.png",
       "subject": "Science",
-      "chapter": "Cell: Structure and Functions",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Plant and animal cells",
       "caption": "(a) Plant cell and (b) animal cell compared",
       "labels": [
@@ -208,7 +208,7 @@
     {
       "file": "16-nerve-cell.png",
       "subject": "Science",
-      "chapter": "Cell: Structure and Functions",
+      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
       "topic": "Specialised cells",
       "caption": "Nerve cell",
       "labels": [
@@ -335,7 +335,7 @@
     {
       "file": "25-human-eye.png",
       "subject": "Science",
-      "chapter": "Light",
+      "chapter": "Light: Mirrors and Lenses",
       "topic": "The human eye",
       "caption": "Human eye",
       "labels": [
@@ -351,7 +351,7 @@
     {
       "file": "26-reflection-of-light.png",
       "subject": "Science",
-      "chapter": "Light",
+      "chapter": "Light: Mirrors and Lenses",
       "topic": "Reflection of light",
       "caption": "Reflection of light: incident ray, reflected ray, normal, angle of incidence (i) and angle of reflection (r)",
       "labels": [
@@ -366,7 +366,7 @@
     {
       "file": "27-regular-and-diffused-reflection.png",
       "subject": "Science",
-      "chapter": "Light",
+      "chapter": "Light: Mirrors and Lenses",
       "topic": "Reflection of light",
       "caption": "Regular reflection from a smooth surface and diffused reflection from a rough surface",
       "labels": [

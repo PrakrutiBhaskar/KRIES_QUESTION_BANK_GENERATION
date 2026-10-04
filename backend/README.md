@@ -288,12 +288,13 @@ with a question. Setting: `MAX_GENERATION_FIGURES` (6). Migration `0008`. See `d
 
 ## Answer-key verification
 
-Every generated batch is checked before it is returned, because the model that writes a question also writes its
-answer key. Exact **rule checks** (Maths/Science patterns, no LLM) run first, then an **independent AI pass**
-(one extra Groq call per batch; MCQs are solved blind and compared with the key; Match keys are checked pair by pair). Each question carries
-`verification_status` (`verified` / `unverified` / `flagged`) and `verification_note`. A key found wrong is
-regenerated; only if that fails is it kept, `flagged`, and a flagged question is never served from the cache or
-used in practice sessions. Settings: `ENABLE_ANSWER_RULE_CHECKS`, `ENABLE_LLM_ANSWER_VERIFICATION`,
+Generation does not check answer keys; it is an on-demand step, because the model that writes a question also writes
+its answer key. After generating, the **Verify answers** button calls `POST /questions/verify`. Exact **rule checks**
+(Maths/Science patterns, no LLM) run first, then an **independent AI pass** (one Groq call per chunk of questions; MCQs
+are solved blind and compared with the key; Match keys are checked pair by pair). Each question carries
+`verification_status` (`verified` / `unverified` / `flagged`) and `verification_note`; new questions start as
+`unverified`. A key found wrong is marked `flagged`, not regenerated, and a flagged question is never served from the
+cache or used in practice sessions. Settings: `ENABLE_ANSWER_RULE_CHECKS`, `ENABLE_LLM_ANSWER_VERIFICATION`,
 `VERIFIER_MODEL`, `VERIFICATION_CHUNK_SIZE`. Migration `0007`. The full description is in
 `docs/api-contract.md` (*Answer verification*) and `generation_engine/README.md`.
 

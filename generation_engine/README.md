@@ -101,7 +101,7 @@ a subject's placeholder list out entirely.
 
 ## Still open
 
-- **Factual correctness.** `check_answer_relevance` catches only structurally broken answers. Wrong answer keys are caught by `rule_checks.py` (exact checks for Maths/Science patterns) and `answer_verification.py` (an independent second AI pass; see docs/api-contract.md, *Answer verification*). The AI pass is a second opinion from a model, not a proof, and the rules cover only the patterns they recognise, so the manual spot-check in test-plan.md Section 4 still stands. `GenerationEngine.verify_relevance_llm` (off by default, `ENABLE_LLM_RELEVANCE_CHECK=true`) is a separate coherence check.
+- **Factual correctness.** `check_answer_relevance` catches only structurally broken answers. Wrong answer keys are caught by `rule_checks.py` (exact checks for Maths/Science patterns) and `answer_verification.py` (an independent second AI pass, run on demand through `GenerationEngine.verify_answers`, not during `generate()`; see docs/api-contract.md, *Answer verification*). The AI pass is a second opinion from a model, not a proof, and the rules cover only the patterns they recognise, so the manual spot-check in test-plan.md Section 4 still stands. `GenerationEngine.verify_relevance_llm` (off by default, `ENABLE_LLM_RELEVANCE_CHECK=true`) is a separate coherence check.
 - **Threshold tuning.** Near-duplicate similarity (0.90) and the word-count bounds are first estimates, not calibrated against real Groq output.
 
 ## Textbook-grounded generation (Karnataka State Board only)

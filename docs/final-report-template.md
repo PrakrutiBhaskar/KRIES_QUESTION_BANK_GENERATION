@@ -33,7 +33,6 @@
 ## 9. Future scope
 - Auth/accounts (teacher/student login, saved history)
 - Additional grades/boards
-- Analytics on question difficulty vs. student performance
 - [add others as identified]
 
 ## 10. Conclusion

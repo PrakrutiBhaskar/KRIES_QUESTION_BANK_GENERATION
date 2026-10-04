@@ -257,8 +257,8 @@ async def test_generated_questions_are_reused_on_the_next_paper(client, groq_stu
         ({"chapters": []}, "chapters"),
         ({"sections": []}, "sections"),
         (
-            {"sections": [{"name": "A", "type": "MCQ", "marks_per_question": 2, "total_marks": 10}]},
-            "MCQ questions must use marks",
+            {"sections": [{"name": "A", "type": "Long", "marks_per_question": 2, "total_marks": 10}]},
+            "Long questions must use marks",
         ),
         (
             {"sections": [{"name": "A", "type": "Long", "marks_per_question": 5, "total_marks": 12}]},

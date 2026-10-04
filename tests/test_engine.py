@@ -208,7 +208,7 @@ async def test_duplicates_within_a_batch_are_dropped():
 async def test_invalid_marks_combination_raises_400():
     engine = GenerationEngine(groq_client=StubGroq([]))
     request = make_request(type=QuestionType.MCQ, marks=1).model_copy(
-        update={"marks": 3}
+        update={"marks": 4}  # not on the mark scale at all
     )
     with pytest.raises(InvalidRequestError):
         await engine.generate(request)

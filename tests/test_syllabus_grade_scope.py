@@ -169,7 +169,9 @@ def test_shipped_syllabus_strict_has_no_grade_leakage(index):
                     assert strict.has_chapter(subject, ch, grade=o) == (
                         o in strict.grades_for_chapter(subject, ch)
                     )
-    assert strict.chapters(Subject.ENGLISH, grade=7) == []
+    # English is grade-scoped by its textbook lessons (Class 7 has 19), not empty.
+    assert len(strict.chapters(Subject.ENGLISH, grade=7)) == 19
+    assert not strict.has_chapter(Subject.ENGLISH, "A Tiger in the House", grade=8)
     assert not strict.has_chapter(Subject.KANNADA, "ಮಗ್ಗದ ಸಾಹೇಬ", grade=7)
 
 

@@ -449,11 +449,47 @@ export async function generateQuestions(p: GenerateParams): Promise<GenerateResu
 }
 
 // ------------------------------------------------------------
+// Answer verification (the "Verify answers" button)
+// ------------------------------------------------------------
+interface VerifyWire {
+  questions: QuestionWire[];
+  verified: number;
+  unverified: number;
+  flagged: number;
+}
+
+export interface VerifyResult {
+  questions: Question[];
+  verified: number;
+  unverified: number;
+  flagged: number;
+}
+
+// POST /questions/verify accepts at most this many ids per call.
+const VERIFY_BATCH = 50;
+
+/** Check the answer keys of stored questions. Generation never does this; it only happens on request. */
+export async function verifyAnswers(ids: string[]): Promise<VerifyResult> {
+  const out: VerifyResult = { questions: [], verified: 0, unverified: 0, flagged: 0 };
+  for (let i = 0; i < ids.length; i += VERIFY_BATCH) {
+    const res = await request<VerifyWire>('/questions/verify', {
+      method: 'POST',
+      body: JSON.stringify({ question_ids: ids.slice(i, i + VERIFY_BATCH) }),
+    });
+    out.questions.push(...res.questions.map(toQuestion));
+    out.verified += res.verified;
+    out.unverified += res.unverified;
+    out.flagged += res.flagged;
+  }
+  return out;
+}
+
+// ------------------------------------------------------------
 // Questions
 // ------------------------------------------------------------
 export interface QuestionEdit {
   text?: string;
-  // No `answer`: the answer key is read-only (it is verified at generation time).
+  // No `answer`: the answer key is read-only (it is checked by "Verify answers").
   explanation?: string;
   options?: string[];
   marks?: number;
@@ -792,38 +828,55 @@ export async function exportBank(id: string, opts: ExportOptions = {}): Promise<
 // Helpers shared by the generation UI
 // ------------------------------------------------------------
 
-/** Turn the form's "Mixed" choices into concrete (type, marks, difficulty, count) batches. */
+export const ALL_QUESTION_TYPES: QuestionType[] = ['MCQ', 'Short', 'Long', 'Fill', 'Match'];
+
+/**
+ * The marks a type will be generated with: the user's choice if the type allows
+ * it, else `preferred` (a saved default; only passed for a single-type request),
+ * else the type's natural value (MCQ/Fill the lowest, Long the highest, others 2).
+ */
+export function effectiveMarks(
+  type: QuestionType,
+  allowed: Marks[],
+  chosen?: Marks,
+  preferred?: Marks,
+): Marks {
+  if (chosen !== undefined && allowed.includes(chosen)) return chosen;
+  if (preferred !== undefined && allowed.includes(preferred)) return preferred;
+  if (type === 'MCQ' || type === 'Fill') return (allowed[0] ?? 1) as Marks;
+  if (type === 'Long') return (allowed[allowed.length - 1] ?? 5) as Marks;
+  return (allowed.includes(2) ? 2 : allowed[0] ?? 2) as Marks;
+}
+
+/**
+ * Turn the form into concrete (type, marks, difficulty, count) batches: `count`
+ * questions spread round-robin over every (type x difficulty) cell, varying the
+ * type fastest so even a small count touches every chosen type.
+ */
 export function planBatches(
   form: {
     questionCount: number;
-    questionType: QuestionType | 'Mixed';
+    questionTypes: QuestionType[];
     difficulty: Difficulty;
-    marksPerQuestion: Marks;
+    marksChoice: Partial<Record<QuestionType, Marks>>;
   },
   marksByType: MarksByType,
+  preferredMarks?: Marks,
 ): { type: QuestionType; marks: Marks; difficulty: QuestionDifficulty; count: number }[] {
-  const types: QuestionType[] =
-    form.questionType === 'Mixed' ? ['MCQ', 'Short', 'Long', 'Fill', 'Match'] : [form.questionType];
+  const types = ALL_QUESTION_TYPES.filter((t) => form.questionTypes.includes(t));
   const difficulties: QuestionDifficulty[] =
     form.difficulty === 'mixed' ? ['easy', 'medium', 'hard'] : [form.difficulty];
+  const preferred = types.length === 1 ? preferredMarks : undefined;
 
-  const marksFor = (t: QuestionType): Marks => {
-    const allowed = marksByType[t];
-    if (form.questionType !== 'Mixed' && allowed.includes(form.marksPerQuestion)) {
-      return form.marksPerQuestion;
-    }
-    // Mixed: use each type's natural marks value.
-    if (t === 'MCQ') return (allowed[0] ?? 1) as Marks;
-    if (t === 'Long') return (allowed[allowed.length - 1] ?? 5) as Marks;
-    return (allowed.includes(2) ? 2 : allowed[0] ?? 2) as Marks;
-  };
-
-  // Spread `count` questions across the (type x difficulty) cells, round-robin.
-  const cells = types.flatMap((type) => difficulties.map((difficulty) => ({ type, difficulty })));
+  const cells = difficulties.flatMap((difficulty) => types.map((type) => ({ type, difficulty })));
   const counts = new Array(cells.length).fill(0);
   for (let i = 0; i < form.questionCount; i++) counts[i % cells.length]++;
 
   return cells
-    .map((c, i) => ({ ...c, marks: marksFor(c.type), count: counts[i] }))
+    .map((c, i) => ({
+      ...c,
+      marks: effectiveMarks(c.type, marksByType[c.type], form.marksChoice[c.type], preferred),
+      count: counts[i],
+    }))
     .filter((b) => b.count > 0);
 }

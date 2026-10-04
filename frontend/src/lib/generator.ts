@@ -108,17 +108,17 @@ export function generateMockQuestions(formData: GenerateFormData): Question[] {
   const {
     chapter,
     questionCount,
-    questionType,
+    questionTypes,
     difficulty,
     bloomsLevel,
-    marksPerQuestion,
+    marksChoice,
   } = formData;
 
   const questions: Question[] = [];
   const difficulties: Array<'easy' | 'medium' | 'hard'> =
     difficulty === 'mixed' ? ['easy', 'medium', 'hard'] : [difficulty as 'easy' | 'medium' | 'hard'];
   const types: QuestionType[] =
-    questionType === 'Mixed' ? ['MCQ', 'Short', 'Long'] : [questionType as QuestionType];
+    questionTypes;
   const blooms: BloomsLevel[] =
     bloomsLevel === 'Mixed'
       ? ['Remember', 'Understand', 'Apply', 'Analyse', 'Evaluate', 'Create']
@@ -150,7 +150,7 @@ export function generateMockQuestions(formData: GenerateFormData): Question[] {
     }
 
     const effectiveMarks = (() => {
-      if (marksPerQuestion) return marksPerQuestion;
+      if (marksChoice[qType]) return marksChoice[qType] as Marks;
       if (qType === 'MCQ') return 1;
       if (qType === 'Short') return 2;
       return diff === 'hard' ? 5 : 3;

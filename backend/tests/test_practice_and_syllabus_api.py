@@ -218,21 +218,24 @@ async def test_chapters_can_be_filtered_by_grade(client, db_session, monkeypatch
         "_grade_chapters",
         syllabus_service._load_grade_map(settings.syllabus_json_path),
     )
+    # list_chapters filters through the loaded index, so install it for this test.
+    monkeypatch.setattr(syllabus_service, "_syllabus_index", index)
     await syllabus_service.seed_from_index(db_session, index)
     await db_session.commit()
 
     subject = SubjectEnum.SOCIAL_SCIENCE
     every = await syllabus_service.list_chapters(db_session, subject)
     grade9 = {c.name for c, _ in await syllabus_service.list_chapters(db_session, subject, 9)}
-    assert "The French Revolution" in grade9
-    assert "Tracing Changes Through a Thousand Years" not in grade9  # Grade 7
+    assert "Our Constitution" in grade9  # Grade 9
+    assert "Medieval Europe" not in grade9  # Grade 7
     assert 0 < len(grade9) < len(every)
 
-    # Subjects with no "grades" block are returned whole for any grade.
+    # Every subject in the bundled syllabus (English included) has a "grades"
+    # block, so a grade narrows the list for all of them.
     english = SubjectEnum.ENGLISH
-    assert len(await syllabus_service.list_chapters(db_session, english, 8)) == len(
-        await syllabus_service.list_chapters(db_session, english)
-    )
+    english_all = await syllabus_service.list_chapters(db_session, english)
+    english_8 = await syllabus_service.list_chapters(db_session, english, 8)
+    assert 0 < len(english_8) < len(english_all)
 
 
 async def test_grade_filter_rejects_out_of_range(client):

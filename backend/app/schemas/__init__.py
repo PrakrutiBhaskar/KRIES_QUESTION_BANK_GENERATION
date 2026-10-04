@@ -32,6 +32,7 @@ from .requests import (
     PaperPatch,
     PracticeSessionIn,
     QuestionPatch,
+    VerifyIn,
 )
 from .responses import (
     BlueprintAllocationOut,
@@ -48,6 +49,7 @@ from .responses import (
     PracticeSessionOut,
     RevealOut,
     SubjectOut,
+    VerifyOut,
 )
 
 __all__ = [
@@ -83,6 +85,8 @@ __all__ = [
     "PaperPatch",
     "PracticeSessionIn",
     "QuestionPatch",
+    "VerifyIn",
+    "VerifyOut",
     "ChapterOut",
     "CombinationOut",
     "ExportOut",

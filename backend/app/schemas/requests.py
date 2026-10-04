@@ -68,6 +68,14 @@ class GenerateIn(BaseModel):
         return v.strip()
 
 
+class VerifyIn(BaseModel):
+    """POST /questions/verify — check the answer keys of stored questions."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    question_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+
+
 class QuestionPatch(BaseModel):
     """
     PATCH /questions/{id} — teacher curation.
@@ -77,10 +85,11 @@ class QuestionPatch(BaseModel):
     subjects would invalidate the marks/format rules it was generated and
     validated under. Re-generate instead.
 
-    `answer` is NOT editable either: the answer key is checked when a question
-    is generated (see "Answer verification" in docs/api-contract.md), and a
-    hand-edited key would carry a "verified" badge for an answer nobody
-    checked. To get a different answer, generate the question again.
+    `answer` is NOT editable either: the answer key is checked by "Verify
+    answers" (POST /questions/verify, see "Answer verification" in
+    docs/api-contract.md), and a hand-edited key would carry a "verified"
+    badge for an answer nobody checked. To get a different answer, generate
+    the question again.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -103,9 +112,9 @@ class QuestionPatch(BaseModel):
         if isinstance(data, dict) and "answer" in data:
             raise PydanticCustomError(
                 "answer_read_only",
-                "answer cannot be edited: the answer key is verified when the "
-                "question is generated. Generate the question again for a "
-                "different answer.",
+                "answer cannot be edited: the answer key is checked by the "
+                "verification step, so a hand-edited key would be unchecked. "
+                "Generate the question again for a different answer.",
             )
         return data
 

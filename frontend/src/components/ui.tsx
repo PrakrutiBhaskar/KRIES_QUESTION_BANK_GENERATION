@@ -76,35 +76,6 @@ export function SubjectDot({ subject }: { subject: string }) {
 }
 
 // ============================================================
-// Generic stat card
-// ============================================================
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  trend?: string;
-  trendUp?: boolean;
-  color?: string;
-}
-
-export function StatCard({ label, value, icon, trend, trendUp, color = 'bg-indigo-50 text-indigo-600' }: StatCardProps) {
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 flex items-start gap-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className={`p-3 rounded-lg ${color}`}>{icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-500 font-medium">{label}</p>
-        <p className="text-2xl font-bold text-slate-900 mt-0.5">{value}</p>
-        {trend && (
-          <p className={`text-xs mt-1 ${trendUp ? 'text-emerald-600' : 'text-red-500'}`}>
-            {trendUp ? '↑' : '↓'} {trend}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
 // Empty state
 // ============================================================
 interface EmptyStateProps {

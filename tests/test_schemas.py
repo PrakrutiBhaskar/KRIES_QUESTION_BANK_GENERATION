@@ -43,9 +43,14 @@ def test_mcq_requires_justification():
         make_mcq(explanation="")
 
 
-def test_mcq_must_be_1_mark():
+@pytest.mark.parametrize("marks", [1, 2, 3, 5])
+def test_mcq_can_carry_any_mark_on_the_scale(marks):
+    assert make_mcq(marks=marks).marks == marks
+
+
+def test_mcq_rejects_a_mark_off_the_scale():
     with pytest.raises(ValidationError):
-        make_mcq(marks=2)
+        make_mcq(marks=4)
 
 
 def test_non_mcq_cannot_carry_options():
@@ -67,7 +72,7 @@ def test_non_mcq_cannot_carry_options():
     "qtype,valid_marks,invalid_mark",
     [
         (QuestionType.SHORT, {1, 2, 3}, 5),
-        (QuestionType.LONG, {5}, 3),
+        (QuestionType.LONG, {3, 5}, 2),
     ],
 )
 def test_marks_must_match_type(qtype, valid_marks, invalid_mark):

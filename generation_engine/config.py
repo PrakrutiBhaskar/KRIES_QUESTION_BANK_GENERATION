@@ -156,7 +156,8 @@ class Settings:
     enable_answer_rule_checks: bool = field(
         default_factory=_env_bool("ENABLE_ANSWER_RULE_CHECKS", True)
     )
-    # Second AI pass: one extra Groq call per batch (per chunk of questions).
+    # Second AI pass: one extra Groq call per chunk of questions, made only when
+    # the teacher clicks "Verify answers" (never during generation).
     enable_llm_answer_verification: bool = field(
         default_factory=_env_bool("ENABLE_LLM_ANSWER_VERIFICATION", True)
     )

@@ -2,6 +2,7 @@
 Generation and question-bank endpoints.
 
   POST   /generate            api-contract.md Section 1
+  POST   /questions/verify    check answer keys (the "Verify answers" button)
   GET    /generation/combinations   not in the contract; see docstring below
   GET    /questions           api-contract.md Section 2
   GET    /questions/{id}
@@ -29,6 +30,8 @@ from ..schemas import (
     Page,
     QuestionOut,
     QuestionPatch,
+    VerifyIn,
+    VerifyOut,
 )
 from ..services import generation as generation_service
 from ..services import questions as question_service
@@ -59,6 +62,35 @@ async def generate(
         cached=cached,
         generated=generated,
         report=report,
+    )
+
+
+@router.post(
+    "/questions/verify",
+    response_model=VerifyOut,
+    summary="Verify the answer keys of generated questions",
+    description=(
+        "Checks each question's answer key (rule checks, then an independent AI "
+        "pass) and stores the result as `verification_status` / "
+        "`verification_note`. Generation does not do this: it is a separate "
+        "step, started by the \"Verify answers\" button."
+    ),
+    responses={
+        404: {"model": ErrorOut, "description": "A question id does not exist"},
+    },
+)
+async def verify_questions(
+    payload: VerifyIn,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> VerifyOut:
+    rows = await generation_service.verify_questions(session, payload.question_ids)
+    out = [QuestionOut.from_model(r) for r in rows]
+    return VerifyOut(
+        questions=out,
+        verified=sum(q.verification_status == "verified" for q in out),
+        unverified=sum(q.verification_status == "unverified" for q in out),
+        flagged=sum(q.verification_status == "flagged" for q in out),
     )
 
 

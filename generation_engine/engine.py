@@ -2,9 +2,13 @@
 GenerationEngine — the Module A entry point.
 
 Orchestrates: request validation -> prompt building -> Groq call -> schema
-validation -> duplicate check -> marks-format check -> answer-key verification
-(rule checks + an independent AI pass) -> retry-to-fill on failures -> a clean
-batch of exactly `request.count` validated Questions.
+validation -> duplicate check -> marks-format check -> retry-to-fill on
+failures -> a clean batch of exactly `request.count` validated Questions.
+
+Answer-key verification (rule checks + an independent AI pass) is NOT part of
+generation. It is a separate, on-demand step: `verify_answers()` below, which
+Module B exposes as `POST /questions/verify` and the UI triggers from a
+"Verify answers" button once questions have been generated.
 
 This is what Module B's `POST /generate` handler calls.
 
@@ -19,7 +23,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-from .answer_verification import FLAGGED, REJECTED, VERIFIED, verify_questions
+from .answer_verification import FLAGGED, REJECTED, verify_questions
 from .config import settings
 from .difficulty import flag_difficulty_mismatch
 from .exceptions import GenerationValidationError, GroqAPIError, InvalidRequestError
@@ -58,11 +62,6 @@ class GenerationReport:
     passages_total: int = 0
     passages_used: list[str] = field(default_factory=list)
     dropped_figure_invalid: int = 0  # figure questions that contradicted their metadata
-    # Answer-key verification
-    answers_verified: int = 0
-    answers_unverified: int = 0
-    dropped_wrong_answer: int = 0  # keys found wrong; replaced by regeneration
-    flagged_kept: int = 0  # wrong-looking keys kept as a last resort, flagged
     difficulty_warnings: list[str] = field(default_factory=list)
     rejection_reasons: list[str] = field(default_factory=list)
 
@@ -80,10 +79,6 @@ class GenerationReport:
             "passages_total": self.passages_total,
             "passages_used": list(self.passages_used),
             "dropped_figure_invalid": self.dropped_figure_invalid,
-            "answers_verified": self.answers_verified,
-            "answers_unverified": self.answers_unverified,
-            "dropped_wrong_answer": self.dropped_wrong_answer,
-            "flagged_kept": self.flagged_kept,
             "difficulty_warnings": list(self.difficulty_warnings),
             "rejection_reasons": list(self.rejection_reasons),
         }
@@ -108,7 +103,7 @@ class GenerationEngine:
         self.require_textbook = (
             settings.require_textbook if require_textbook is None else require_textbook
         )
-        # The second AI pass. A different model gives a more independent opinion
+        # The second AI pass, run only when `verify_answers()` is called. A different model gives a more independent opinion
         # (VERIFIER_MODEL); when the caller supplied their own client, or no
         # separate model is configured, the generating client does both jobs.
         if verifier_client is not None:
@@ -154,9 +149,6 @@ class GenerationEngine:
         issued = 0  # passages handed out so far; retries move on to fresh ones
 
         accepted: list[Question] = []
-        # Questions whose answer key looked wrong. They are replaced by
-        # regeneration; only if that fails do they fill the batch, flagged.
-        held_back: list[Question] = []
         report = GenerationReport(
             requested_count=request.count, returned_count=0, attempts=0
         )
@@ -266,12 +258,6 @@ class GenerationEngine:
             if settings.enable_llm_relevance_check and surviving:
                 surviving = await self._filter_by_llm_relevance(surviving, report)
 
-            # answer-key verification: rule checks + independent AI pass
-            if surviving and (
-                settings.enable_answer_rule_checks or settings.enable_llm_answer_verification
-            ):
-                surviving = await self._verify_answers(surviving, report, held_back, feedback)
-
             for q in surviving:
                 warning = flag_difficulty_mismatch(q)
                 if warning:
@@ -279,19 +265,6 @@ class GenerationEngine:
 
             accepted.extend(surviving[:remaining])
             remaining = request.count - len(accepted)
-
-        # Out of retries with questions still missing: rather than failing the
-        # whole request, fill with the ones whose keys looked wrong, clearly
-        # flagged so the teacher reviews them. A wrong key is never passed off
-        # as verified.
-        if len(accepted) < request.count and held_back:
-            for q in held_back:
-                if len(accepted) >= request.count:
-                    break
-                if find_duplicates(accepted + [q]):
-                    continue
-                accepted.append(q)
-                report.flagged_kept += 1
 
         report.returned_count = len(accepted)
 
@@ -305,7 +278,6 @@ class GenerationEngine:
                 f"{report.dropped_out_of_syllabus} out-of-syllabus, "
                 f"{report.dropped_ungrounded} ungrounded, "
                 f"{report.dropped_figure_invalid} contradicting their figure, "
-                f"{report.dropped_wrong_answer} with a wrong answer key, "
                 f"{report.dropped_duplicates} duplicates.",
                 context={"report": report.as_dict()},
             )
@@ -345,14 +317,25 @@ class GenerationEngine:
             return None
         return passages[idx - 1] if 1 <= idx <= len(passages) else None
 
-    async def _verify_answers(
-        self,
-        questions: list[Question],
-        report: GenerationReport,
-        held_back: list[Question],
-        feedback: list[str],
-    ) -> list[Question]:
-        """Stamp each question verified / unverified; set wrong-keyed ones aside."""
+    async def verify_answers(self, questions: list[Question]) -> list[Question]:
+        """
+        Check the answer keys of already-generated questions (on demand).
+
+        Rule checks first, then an independent AI pass for whatever the rules
+        could not decide (see answer_verification.py). Returns one copy of each
+        input question, in order, stamped with `verification_status`:
+
+          verified    a rule confirmed the key, or the AI pass reached the same answer
+          unverified  nothing could be checked (no rule applies, the AI pass was
+                      not confident, or it failed)
+          flagged     a rule or the AI pass found the key wrong
+
+        Never raises: an AI-pass failure just leaves questions "unverified".
+        Unlike generation, nothing is dropped or regenerated here — a flagged
+        question is reported to the teacher, who can regenerate or delete it.
+        """
+        if not questions:
+            return []
         results = await verify_questions(
             questions,
             client=self.verifier_client,
@@ -360,36 +343,17 @@ class GenerationEngine:
             use_llm=settings.enable_llm_answer_verification,
             chunk_size=settings.verification_chunk_size,
         )
-        kept: list[Question] = []
+        out: list[Question] = []
         for q, result in zip(questions, results):
-            if result.status == REJECTED:
-                report.dropped_wrong_answer += 1
-                reason = f"answer key rejected: {result.note}"
-                report.rejection_reasons.append(reason)
-                feedback.append(
-                    f"a question's answer key was wrong ({result.note}) — "
-                    "double-check every calculation and fact in the answer keys"
-                )
-                logger.warning("Answer verification rejected %r: %s", q.text[:60], result.note)
-                held_back.append(
-                    q.model_copy(
-                        update={"verification_status": FLAGGED, "verification_note": result.note}
-                    )
-                )
-                continue
-            if result.status == VERIFIED:
-                report.answers_verified += 1
-            else:
-                report.answers_unverified += 1
-            kept.append(
+            status = FLAGGED if result.status == REJECTED else result.status
+            if status == FLAGGED:
+                logger.warning("Answer verification flagged %r: %s", q.text[:60], result.note)
+            out.append(
                 q.model_copy(
-                    update={
-                        "verification_status": result.status,
-                        "verification_note": result.note,
-                    }
+                    update={"verification_status": status, "verification_note": result.note}
                 )
             )
-        return kept
+        return out
 
     @staticmethod
     def _summarize(error: str, limit: int = 200) -> str:

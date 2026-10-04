@@ -46,24 +46,29 @@ VALID_MARKS = {1, 2, 3, 5}
 # validation stay in step with whatever the caller actually asked for.
 VALID_GRADES = {7, 8, 9}
 
-# Which marks are valid for which question type.
+# Which marks are valid for which question type: every combination that is
+# logically possible, and nothing that contradicts the format itself.
 #
-# - MCQ is fixed at 1 mark (spec.md Section 7: "MCQs ... typically fixed at
-#   1 mark").
-# - Short answer covers the 1-, 2- and 3-mark formats. The 1-mark descriptive
-#   case is explicitly required by spec.md Section 7 — the mark-scheme table
-#   gives non-MCQ 1-mark examples for every subject ("What is the SI unit of
-#   force?" -> Newton), and Module A lists "1 mark -> direct one-line answer,
-#   no explanation" as a bullet separate from the MCQ rule.
-# - Long answer is the 5-mark, exam-response format (prompt-library.md).
-# - Fill in the blank is a 1-mark item with exactly one blank.
+# - MCQ: picking one of four options can be weighted at any mark value; the
+#   higher values simply ask for more demanding (multi-step / application) items.
+# - Short answer covers the 1-, 2- and 3-mark formats. Beyond 3 marks an answer
+#   is no longer "short" (that is the Long format).
+# - Long answer is an extended, structured response: 3 or 5 marks. A 1- or
+#   2-mark "long answer" is a contradiction in terms.
+# - Fill in the blank has exactly one blank; like an MCQ it can carry any weight.
 # - Match the following is one mark per pair, so a 3-mark question has 3 pairs
-#   and a 5-mark question has 5 (the mark scale has no 4).
+#   and a 5-mark question has 5 (the mark scale has no 4). A 1-mark match has no
+#   pair to match, and a 2-pair match is degenerate (the second answer follows
+#   from the first), so Match starts at 3.
+#
+# This table is the single source of truth: the prompt templates, the
+# /generation/combinations endpoint, blueprint validation and the UI selectors
+# all derive from it.
 VALID_MARKS_BY_TYPE = {
-    QuestionType.MCQ: {1},
+    QuestionType.MCQ: {1, 2, 3, 5},
     QuestionType.SHORT: {1, 2, 3},
-    QuestionType.LONG: {5},
-    QuestionType.FILL: {1},
+    QuestionType.LONG: {3, 5},
+    QuestionType.FILL: {1, 2, 3, 5},
     QuestionType.MATCH: {3, 5},
 }
 
@@ -220,8 +225,6 @@ class Question(BaseModel):
                 raise ValueError(
                     "MCQ questions require a 1-line justification (explanation)"
                 )
-            if self.marks != 1:
-                raise ValueError("MCQ questions must be worth 1 mark")
         elif self.type == QuestionType.MATCH:
             self._check_match_shape()
         else:

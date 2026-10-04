@@ -23,7 +23,7 @@
     {
       "file": "02-respiration-word-equations.png",
       "subject": "Science",
-      "chapter": "Respiration in Organisms",
+      "chapter": "Life Processes in Animals",
       "topic": "Aerobic and anaerobic respiration",
       "caption": "Word equations for respiration: glucose with oxygen gives carbon dioxide, water and energy; glucose without oxygen gives alcohol, carbon dioxide and energy",
       "labels": []
@@ -31,7 +31,7 @@
     {
       "file": "03-distance-time-constant-speed.png",
       "subject": "Science",
-      "chapter": "Motion and Time",
+      "chapter": "Measurement of Time and Motion",
       "topic": "Distance-time graphs",
       "caption": "Distance-time graph of a car moving at constant speed (a straight sloping line)",
       "labels": [
@@ -42,7 +42,7 @@
     {
       "file": "04-distance-time-car-parked.png",
       "subject": "Science",
-      "chapter": "Motion and Time",
+      "chapter": "Measurement of Time and Motion",
       "topic": "Distance-time graphs",
       "caption": "Distance-time graph of a car parked on a side road (a horizontal line)",
       "labels": [
@@ -53,7 +53,7 @@
     {
       "file": "05-circuit-two-cells-bulb-gap.png",
       "subject": "Science",
-      "chapter": "Electric Current and Its Effects",
+      "chapter": "Electricity: Circuits and their Components",
       "topic": "Electric circuits",
       "caption": "Electric circuit with a bulb, two cells in series and a gap between two terminals in the wire",
       "labels": [
@@ -65,7 +65,7 @@
     {
       "file": "06-circuit-bulb-switch.png",
       "subject": "Science",
-      "chapter": "Electric Current and Its Effects",
+      "chapter": "Electricity: Circuits and their Components",
       "topic": "Electric circuits",
       "caption": "Electric circuit with a bulb, a switch and a source of current",
       "labels": [
@@ -77,7 +77,7 @@
     {
       "file": "07-circuit-three-bulbs-switch.png",
       "subject": "Science",
-      "chapter": "Electric Current and Its Effects",
+      "chapter": "Electricity: Circuits and their Components",
       "topic": "Electric circuits",
       "caption": "Electric circuit with a battery, an open switch and three bulbs A, B and C in series",
       "labels": [
@@ -91,7 +91,7 @@
     {
       "file": "08-circuit-bulb-glowing.png",
       "subject": "Science",
-      "chapter": "Electric Current and Its Effects",
+      "chapter": "Electricity: Circuits and their Components",
       "topic": "Electric circuits",
       "caption": "Circuit diagram of an electric circuit with a cell, a glowing bulb and a closed switch",
       "labels": [
@@ -103,7 +103,7 @@
     {
       "file": "09-pitcher-plant-morphology.png",
       "subject": "Science",
-      "chapter": "Nutrition in Plants",
+      "chapter": "Life Processes in Plants",
       "topic": "Insectivorous plants",
       "caption": "Pitcher plant morphology, with a detail of the pitcher showing its carnivorous adaptation",
       "labels": [
@@ -120,7 +120,7 @@
     {
       "file": "10-photosynthesis-pathway.png",
       "subject": "Science",
-      "chapter": "Nutrition in Plants",
+      "chapter": "Life Processes in Plants",
       "topic": "Photosynthesis",
       "caption": "Photosynthesis pathway: cross-section of a leaf, chloroplast, stomata and the overall reaction",
       "labels": [
@@ -139,7 +139,7 @@
     {
       "file": "11-animal-cell-epithelial.png",
       "subject": "Science",
-      "chapter": "Nutrition in Animals",
+      "chapter": "Life Processes in Animals",
       "topic": "Animal cell",
       "caption": "Animal cell structure as seen in epithelial tissue",
       "labels": [
@@ -172,7 +172,7 @@
     {
       "file": "13-ruminant-digestion.png",
       "subject": "Science",
-      "chapter": "Nutrition in Animals",
+      "chapter": "Life Processes in Animals",
       "topic": "Digestion in ruminants",
       "caption": "Digestive system of a ruminant (cow)",
       "labels": [
@@ -186,7 +186,7 @@
     {
       "file": "14-peristalsis-alimentary-canal.png",
       "subject": "Science",
-      "chapter": "Nutrition in Animals",
+      "chapter": "Life Processes in Animals",
       "topic": "Digestion in humans",
       "caption": "Movement of food in the alimentary canal by peristalsis",
       "labels": [
@@ -199,7 +199,7 @@
     {
       "file": "15-human-digestive-system.png",
       "subject": "Science",
-      "chapter": "Nutrition in Animals",
+      "chapter": "Life Processes in Animals",
       "topic": "Digestion in humans",
       "caption": "Human digestive system (Fig. 2.2)",
       "labels": [
@@ -219,7 +219,7 @@
     {
       "file": "16-amoeba-feeding.png",
       "subject": "Science",
-      "chapter": "Nutrition in Animals",
+      "chapter": "Life Processes in Animals",
       "topic": "Nutrition in amoeba",
       "caption": "Amoeba's feeding process: ingestion, digestion and egestion",
       "labels": [
@@ -233,7 +233,7 @@
     {
       "file": "17-photosynthesis-schematic.png",
       "subject": "Science",
-      "chapter": "Nutrition in Plants",
+      "chapter": "Life Processes in Plants",
       "topic": "Photosynthesis",
       "caption": "Schematic diagram showing photosynthesis in a plant",
       "labels": [
@@ -247,7 +247,7 @@
     {
       "file": "18-lime-water-co2-setup.png",
       "subject": "Science",
-      "chapter": "Physical and Chemical Changes",
+      "chapter": "Changes Around Us: Physical and Chemical",
       "topic": "Chemical changes",
       "caption": "Set-up to pass the gas from vinegar and baking soda through lime water",
       "labels": [
@@ -259,7 +259,7 @@
     {
       "file": "19-heat-flow-metal-strip.png",
       "subject": "Science",
-      "chapter": "Heat",
+      "chapter": "Heat Transfer in Nature",
       "topic": "Conduction",
       "caption": "Flow of heat through a metal strip with wax drops falling as it melts",
       "labels": []
@@ -267,7 +267,7 @@
     {
       "file": "20-lab-thermometer-water.png",
       "subject": "Science",
-      "chapter": "Heat",
+      "chapter": "Heat Transfer in Nature",
       "topic": "Measuring temperature",
       "caption": "Fig. 4.5: Measuring the temperature of water with a laboratory thermometer",
       "labels": []
@@ -275,7 +275,7 @@
     {
       "file": "21-clinical-thermometer.png",
       "subject": "Science",
-      "chapter": "Heat",
+      "chapter": "Heat Transfer in Nature",
       "topic": "Measuring temperature",
       "caption": "Fig. 4.2: A clinical thermometer, with a magnified view of the scale at 37",
       "labels": []
@@ -283,7 +283,7 @@
     {
       "file": "22-convection-heating-water.png",
       "subject": "Science",
-      "chapter": "Heat",
+      "chapter": "Heat Transfer in Nature",
       "topic": "Convection",
       "caption": "Fig. 4.14: Heating water by convection",
       "labels": []
@@ -306,7 +306,7 @@
     {
       "file": "24-mechanical-clock.png",
       "subject": "Science",
-      "chapter": "Motion and Time",
+      "chapter": "Measurement of Time and Motion",
       "topic": "Measuring time",
       "caption": "A mechanical clock showing its gears",
       "labels": [],
@@ -315,7 +315,7 @@
     {
       "file": "25-sundial.png",
       "subject": "Science",
-      "chapter": "Motion and Time",
+      "chapter": "Measurement of Time and Motion",
       "topic": "Measuring time",
       "caption": "A sundial",
       "labels": [],
@@ -324,7 +324,7 @@
     {
       "file": "26-human-excretory-system.png",
       "subject": "Science",
-      "chapter": "Transportation in Animals and Plants",
+      "chapter": "Life Processes in Animals",
       "topic": "Excretion",
       "caption": "Human excretory system",
       "labels": [
@@ -338,7 +338,7 @@
     {
       "file": "27-heart-sections.png",
       "subject": "Science",
-      "chapter": "Transportation in Animals and Plants",
+      "chapter": "Life Processes in Animals",
       "topic": "Heart",
       "caption": "Sections of the human heart",
       "labels": [
@@ -356,7 +356,7 @@
     {
       "file": "28-breathing-mechanism.png",
       "subject": "Science",
-      "chapter": "Respiration in Organisms",
+      "chapter": "Life Processes in Animals",
       "topic": "Breathing",
       "caption": "Mechanism of breathing in human beings: inhalation and exhalation",
       "labels": [
@@ -369,7 +369,7 @@
     {
       "file": "29-human-respiratory-system.png",
       "subject": "Science",
-      "chapter": "Respiration in Organisms",
+      "chapter": "Life Processes in Animals",
       "topic": "Breathing",
       "caption": "Human respiratory system",
       "labels": [
@@ -423,7 +423,7 @@
     {
       "file": "33-blood-circulation-body-a.png",
       "subject": "Science",
-      "chapter": "Transportation in Animals and Plants",
+      "chapter": "Life Processes in Animals",
       "topic": "Circulation of blood",
       "caption": "Blood circulation in the human body showing the heart, a vein and an artery",
       "labels": [
@@ -436,7 +436,7 @@
     {
       "file": "34-blood-circulation-body-b.png",
       "subject": "Science",
-      "chapter": "Transportation in Animals and Plants",
+      "chapter": "Life Processes in Animals",
       "topic": "Circulation of blood",
       "caption": "Blood circulation in the human body showing the heart, a vein and an artery",
       "labels": [
@@ -449,7 +449,7 @@
     {
       "file": "35-circulation-schematic.png",
       "subject": "Science",
-      "chapter": "Transportation in Animals and Plants",
+      "chapter": "Life Processes in Animals",
       "topic": "Circulation of blood",
       "caption": "Schematic of blood circulation: heart, pulmonary artery and vein, artery, vein and capillaries",
       "labels": [
@@ -515,7 +515,7 @@
     {
       "file": "41-simple-electric-circuit.png",
       "subject": "Science",
-      "chapter": "Electric Current and Its Effects",
+      "chapter": "Electricity: Circuits and their Components",
       "topic": "Electric circuits",
       "caption": "Simple electric circuit with a cell, a switch and a bulb",
       "labels": [
@@ -527,7 +527,7 @@
     {
       "file": "42-simple-pendulum-positions.png",
       "subject": "Science",
-      "chapter": "Motion and Time",
+      "chapter": "Measurement of Time and Motion",
       "topic": "Simple pendulum",
       "caption": "Simple pendulum and its different positions",
       "labels": [

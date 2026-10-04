@@ -21,9 +21,12 @@ Each question ends in one of three states:
   verified    a rule confirmed the key, or the AI pass reached the same answer
   unverified  nothing could be checked (no rule applies, the AI pass was not
               confident, or it failed). Kept: the key is merely unconfirmed.
-  rejected    a rule or the AI pass found the key wrong. The engine drops it
-              and generates a replacement (see engine.py), keeping it only as
-              a clearly-flagged last resort if replacements can't be found.
+  rejected    a rule or the AI pass found the key wrong. The engine reports it
+              as "flagged" (see GenerationEngine.verify_answers); the teacher
+              decides whether to regenerate or delete it.
+
+Verification runs on demand (the "Verify answers" button), not during
+generation, so generating questions never waits for it.
 
 The AI pass fails open: a Groq error means "unverified", never a failed
 request. Rule hits are final (no AI pass is spent on a question a rule already
@@ -43,7 +46,7 @@ logger = logging.getLogger("generation_engine.verification")
 
 VERIFIED = "verified"
 UNVERIFIED = "unverified"
-REJECTED = "rejected"  # engine-internal: becomes "flagged" if it has to be kept
+REJECTED = "rejected"  # engine-internal: reported as "flagged"
 FLAGGED = "flagged"
 
 _LETTERS = "ABCD"

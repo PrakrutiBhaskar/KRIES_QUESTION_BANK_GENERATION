@@ -372,6 +372,11 @@ async def test_the_answer_verifier_is_told_what_the_figure_shows(client, admin_c
     await add_figure(admin_client)
     r = await generate(client, use_figures=True, count=2)
     assert r.status_code == 200, r.text
+    assert groq_stub.verification_calls == []  # generation does not verify
+    verified = await client.post(
+        "/questions/verify", json={"question_ids": [q["id"] for q in r.json()["questions"]]}
+    )
+    assert verified.status_code == 200, verified.text
     verifier_prompt = groq_stub.verification_calls[0][1]
     assert '"figure": "Caption: Plant cell' in verifier_prompt
     assert "A: nucleus" in verifier_prompt

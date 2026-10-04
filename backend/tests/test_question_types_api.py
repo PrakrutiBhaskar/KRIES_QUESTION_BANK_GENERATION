@@ -36,15 +36,16 @@ def option_for(question: dict, number: int) -> str:
 
 async def test_combinations_list_the_new_types(client):
     rows = {r["type"]: r["marks"] for r in (await client.get("/generation/combinations")).json()}
-    assert rows["Fill"] == [1]
+    assert rows["Fill"] == [1, 2, 3, 5]
     assert rows["Match"] == [3, 5]
-    # the original three are untouched
-    assert rows["MCQ"] == [1] and rows["Short"] == [1, 2, 3] and rows["Long"] == [5]
+    assert rows["MCQ"] == [1, 2, 3, 5]
+    assert rows["Short"] == [1, 2, 3]
+    assert rows["Long"] == [3, 5]
 
 
 @pytest.mark.parametrize(
     "q_type,marks",
-    [("Fill", 2), ("Fill", 5), ("Match", 1), ("Match", 2), ("Match", 4), ("MCQ", 3)],
+    [("Fill", 4), ("Match", 1), ("Match", 2), ("Match", 4), ("MCQ", 4), ("Long", 1), ("Short", 5)],
 )
 async def test_unsupported_marks_for_the_new_types_are_a_400(client, groq_stub, q_type, marks):
     body = {
@@ -267,7 +268,7 @@ async def test_blueprint_sections_can_use_the_new_types(client):
 
 
 @pytest.mark.parametrize(
-    "q_type,marks", [("Fill", 2), ("Match", 2), ("Match", 4)]
+    "q_type,marks", [("Fill", 4), ("Match", 2), ("Match", 4), ("Long", 2)]
 )
 async def test_blueprint_rejects_marks_the_type_does_not_support(client, groq_stub, q_type, marks):
     body = {

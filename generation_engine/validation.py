@@ -564,7 +564,10 @@ def check_marks_format(question: Question) -> list[str]:
     if question.type == QuestionType.FILL:
         problems.extend(_check_fill_format(question))
 
-    rule = get_marks_rule(question.subject, question.marks)
+    # A fill-in-the-blank answer is always a word or short phrase, whatever
+    # the question is worth, so it is held to the 1-mark answer shape.
+    rule_marks = 1 if question.type == QuestionType.FILL else question.marks
+    rule = get_marks_rule(question.subject, rule_marks)
     points = _split_points(answer)
     label = f"{question.marks}-mark answer"
 

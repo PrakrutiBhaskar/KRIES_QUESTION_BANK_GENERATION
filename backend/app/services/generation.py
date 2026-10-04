@@ -25,12 +25,18 @@ about by a short reference; the engine maps that back to the real figure id and
 `persist_batch` stores it, so the model never sees or invents an image or an id.
 A figure request is served from stored questions only when they use one of the
 chosen figures.
+
+Answer-key verification is not part of generation. `verify_questions` below is
+a separate, on-demand step (POST /questions/verify, the "Verify answers" button):
+generation stays fast and returns questions as "unverified" until someone asks.
 """
 from __future__ import annotations
 
 import logging
 import uuid
+from typing import Sequence
 
+from pydantic import ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,9 +48,10 @@ from generation_engine.exceptions import (
 )
 from generation_engine.config import settings as engine_settings
 from generation_engine.schemas import GenerationRequest
+from generation_engine.schemas import Question as EngineQuestion
 
 from ..config import settings
-from ..errors import BadRequestError, UnprocessableError, UpstreamError
+from ..errors import BadRequestError, NotFoundError, UnprocessableError, UpstreamError
 from ..models import Question
 from ..schemas.requests import GenerateIn
 from . import figures as figure_service
@@ -282,3 +289,74 @@ async def generate_questions(
             seen.add(row.id)
 
     return combined[: payload.count], len(cached), len(stored), report.as_dict()
+
+
+# ---------------------------------------------------------------------------
+# On-demand answer-key verification
+# ---------------------------------------------------------------------------
+
+_UNCHECKABLE_NOTE = "Could not be checked: the stored question is not in a checkable format."
+
+
+def _to_engine_question(row: Question) -> EngineQuestion:
+    """The stored row as Module A's Question, with the figure's text description."""
+    figure_context = (
+        figure_service.to_context(row.figure).describe() if row.figure is not None else None
+    )
+    return EngineQuestion(
+        id=str(row.id),
+        subject=row.subject.name,
+        chapter=row.chapter.name,
+        type=row.type,
+        grade=row.grade,
+        text=row.text,
+        options=list(row.options) if row.options else None,
+        answer=row.answer,
+        explanation=row.explanation or "",
+        marks=row.marks,
+        difficulty=row.difficulty,
+        topic=row.topic or "",
+        tags=list(row.tags or []),
+        figure_id=str(row.figure_id) if row.figure_id else None,
+        figure_context=figure_context,
+    )
+
+
+async def verify_questions(
+    session: AsyncSession, question_ids: Sequence[uuid.UUID]
+) -> list[Question]:
+    """
+    Check the answer keys of stored questions and save the result on each row.
+
+    Rule checks run first, then (if enabled) one independent AI pass per chunk
+    for whatever the rules couldn't decide. This never fails because the AI
+    pass did: a Groq error just leaves those questions "unverified".
+
+    Any signed-in user may verify any stored question: the result is metadata
+    about the answer key, not an edit to the question, and the pool is shared.
+    Returns the rows in the order requested.
+    """
+    ids = list(dict.fromkeys(question_ids))  # de-duplicate, keep order
+    rows_by_id = await question_service.get_questions_by_ids(session, ids)
+    missing = [str(i) for i in ids if i not in rows_by_id]
+    if missing:
+        raise NotFoundError(f"Question(s) not found: {', '.join(missing)}.")
+    rows = [rows_by_id[i] for i in ids]
+
+    checkable: list[tuple[Question, EngineQuestion]] = []
+    for row in rows:
+        try:
+            checkable.append((row, _to_engine_question(row)))
+        except ValidationError:
+            logger.warning("Question %s cannot be verified: invalid stored shape", row.id)
+            row.verification_status = "unverified"
+            row.verification_note = _UNCHECKABLE_NOTE
+
+    if checkable:
+        checked = await get_engine().verify_answers([eq for _, eq in checkable])
+        for (row, _), result in zip(checkable, checked):
+            row.verification_status = result.verification_status
+            row.verification_note = result.verification_note
+
+    await session.flush()
+    return rows

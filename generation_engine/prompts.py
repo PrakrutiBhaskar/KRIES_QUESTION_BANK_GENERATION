@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .schemas import GenerationRequest, QuestionType, figure_ref_map
+from .schemas import VALID_MARKS_BY_TYPE, GenerationRequest, QuestionType, figure_ref_map
 from .subject_formats import get_prompt_note
 
 # ---------------------------------------------------------------------------
@@ -204,14 +204,32 @@ include any text before or after the JSON object."""
 # Per-(type, marks) templates
 # ---------------------------------------------------------------------------
 
-def _prompt_mcq_1_mark(request: GenerationRequest) -> str:
+def _weight_note(marks: int, what: str) -> str:
+    """Extra depth guidance for a single-pick item that is worth more than 1 mark."""
+    if marks == 1:
+        return ""
+    return (
+        f"\n\nEach {what} is worth {marks} marks, so it must be correspondingly "
+        f"more demanding than a 1-mark item: {_DEPTH_BY_MARKS[marks]} Still "
+        "keep it to a single, unambiguous answer."
+    )
+
+
+_DEPTH_BY_MARKS = {
+    2: "test understanding or a simple application rather than bare recall.",
+    3: "require a short chain of reasoning or a multi-step application.",
+    5: "require analysis or a multi-step application that combines ideas from the chapter.",
+}
+
+
+def _prompt_mcq(request: GenerationRequest) -> str:
     return f"""Generate {request.count} multiple-choice questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}.
 
 For each question return:
 - question text
 - exactly 4 options (no duplicates, exactly one of them correct)
 - the correct option, copied verbatim into "answer"
-- a 1-line justification for the correct answer in "explanation\""""
+- a 1-line justification for the correct answer in "explanation\"""" + _weight_note(request.marks, "question")
 
 
 def _prompt_short_1_mark(request: GenerationRequest) -> str:
@@ -236,7 +254,13 @@ def _prompt_long_5_marks(request: GenerationRequest) -> str:
 Structure the answer explicitly inside the "answer" string — numbered steps each on their own line ("1. ... 2. ... 3. ..."), or labeled sections ("Causes: ... Effects: ...") — rather than leaving the structure implicit in a single paragraph."""
 
 
-def _prompt_fill_1_mark(request: GenerationRequest) -> str:
+def _prompt_long_3_marks(request: GenerationRequest) -> str:
+    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. These are long-answer (explain / describe / discuss) questions worth 3 marks: each answer must be a structured response with EXACTLY 3 distinct points or steps, each developed in a full sentence, matching how a 3-mark extended answer is evaluated on a Karnataka State Board exam.
+
+Number the three points "1. ", "2. ", "3. " inside each object's "answer" string, each on its own line. This numbering has nothing to do with how many objects are in the outer array (that count is always {request.count}, one object per question). Do not merge two points into one, and do not add a fourth."""
+
+
+def _prompt_fill(request: GenerationRequest) -> str:
     return f"""Generate {request.count} fill-in-the-blank questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}.
 
 Each question is one complete sentence (two short sentences at most) with exactly ONE blank, written as five underscores (_____), standing in for a key word or short phrase that the chapter teaches.
@@ -244,7 +268,7 @@ Each question is one complete sentence (two short sentences at most) with exactl
 - "answer" is only the missing word or phrase (one to three words), exactly as it would fill the blank. No explanation, no full sentence.
 - Never leave the answer, or another form of it, elsewhere in the sentence.
 - Do not blank out an article, preposition or other trivial word, and do not use more than one blank or numbered blanks.
-- Leave "explanation" as an empty string."""
+- Leave "explanation" as an empty string.""" + _weight_note(request.marks, "question")
 
 
 def _match_prompt(request: GenerationRequest) -> str:
@@ -262,24 +286,28 @@ Rules:
 - Do not return an "answer" or "explanation"."""
 
 
-def _prompt_match_3_marks(request: GenerationRequest) -> str:
-    return _match_prompt(request)
-
-
-def _prompt_match_5_marks(request: GenerationRequest) -> str:
-    return _match_prompt(request)
-
-
-# (type, marks) -> builder function
-_TEMPLATES = {
-    (QuestionType.MCQ, 1): (_prompt_mcq_1_mark, _JSON_SHAPE_MCQ),
+# (type, marks) -> builder function. Built from VALID_MARKS_BY_TYPE so a
+# combination the schema accepts always has a template (and vice versa).
+_BUILDERS = {
+    (QuestionType.MCQ, None): (_prompt_mcq, _JSON_SHAPE_MCQ),
+    (QuestionType.FILL, None): (_prompt_fill, _JSON_SHAPE_DESCRIPTIVE),
+    (QuestionType.MATCH, None): (_match_prompt, _JSON_SHAPE_MATCH),
     (QuestionType.SHORT, 1): (_prompt_short_1_mark, _JSON_SHAPE_DESCRIPTIVE),
     (QuestionType.SHORT, 2): (_prompt_short_2_marks, _JSON_SHAPE_DESCRIPTIVE),
     (QuestionType.SHORT, 3): (_prompt_short_3_marks, _JSON_SHAPE_DESCRIPTIVE),
+    (QuestionType.LONG, 3): (_prompt_long_3_marks, _JSON_SHAPE_DESCRIPTIVE),
     (QuestionType.LONG, 5): (_prompt_long_5_marks, _JSON_SHAPE_DESCRIPTIVE),
-    (QuestionType.FILL, 1): (_prompt_fill_1_mark, _JSON_SHAPE_DESCRIPTIVE),
-    (QuestionType.MATCH, 3): (_prompt_match_3_marks, _JSON_SHAPE_MATCH),
-    (QuestionType.MATCH, 5): (_prompt_match_5_marks, _JSON_SHAPE_MATCH),
+}
+
+
+def _template_for(q_type: QuestionType, marks: int):
+    return _BUILDERS.get((q_type, marks)) or _BUILDERS[(q_type, None)]
+
+
+_TEMPLATES = {
+    (q_type, marks): _template_for(q_type, marks)
+    for q_type, allowed in VALID_MARKS_BY_TYPE.items()
+    for marks in allowed
 }
 
 

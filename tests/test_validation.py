@@ -25,13 +25,13 @@ def make_short(marks, answer, subject=Subject.SCIENCE, text="Why does ice float 
 
 # --- request combination checks -------------------------------------------------
 
-def test_mcq_must_request_1_mark():
-    req = GenerationRequest(
-        subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
-        grade=8, marks=3, difficulty=Difficulty.EASY, count=5,
-    )
-    problems = validate_request_combination(req)
-    assert problems
+def test_mcq_can_request_any_mark_on_the_scale():
+    for marks in (1, 2, 3, 5):
+        req = GenerationRequest(
+            subject=Subject.SCIENCE, chapter="Photosynthesis", type=QuestionType.MCQ,
+            grade=8, marks=marks, difficulty=Difficulty.EASY, count=5,
+        )
+        assert validate_request_combination(req) == []
 
 
 def test_valid_combination_has_no_problems():

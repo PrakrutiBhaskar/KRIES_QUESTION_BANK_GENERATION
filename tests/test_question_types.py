@@ -101,10 +101,11 @@ def match_raw(pairs=PAIRS_3, **extra):
 
 
 def test_new_types_are_registered_with_their_marks():
-    assert VALID_MARKS_BY_TYPE[QuestionType.FILL] == {1}
+    assert VALID_MARKS_BY_TYPE[QuestionType.FILL] == {1, 2, 3, 5}
     assert VALID_MARKS_BY_TYPE[QuestionType.MATCH] == {3, 5}
     combos = supported_combinations()
     assert (QuestionType.FILL, 1) in combos
+    assert (QuestionType.FILL, 5) in combos
     assert (QuestionType.MATCH, 3) in combos
     assert (QuestionType.MATCH, 5) in combos
 
@@ -144,7 +145,7 @@ def test_fill_rejects_options_and_wrong_marks():
             QuestionType.FILL, 1, text="A _____ is a thing.", answer="x", options=["a", "b"]
         )
     with pytest.raises(ValidationError, match="marks"):
-        make_question(QuestionType.FILL, 2, text="A _____ is a thing.", answer="x")
+        make_question(QuestionType.FILL, 4, text="A _____ is a thing.", answer="x")  # no 4 on the scale
 
 
 def test_blank_counter():

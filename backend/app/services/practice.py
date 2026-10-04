@@ -92,8 +92,8 @@ async def create_session(
             user_id=user_id,
         )
         chosen_ids = {row.id for row in chosen}
-        # A freshly generated question whose answer key still looked wrong after
-        # every retry comes back flagged; students don't practise against those.
+        # An identical question that was stored earlier may already have been
+        # flagged by "Verify answers"; students don't practise against those.
         chosen.extend(
             row
             for row in generated

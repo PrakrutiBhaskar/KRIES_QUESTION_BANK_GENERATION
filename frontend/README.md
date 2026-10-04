@@ -49,6 +49,7 @@ Everything except the first four pages needs you to be signed in; signed-out vis
 | Subject / chapter pickers | `GET /subjects/{subject}/chapters` |
 | Type → marks options | `GET /generation/combinations` |
 | Generate | `POST /generate` (one call per type × difficulty when "Mixed") |
+| Verify answers (button, after generating) | `POST /questions/verify` |
 | Delete a generated question | `DELETE /questions/{id}` |
 | Save Bank | `POST /papers` — a **question bank is a saved paper** |
 | Bank list / detail | `GET /papers`, `GET /papers/{id}` |
@@ -98,8 +99,7 @@ src/
 ## Not in the backend yet (removed from the UI)
 
 Bloom's taxonomy level, bank description, and draft/published/archived status have no backend field, so those controls were
-removed rather than faked. The prototype's mock-data files were deleted. An unfinished Analytics page is parked in
-`wip/analytics/` (see its README); it is not part of the build.
+removed rather than faked. The prototype's mock-data files were deleted. There is no Analytics page.
 
 ## Not done
 

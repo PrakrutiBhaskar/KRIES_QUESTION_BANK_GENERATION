@@ -27,8 +27,9 @@ All endpoints return JSON. Base path: `/api/v1`
 ```
 
 `verification_status` / `verification_note` are additive (older clients can ignore
-them) and describe whether the answer key was checked when the question was
-generated; see [Answer verification](#answer-verification).
+them) and describe whether the answer key has been checked. Generation does not check
+it: new questions are `unverified` until someone clicks **Verify answers**
+(`POST /questions/verify`); see [Answer verification](#answer-verification).
 
 **Optional extension — figures.** A question that has a diagram attached also carries
 `figure` (printed with the question) and/or `answer_figure` (printed only in the answer
@@ -120,6 +121,24 @@ Errors: `403` for someone else's question, `404` for an unknown figure.
 
 ### `DELETE /questions/{id}`
 Discard a question.
+
+### `POST /questions/verify`
+Check the answer keys of stored questions (the **Verify answers** button on the
+generation screen). Body: `{"question_ids": ["uuid", ...]}` (1 to 50 ids). Any
+signed-in user may verify any stored question.
+
+Response `200`:
+```json
+{
+  "questions": [ /* Question objects, same order as requested, with verification_status / verification_note updated */ ],
+  "verified": 0,
+  "unverified": 0,
+  "flagged": 0
+}
+```
+The result is saved on each question. Re-verifying overwrites the earlier result. A
+stored question that is not in a checkable shape reads `unverified` rather than failing
+the call. Errors: `404` if an id does not exist, `400`/`422` for an empty or oversized list.
 
 ---
 
@@ -364,7 +383,7 @@ and a `Retry-After: N` header.
 | `global` | every request except `/health` | 120 / min | signed-in user, else IP |
 | `login` | `POST /auth/login` | 10 / min | IP |
 | `signup` | `POST /auth/signup` | 5 / hour | IP |
-| `generate` | `POST /generate`, `POST /practice/sessions` | 30 / min | user |
+| `generate` | `POST /generate`, `POST /questions/verify`, `POST /practice/sessions` | 30 / min | user |
 | `export` | `POST /export/{id}` | 10 / min | user |
 | failed logins | wrong password | 5 per 15 min, then locked out for the rest of the window | IP + email |
 
@@ -376,8 +395,10 @@ them to Redis before running more than one worker or instance.
 
 ## Answer verification
 
-The model that writes a question also writes its answer key, so every generated
-batch is checked before it is returned. Two layers, cheapest first
+The model that writes a question also writes its answer key, so a key can be checked
+on request. This is a separate step, not part of generation: `POST /generate` returns
+questions as `unverified`, and the **Verify answers** button (`POST /questions/verify`)
+checks the ones on screen. Two layers, cheapest first
 (`generation_engine/rule_checks.py`, `generation_engine/answer_verification.py`):
 
 1. **Rule checks** (Maths and Science, no LLM): arithmetic, `x%` of `n`, roots and
@@ -387,7 +408,7 @@ batch is checked before it is returned. Two layers, cheapest first
    (speed, density, force, work, power, pressure, Ohm's law, with unit conversion).
    They only fire when the question matches strictly enough that the answer is
    unambiguous; anything else is left to layer 2.
-2. **Independent AI pass** (all subjects, one extra Groq call per batch). For MCQs the
+2. **Independent AI pass** (all subjects, one Groq call per chunk of questions, only when verifying). For MCQs the
    verifier is *not shown* the key: it solves the question itself and its choice is
    compared with the key. For Short/Long/Fill answers it is shown the answer and asked to
    check it sceptically. For Match it is shown the answer and Column B and checks each
@@ -397,19 +418,15 @@ batch is checked before it is returned. Two layers, cheapest first
 |---|---|---|
 | `verified` | A rule confirmed the key, or the AI pass reached the same answer | Returned and cached as normal |
 | `unverified` | Nothing could be checked: no rule applies, the AI pass wasn't confident, or the call failed | Returned and cached; the key is simply unconfirmed. Questions stored before this feature read as `unverified` |
-| `flagged` | A rule or the AI pass found the key wrong, and no replacement could be generated | Returned **clearly marked** so the teacher can review it; never served from the cache or used in practice sessions |
+| `flagged` | A rule or the AI pass found the key wrong | Shown **clearly marked** so the teacher can regenerate or delete it; never served from the cache or used in practice sessions |
 
-A key found wrong is not returned as-is: the engine drops the question and
-regenerates a replacement (telling the model what was wrong), up to the normal retry
-limit. Only if that fails does it fill the batch with the `flagged` ones, so a
-generation request never fails just because of a strict verifier. The AI pass fails
-open: a Groq error leaves questions `unverified`.
-
-`POST /generate` `report` gains `answers_verified`, `answers_unverified`,
-`dropped_wrong_answer` (keys found wrong and replaced) and `flagged_kept`.
+Nothing is regenerated automatically: a flagged question stays where it is until the
+teacher acts on it. The AI pass fails open: a Groq error leaves questions `unverified`.
+Verification never runs during `POST /generate`, so generation does not wait for it and
+its `report` carries no verification counters.
 
 Settings (`backend/.env`): `ENABLE_ANSWER_RULE_CHECKS` (default true),
-`ENABLE_LLM_ANSWER_VERIFICATION` (default true; set false to skip the extra Groq call),
+`ENABLE_LLM_ANSWER_VERIFICATION` (default true; set false to skip the AI pass when verifying),
 `VERIFIER_MODEL` (optional different model for the second opinion),
 `VERIFICATION_CHUNK_SIZE` (default 10). Database: `questions.verification_status` and
 `questions.verification_note` (nullable); added automatically with

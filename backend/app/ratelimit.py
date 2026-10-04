@@ -12,6 +12,7 @@ Three layers, all configured in config.py / .env (see the RATE_LIMIT_* keys):
          POST /auth/forgot-password,
          POST /auth/reset-password   per IP
          POST /generate,
+         POST /questions/verify,
          POST /practice/sessions,
          POST /papers/blueprint      per user   (these can call the LLM)
          POST /export/{id}           per user
@@ -155,7 +156,13 @@ def _rules_for(method: str, path: str) -> list[tuple[str, str, str]]:
             rules.append(("signup", settings.rate_limit_signup, "ip"))
         elif rel in ("/auth/forgot-password", "/auth/reset-password"):
             rules.append(("password-reset", settings.rate_limit_password_reset, "ip"))
-        elif rel in ("/generate", "/practice/sessions", "/papers/blueprint", "/papers/blueprint/jobs"):
+        elif rel in (
+            "/generate",
+            "/questions/verify",
+            "/practice/sessions",
+            "/papers/blueprint",
+            "/papers/blueprint/jobs",
+        ):
             rules.append(("generate", settings.rate_limit_generate, "user"))
         elif rel.startswith("/export/") and not rel.startswith("/export/files/"):
             rules.append(("export", settings.rate_limit_export, "user"))

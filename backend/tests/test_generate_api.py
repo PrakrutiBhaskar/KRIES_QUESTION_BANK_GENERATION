@@ -132,8 +132,8 @@ async def test_cache_does_not_cross_difficulty(client):
 @pytest.mark.parametrize(
     "override,reason",
     [
-        ({"type": "MCQ", "marks": 3}, "MCQ is fixed at 1 mark"),
-        ({"type": "Long", "marks": 2}, "Long answers are 5-mark only"),
+        ({"type": "Match", "marks": 2}, "a 2-pair match is degenerate"),
+        ({"type": "Long", "marks": 2}, "Long answers start at 3 marks"),
         ({"marks": 4}, "4 is not a valid mark value"),
         ({"grade": 11}, "grades are 7-9"),
         ({"subject": "Physics"}, "not one of the five subjects"),
