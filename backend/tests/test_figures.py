@@ -271,7 +271,7 @@ async def test_figure_is_part_of_a_questions_identity():
 # --- practice mode: the key figure must not leak ------------------------------
 
 
-async def test_practice_hides_the_answer_figure_until_reveal(client, admin_client):
+async def test_practice_hides_the_answer_figure_until_reveal(client, admin_client, practice_shortfall_on):
     fig = await make_figure(admin_client, caption="Question figure")
     key = await make_figure(admin_client, caption="Answer figure")
     session = (

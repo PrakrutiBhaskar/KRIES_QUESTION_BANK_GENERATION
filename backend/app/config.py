@@ -161,9 +161,11 @@ class Settings(BaseSettings):
 
     # --- Practice mode ---
     # If a practice session can't be filled from stored questions, generate the
-    # shortfall on demand instead of returning a short set.
+    # shortfall on demand instead of returning a short set. Off by default:
+    # students practise on what is already in the bank and never trigger a live
+    # model call.
     practice_generate_shortfall: bool = Field(
-        default=True, alias="PRACTICE_GENERATE_SHORTFALL"
+        default=False, alias="PRACTICE_GENERATE_SHORTFALL"
     )
 
     # --- Auth (JWT bearer tokens) ---

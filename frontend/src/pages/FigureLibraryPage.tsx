@@ -384,8 +384,8 @@ export default function FigureLibraryPage() {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-sm text-indigo-900">
-        Diagrams added here are shared with every teacher. On the Generate page they can choose{' '}
-        <strong>Write questions about figures</strong> to get diagram-based questions for a chapter, and each
+        Diagrams added here are shared with every teacher. When a question bank or question paper is generated,
+        some questions are picked at random to be diagram-based (for chapters that have diagrams here), and each
         question's diagram is printed again in the answer key.
       </div>
 

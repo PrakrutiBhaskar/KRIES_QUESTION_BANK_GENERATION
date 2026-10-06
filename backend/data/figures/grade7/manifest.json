@@ -1,0 +1,673 @@
+{
+  "_comment": "Grade 7 Science diagrams, one per item of the figure list (53 of 60; 1.2, 1.5, 2.5, 3.5, 4.2, 4.4, 4.5 have no image yet). Titles were cropped off the original screenshots so they do not give answers away; letters A, B, C... were added to blank answer boxes. Entries with a 'note' need a quick check.",
+  "figures": [
+    {
+      "file": "01-timeline-of-inventions.png",
+      "subject": "Science",
+      "chapter": "The Ever-Evolving World of Science",
+      "topic": "Timeline of key inventions",
+      "caption": "Six inventions drawn in a row along a timeline arrow, each with a lettered blank box below it for its name",
+      "labels": [
+        "A: Microscope",
+        "B: Telescope",
+        "C: Steam engine (locomotive)",
+        "D: Vaccine (syringe and vial)",
+        "E: Electric bulb",
+        "F: Computer"
+      ],
+      "note": "No dates are shown, only the order left to right. Letters A-F were added to the blank boxes."
+    },
+    {
+      "file": "02-smartphone-and-satellite.png",
+      "subject": "Science",
+      "chapter": "The Ever-Evolving World of Science",
+      "topic": "Science and everyday technology",
+      "caption": "A smartphone and a satellite drawn side by side",
+      "labels": [
+        "Smartphone",
+        "Satellite"
+      ]
+    },
+    {
+      "file": "03-sundial-and-digital-clock.png",
+      "subject": "Science",
+      "chapter": "The Ever-Evolving World of Science",
+      "topic": "Ancient and modern tools",
+      "caption": "A sundial and a digital clock showing 10:30 drawn side by side, separated by a dashed line",
+      "labels": [
+        "Sundial",
+        "Digital clock"
+      ]
+    },
+    {
+      "file": "04-litmus-paper-in-solutions.png",
+      "subject": "Science",
+      "chapter": "Exploring Substances: Acidic, Basic, and Neutral",
+      "topic": "Litmus test",
+      "caption": "A strip of litmus paper dipped in each of three beakers of solution",
+      "labels": [
+        "Acidic solution",
+        "Basic solution",
+        "Neutral solution",
+        "Litmus paper"
+      ],
+      "note": "Black-and-white drawing: the colour change of the litmus is not shown."
+    },
+    {
+      "file": "05-ph-scale-everyday-items.png",
+      "subject": "Science",
+      "chapter": "Exploring Substances: Acidic, Basic, and Neutral",
+      "topic": "pH scale",
+      "caption": "A pH scale from 0 to 14 with arrows from five everyday items to positions on the scale",
+      "labels": [
+        "Lemon: pH 1",
+        "Vinegar: pH 4",
+        "Water: pH 7",
+        "Soap: pH 10",
+        "Baking soda: pH 13"
+      ],
+      "note": "Positions are read from where the arrows point on the drawn scale."
+    },
+    {
+      "file": "06-natural-indicators.png",
+      "subject": "Science",
+      "chapter": "Exploring Substances: Acidic, Basic, and Neutral",
+      "topic": "Natural indicators",
+      "caption": "Turmeric and China rose, each shown with one beaker of acid and one beaker of base with a stirring rod",
+      "labels": [
+        "Turmeric",
+        "China rose",
+        "In acid",
+        "In base"
+      ],
+      "note": "Black-and-white drawing: colours are not shown."
+    },
+    {
+      "file": "07-neutralisation-setup.png",
+      "subject": "Science",
+      "chapter": "Exploring Substances: Acidic, Basic, and Neutral",
+      "topic": "Neutralisation",
+      "caption": "A burette clamped above a conical flask containing indicator, on a stand",
+      "labels": [
+        "Burette",
+        "Flask with indicator"
+      ],
+      "note": "Screenshot clips the right edge of the 'Flask with indicator' text slightly."
+    },
+    {
+      "file": "08-simple-circuit.png",
+      "subject": "Science",
+      "chapter": "Electricity: Circuits and their Components",
+      "topic": "Simple electric circuit",
+      "caption": "A simple electric circuit made of a cell, a bulb and a switch joined by wires",
+      "labels": [
+        "Cell (battery)",
+        "Bulb",
+        "Switch",
+        "Connecting wires"
+      ],
+      "note": "The + and - ends of the cell are marked in the drawing."
+    },
+    {
+      "file": "09-circuit-symbols-table.png",
+      "subject": "Science",
+      "chapter": "Electricity: Circuits and their Components",
+      "topic": "Circuit symbols",
+      "caption": "A table of five circuit symbols in the left column, with the right column left blank for their names",
+      "labels": [
+        "Row 1: Cell",
+        "Row 2: Connecting wire",
+        "Row 3: Bulb (lamp)",
+        "Row 4: Switch (open)",
+        "Row 5: Resistor"
+      ],
+      "note": "My reading of the five symbols from top to bottom; please confirm 'Resistor' is what your textbook calls the zigzag symbol."
+    },
+    {
+      "file": "10-open-and-closed-circuit.png",
+      "subject": "Science",
+      "chapter": "Electricity: Circuits and their Components",
+      "topic": "Open and closed circuits",
+      "caption": "Two circuits, each with a cell, a bulb and a switch: one labelled closed circuit and one labelled open circuit",
+      "labels": [
+        "Closed circuit",
+        "Open circuit"
+      ]
+    },
+    {
+      "file": "11-series-and-parallel.png",
+      "subject": "Science",
+      "chapter": "Electricity: Circuits and their Components",
+      "topic": "Series and parallel circuits",
+      "caption": "Two circuits, each with a cell and two bulbs: one labelled series circuit and one labelled parallel circuit",
+      "labels": [
+        "Series circuit",
+        "Parallel circuit"
+      ]
+    },
+    {
+      "file": "12-properties-of-metals.png",
+      "subject": "Science",
+      "chapter": "The World of Metals and Non-metals",
+      "topic": "Physical properties of metals",
+      "caption": "Metal bars, a coiled wire, and a hammer beating a metal piece into a sheet",
+      "labels": [
+        "Lustre",
+        "Ductility (wire)",
+        "Malleability (sheet)"
+      ]
+    },
+    {
+      "file": "13-rusting-of-iron-nail.png",
+      "subject": "Science",
+      "chapter": "The World of Metals and Non-metals",
+      "topic": "Rusting of iron",
+      "caption": "Three stoppered test tubes, each holding an iron nail: one in dry air, one in water, one in boiled water with a layer of oil",
+      "labels": [
+        "Dry air",
+        "Water",
+        "Boiled water with oil"
+      ],
+      "note": "The dry-air tube contains granules at the bottom (a drying agent), which are not labelled."
+    },
+    {
+      "file": "14-physical-vs-chemical-change.png",
+      "subject": "Science",
+      "chapter": "Changes Around Us: Physical and Chemical",
+      "topic": "Physical and chemical changes",
+      "caption": "Two changes drawn with arrows: ice melting into water, and a sheet of paper burning",
+      "labels": [
+        "Melting of ice",
+        "Burning of paper"
+      ]
+    },
+    {
+      "file": "15-rusting-and-tarnishing.png",
+      "subject": "Science",
+      "chapter": "Changes Around Us: Physical and Chemical",
+      "topic": "Rusting and tarnishing",
+      "caption": "A rusted iron nail and a tarnished silver spoon",
+      "labels": [
+        "Rusting iron nail",
+        "Tarnished silver item"
+      ]
+    },
+    {
+      "file": "16-baking-soda-vinegar-reaction.png",
+      "subject": "Science",
+      "chapter": "Changes Around Us: Physical and Chemical",
+      "topic": "Baking soda and vinegar reaction",
+      "caption": "A liquid poured from a small beaker into a conical flask in which bubbles are rising",
+      "labels": [],
+      "note": "Unlabelled drawing; the topic comes from the figure list you gave."
+    },
+    {
+      "file": "17-crystallisation.png",
+      "subject": "Science",
+      "chapter": "Changes Around Us: Physical and Chemical",
+      "topic": "Crystallisation",
+      "caption": "A beaker of solution with a seed crystal hung from a rod on a thread and crystals lying at the bottom",
+      "labels": [],
+      "note": "Unlabelled drawing; the substance (salt or copper sulphate) is not identifiable from the picture."
+    },
+    {
+      "file": "18-milk-curdling-apple-browning.png",
+      "subject": "Science",
+      "chapter": "Changes Around Us: Physical and Chemical",
+      "topic": "Chemical changes in food",
+      "caption": "Milk before and after curdling, and a cut apple before and after browning",
+      "labels": [
+        "Milk curdling",
+        "Apple browning"
+      ]
+    },
+    {
+      "file": "19-growth-chart.png",
+      "subject": "Science",
+      "chapter": "Adolescence: A Stage of Growth and Change",
+      "topic": "Growth during adolescence",
+      "caption": "A line graph of height (cm) against age (years) for boys and girls from about 10 to 18 years",
+      "labels": [
+        "Boys",
+        "Girls",
+        "Height (cm)",
+        "Age (years)"
+      ],
+      "note": "No numeric data table, only the plotted lines."
+    },
+    {
+      "file": "20-endocrine-glands.png",
+      "subject": "Science",
+      "chapter": "Adolescence: A Stage of Growth and Change",
+      "topic": "Endocrine glands",
+      "caption": "Outline of the human body showing the positions of six endocrine glands, each joined by a line to a lettered blank box",
+      "labels": [
+        "A: Pituitary gland",
+        "B: Thyroid gland",
+        "C: Thymus gland",
+        "D: Adrenal gland",
+        "E: Pancreas",
+        "F: Gonads (testes or ovaries)"
+      ],
+      "note": "PLEASE VERIFY C and F. C is the lobed organ in the chest (I read it as the thymus); F is the pair of small round organs at the bottom. Letters A-F were added to the blank boxes."
+    },
+    {
+      "file": "21-balanced-diet-plate.png",
+      "subject": "Science",
+      "chapter": "Adolescence: A Stage of Growth and Change",
+      "topic": "Balanced diet",
+      "caption": "A round plate divided into four sections of food items",
+      "labels": [
+        "Rice and bread",
+        "Leafy vegetables and tomato",
+        "Banana, apple and grapes",
+        "Fish, avocado and a glass of milk"
+      ],
+      "note": "Food groups are my reading of the drawn items; check them against your textbook's plate."
+    },
+    {
+      "file": "22-daily-routine-pie-chart.png",
+      "subject": "Science",
+      "chapter": "Adolescence: A Stage of Growth and Change",
+      "topic": "Daily routine and healthy habits",
+      "caption": "A pie chart of a daily routine divided into four sections",
+      "labels": [
+        "Sleep",
+        "Study",
+        "Play",
+        "Others"
+      ],
+      "note": "No percentages or hours are shown."
+    },
+    {
+      "file": "23-hygiene-items.png",
+      "subject": "Science",
+      "chapter": "Adolescence: A Stage of Growth and Change",
+      "topic": "Hygiene items and practices",
+      "caption": "Hygiene items and practices drawn together: soap, toothbrush, comb, towel, hand washing at a tap, nail cutter, a bottle and a shower",
+      "labels": [
+        "Soap",
+        "Toothbrush",
+        "Comb",
+        "Towel",
+        "Washing hands under a tap",
+        "Nail cutter",
+        "Hand wash or sanitiser bottle",
+        "Shower"
+      ]
+    },
+    {
+      "file": "24-conduction-metal-rod.png",
+      "subject": "Science",
+      "chapter": "Heat Transfer in Nature",
+      "topic": "Conduction",
+      "caption": "A metal rod clamped on a stand and heated at one end by a burner, with small pins stuck along the rod using wax",
+      "labels": [
+        "Wax",
+        "Metal rod"
+      ]
+    },
+    {
+      "file": "25-convection-in-water.png",
+      "subject": "Science",
+      "chapter": "Heat Transfer in Nature",
+      "topic": "Convection currents in water",
+      "caption": "A beaker of water on a tripod heated from below, with a dye crystal at the bottom and arrows showing how the water moves",
+      "labels": [
+        "Dye crystal"
+      ]
+    },
+    {
+      "file": "26-radiation-from-sun.png",
+      "subject": "Science",
+      "chapter": "Heat Transfer in Nature",
+      "topic": "Radiation",
+      "caption": "The Sun and the Earth with dashed arrows pointing from the Sun to the Earth",
+      "labels": [
+        "Sun",
+        "Earth"
+      ]
+    },
+    {
+      "file": "27-sea-and-land-breeze.png",
+      "subject": "Science",
+      "chapter": "Heat Transfer in Nature",
+      "topic": "Land breeze and sea breeze",
+      "caption": "Two panels, one for daytime and one for night, each showing land, sea, a palm tree and looping arrows",
+      "labels": [
+        "Sea breeze (day)",
+        "Land breeze (night)",
+        "Land",
+        "Sea"
+      ]
+    },
+    {
+      "file": "28-dark-light-clothes-thermos.png",
+      "subject": "Science",
+      "chapter": "Heat Transfer in Nature",
+      "topic": "Heat and colour; thermos flask",
+      "caption": "A dark T-shirt and a light T-shirt in sunshine, and a cross-section of a flask",
+      "labels": [
+        "Dark colour (absorbs more heat)",
+        "Light colour (reflects more heat)",
+        "Plastic cap",
+        "Vacuum layer",
+        "Silvered surface"
+      ]
+    },
+    {
+      "file": "29-distance-time-graph.png",
+      "subject": "Science",
+      "chapter": "Measurement of Time and Motion",
+      "topic": "Distance-time graph",
+      "caption": "A distance (m) against time (s) graph: a rising line, then a flat part, then a rising line again",
+      "labels": [
+        "Distance (m)",
+        "Time (s)"
+      ],
+      "note": "No numeric values on the axes."
+    },
+    {
+      "file": "30-simple-pendulum.png",
+      "subject": "Science",
+      "chapter": "Measurement of Time and Motion",
+      "topic": "Simple pendulum and time period",
+      "caption": "A pendulum bob hanging by a string from a stand, with dotted outlines of the bob at the two ends of its swing",
+      "labels": [],
+      "note": "Unlabelled drawing."
+    },
+    {
+      "file": "31-speedometer-odometer.png",
+      "subject": "Science",
+      "chapter": "Measurement of Time and Motion",
+      "topic": "Reading a speedometer and odometer",
+      "caption": "A vehicle speedometer marked 0 to 180 km/h with a needle, and an odometer display below it reading 082735 km",
+      "labels": [
+        "Speedometer",
+        "Odometer",
+        "km/h",
+        "km"
+      ],
+      "note": "The needle's exact reading is not stated here, so questions should not ask for it."
+    },
+    {
+      "file": "32-time-measuring-devices.png",
+      "subject": "Science",
+      "chapter": "Measurement of Time and Motion",
+      "topic": "Time-measuring devices",
+      "caption": "A sundial, a water clock and a digital clock showing 10:30",
+      "labels": [
+        "Sundial",
+        "Water clock",
+        "Digital clock"
+      ]
+    },
+    {
+      "file": "33-types-of-motion.png",
+      "subject": "Science",
+      "chapter": "Measurement of Time and Motion",
+      "topic": "Types of motion",
+      "caption": "Four moving objects: a train on a track, a Ferris wheel, a child on a swing and a ceiling fan",
+      "labels": [
+        "Train: linear motion",
+        "Ferris wheel: circular motion",
+        "Swing: oscillatory motion",
+        "Ceiling fan: periodic motion"
+      ],
+      "note": "These pairings are exactly as printed on the figure (the fan is shown as 'periodic motion')."
+    },
+    {
+      "file": "34-human-digestive-system.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Animals",
+      "topic": "Human digestive system",
+      "caption": "Outline of the human body showing the digestive system",
+      "labels": [
+        "Food pipe (oesophagus)",
+        "Stomach",
+        "Liver",
+        "Small intestine",
+        "Large intestine"
+      ],
+      "note": "No labels are printed on the picture; the parts are those drawn. For part-identification questions you may want letters added."
+    },
+    {
+      "file": "35-human-respiratory-system.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Animals",
+      "topic": "Breathing and the diaphragm",
+      "caption": "The human respiratory system, with two small diagrams of the diaphragm during breathing in and breathing out",
+      "labels": [
+        "Inhalation (diaphragm contracts)",
+        "Exhalation (diaphragm relaxes)"
+      ]
+    },
+    {
+      "file": "36-heart-and-circulation.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Animals",
+      "topic": "Heart and circulation",
+      "caption": "A section through the human heart with arrows showing the direction of blood flow",
+      "labels": [
+        "To lungs",
+        "From lungs",
+        "From body",
+        "To body"
+      ]
+    },
+    {
+      "file": "37-human-excretory-system.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Animals",
+      "topic": "Human excretory system",
+      "caption": "Diagram of the human excretory system",
+      "labels": [
+        "Kidney",
+        "Ureter",
+        "Urinary bladder",
+        "Urethra"
+      ],
+      "note": "No labels are printed on the picture; the parts are those drawn. For part-identification questions you may want letters added."
+    },
+    {
+      "file": "38-amoeba-earthworm-fish.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Animals",
+      "topic": "Nutrition and respiration in other animals",
+      "caption": "An amoeba taking in food, an earthworm and a fish, with arrows for oxygen and carbon dioxide",
+      "labels": [
+        "Amoeba (nutrition)",
+        "Earthworm (respiration through skin)",
+        "Fish (respiration through gills)",
+        "O2",
+        "CO2"
+      ],
+      "note": "Screenshot clips the left edge of the earthworm label slightly."
+    },
+    {
+      "file": "39-leaf-cross-section.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Plants",
+      "topic": "Leaf structure and stomata",
+      "caption": "A cross-section of a leaf with stomata marked, and five lettered blank boxes joined by lines to its layers",
+      "labels": [
+        "A: Upper epidermis",
+        "B: Palisade mesophyll",
+        "C: Spongy mesophyll",
+        "D: Lower epidermis",
+        "E: Guard cell",
+        "Stomata"
+      ],
+      "note": "PLEASE VERIFY A-E. The original boxes were cut off at the edge of the screenshot, so I redrew them and matched each line to a layer by eye. 'Stomata' is printed on the figure."
+    },
+    {
+      "file": "40-photosynthesis-diagram.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Plants",
+      "topic": "Photosynthesis",
+      "caption": "A plant with the Sun, and arrows going into and out of the plant, each ending at a lettered blank box",
+      "labels": [
+        "A: Sunlight",
+        "B: Oxygen",
+        "C: Carbon dioxide",
+        "D: Glucose (food)",
+        "E: Water"
+      ],
+      "note": "Letters A-E were added to the blank boxes. The two right-hand boxes were clipped by the screenshot and have been closed."
+    },
+    {
+      "file": "41-transpiration-setup.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Plants",
+      "topic": "Transpiration",
+      "caption": "A potted plant with its leafy shoot covered by a polythene bag in which water droplets have collected",
+      "labels": [
+        "Polythene bag",
+        "Water droplets"
+      ]
+    },
+    {
+      "file": "42-absorption-and-transport.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Plants",
+      "topic": "Absorption and transport in plants",
+      "caption": "A root hair taking in water, next to two vertical tubes with arrows showing movement inside them",
+      "labels": [
+        "Root hair",
+        "Xylem",
+        "Phloem"
+      ]
+    },
+    {
+      "file": "43-starch-test-on-leaf.png",
+      "subject": "Science",
+      "chapter": "Life Processes in Plants",
+      "topic": "Starch test on a leaf",
+      "caption": "Steps of testing a leaf with pale patches: the leaf, the leaf heated in a beaker on a burner, and a dropper adding a liquid to the leaf",
+      "labels": [],
+      "note": "Unlabelled drawing."
+    },
+    {
+      "file": "44-shadows-opaque-translucent-transparent.png",
+      "subject": "Science",
+      "chapter": "Light: Shadows and Reflections",
+      "topic": "Shadows",
+      "caption": "Three torches shining on three objects, each with a screen behind it",
+      "labels": [
+        "Opaque object",
+        "Translucent object",
+        "Transparent object"
+      ]
+    },
+    {
+      "file": "45-pinhole-camera.png",
+      "subject": "Science",
+      "chapter": "Light: Shadows and Reflections",
+      "topic": "Pinhole camera",
+      "caption": "A candle in front of a box with a small hole in one face, and an upside-down candle image on the screen at the back",
+      "labels": [
+        "Object",
+        "Pinhole",
+        "Inverted image"
+      ]
+    },
+    {
+      "file": "46-plane-mirror-reflection.png",
+      "subject": "Science",
+      "chapter": "Light: Shadows and Reflections",
+      "topic": "Reflection of light",
+      "caption": "A ray of light striking a plane mirror and reflecting, with the normal drawn and two lettered blank boxes between the rays and the normal",
+      "labels": [
+        "Incident ray",
+        "Reflected ray",
+        "Normal",
+        "Plane mirror",
+        "A: Angle of incidence",
+        "B: Angle of reflection"
+      ],
+      "note": "Letters A and B were added to the blank boxes."
+    },
+    {
+      "file": "47-lateral-inversion.png",
+      "subject": "Science",
+      "chapter": "Light: Shadows and Reflections",
+      "topic": "Lateral inversion",
+      "caption": "The word AMBULANCE, a plane mirror, and the mirror image of the word",
+      "labels": [
+        "Object (word)",
+        "Plane mirror",
+        "Image in mirror"
+      ]
+    },
+    {
+      "file": "48-periscope.png",
+      "subject": "Science",
+      "chapter": "Light: Shadows and Reflections",
+      "topic": "Periscope",
+      "caption": "A periscope tube with a mirror at each end, a tree on one side and an eye on the other, and a dashed arrow showing the path of light",
+      "labels": [
+        "Plane mirror (upper)",
+        "Plane mirror (lower)"
+      ]
+    },
+    {
+      "file": "49-phases-of-the-moon.png",
+      "subject": "Science",
+      "chapter": "Earth, Moon, and the Sun",
+      "topic": "Phases of the Moon",
+      "caption": "Eight phases of the Moon arranged in a circle with arrows between them",
+      "labels": [],
+      "note": "Unlabelled drawing: no phase names are printed."
+    },
+    {
+      "file": "50-solar-and-lunar-eclipse.png",
+      "subject": "Science",
+      "chapter": "Earth, Moon, and the Sun",
+      "topic": "Solar and lunar eclipse",
+      "caption": "Two diagrams, one of a solar eclipse and one of a lunar eclipse, each showing the Sun, Moon and Earth",
+      "labels": [
+        "Solar eclipse",
+        "Lunar eclipse",
+        "Sun",
+        "Moon",
+        "Earth"
+      ]
+    },
+    {
+      "file": "51-rotation-and-revolution.png",
+      "subject": "Science",
+      "chapter": "Earth, Moon, and the Sun",
+      "topic": "Rotation and revolution of the Earth",
+      "caption": "The Earth with a tilted axis turning on it, and four positions of the Earth around the Sun",
+      "labels": [
+        "Rotation (24 hours)",
+        "Revolution (365 days)"
+      ]
+    },
+    {
+      "file": "52-day-and-night.png",
+      "subject": "Science",
+      "chapter": "Earth, Moon, and the Sun",
+      "topic": "Day and night on Earth",
+      "caption": "Sunlight arriving from the left on the Earth, with one half lit and the other half dark",
+      "labels": [
+        "Sunlight",
+        "Day",
+        "Night"
+      ]
+    },
+    {
+      "file": "53-layers-of-the-earth.png",
+      "subject": "Science",
+      "chapter": "Earth, Moon, and the Sun",
+      "topic": "Layers of the Earth",
+      "caption": "A cut-away view of the Earth showing three layers, each joined by a line to a lettered blank box",
+      "labels": [
+        "A: Crust",
+        "B: Mantle",
+        "C: Core"
+      ],
+      "note": "Letters A-C were added to the blank boxes."
+    }
+  ]
+}

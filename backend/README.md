@@ -226,9 +226,10 @@ the answer key prints the question's own figure, so a generated diagram question
 
 **Administrators manage the figure library; everyone uses it.** A user with the `Admin` role gets a
 *Figure Library* page in the web app, where they upload a diagram and tag it with a subject, chapter,
-optional topic, a caption and the labelled parts (`A: nucleus`, one per line). Every teacher can then tick
-*Write questions about figures* on the Generate page and get diagram-based questions for that chapter; the
-diagram is printed with the question in the paper and again in the answer key.
+optional topic, a caption and the labelled parts (`A: nucleus`, one per line). When a teacher generates a question
+bank or a blueprint paper, some questions are picked at random to be diagram-based (chapters with no library
+figure are all theory); the diagram is printed with the question in the paper and again in the answer key.
+The Generate page sends `mix_figures: true` to `POST /generate` to ask for this.
 
 Only the admin-only routes change: `POST` / `PATCH` / `DELETE /figures` answer `403 admin_required` for
 anyone else. The role is read from the account on every request. **It can't be self-assigned**: sign-up only

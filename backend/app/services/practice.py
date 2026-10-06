@@ -7,9 +7,9 @@ at a time through the reveal endpoint, which is what makes
 "doesn't leak other answers" (test-plan.md Section 3) true at the API layer
 rather than depending on the frontend to hide them.
 
-Question selection prefers what's already in the bank. If the chapter is
-thin, the shortfall is generated on demand (PRACTICE_GENERATE_SHORTFALL) so a
-student picking a fresh chapter isn't handed an empty set.
+Question selection uses what's already in the bank. Students never trigger a
+live model call: the on-demand shortfall fill (PRACTICE_GENERATE_SHORTFALL) is
+off by default, so a thin chapter returns a short set (or a 422 if empty).
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import uuid
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from generation_engine.schemas import QuestionType
+from generation_engine.schemas import VALID_GRADES, QuestionType
 
 from ..config import settings
 from ..errors import BadRequestError, NotFoundError, UnprocessableError
@@ -60,6 +60,10 @@ async def _stored_pool(
 async def create_session(
     session: AsyncSession, payload: PracticeSessionIn, user_id: uuid.UUID
 ) -> PracticeSession:
+    if payload.grade not in VALID_GRADES:
+        raise BadRequestError(
+            f"grade must be one of {sorted(VALID_GRADES)}, got {payload.grade}"
+        )
     index = get_syllabus_index()
     if index is not None and not index.has_chapter(
         payload.subject, payload.chapter, grade=payload.grade

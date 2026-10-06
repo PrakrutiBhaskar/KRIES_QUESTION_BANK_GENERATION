@@ -417,6 +417,8 @@ export interface GenerateParams {
   useFigures?: boolean;
   /** Or name exact figures; implies useFigures. */
   figureIds?: string[];
+  /** Let the server randomly make some of the questions diagram-based (theory when the chapter has no figures). */
+  mixFigures?: boolean;
 }
 
 export interface GenerateResult {
@@ -439,6 +441,7 @@ export async function generateQuestions(p: GenerateParams): Promise<GenerateResu
   if (p.topic?.trim()) body.topic = p.topic.trim();
   if (p.figureIds?.length) body.figure_ids = p.figureIds;
   else if (p.useFigures) body.use_figures = true;
+  else if (p.mixFigures) body.mix_figures = true;
 
   const res = await request<GenerateWire>('/generate', { method: 'POST', body: JSON.stringify(body) });
   return {

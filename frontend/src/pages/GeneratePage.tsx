@@ -200,8 +200,6 @@ export default function GeneratePage() {
       settings.defaultQuestionType === 'Mixed' ? [...ALL_QUESTION_TYPES] : [settings.defaultQuestionType],
     difficulty: settings.defaultDifficulty,
     marksChoice: {},
-    fresh: false,
-    useFigures: false,
   });
 
   const [chapters, setChapters] = useState<ChapterInfo[]>([]);
@@ -297,7 +295,7 @@ export default function GeneratePage() {
           difficulty: b.difficulty,
           count: b.count,
           refresh,
-          useFigures: form.useFigures,
+          mixFigures: true,
         });
         for (const q of res.questions) {
           if (seen.has(q.id)) continue;
@@ -320,7 +318,7 @@ export default function GeneratePage() {
     setLoading(true);
     setSaved(false);
     try {
-      const questions = await generateBatches(form.questionCount, form.fresh);
+      const questions = await generateBatches(form.questionCount, false);
       setGenerated(renumber(questions));
       if (questions.length < form.questionCount) {
         showToast(
@@ -665,37 +663,6 @@ export default function GeneratePage() {
                   </p>
                 )}
               </div>
-
-              <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.fresh}
-                  onChange={(e) => setField('fresh', e.target.checked)}
-                  className="mt-0.5 accent-indigo-600"
-                />
-                <span>
-                  Always generate new questions
-                  <span className="block text-slate-400">
-                    Off: reuse matching questions already stored, and only generate the shortfall.
-                  </span>
-                </span>
-              </label>
-
-              <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.useFigures}
-                  onChange={(e) => setField('useFigures', e.target.checked)}
-                  className="mt-0.5 accent-indigo-600"
-                />
-                <span>
-                  Diagram-based questions
-                  <span className="block text-slate-400">
-                    Write the questions about diagrams for this chapter. The diagram prints with the question and
-                    in the answer key. Needs diagrams tagged to the chapter.
-                  </span>
-                </span>
-              </label>
             </div>
           </div>
 

@@ -467,3 +467,11 @@ async def generate_questions(client, **overrides) -> list[dict]:
     response = await client.post("/generate", json=body)
     assert response.status_code == 200, response.text
     return response.json()["questions"]
+
+
+@pytest.fixture
+def practice_shortfall_on(monkeypatch):
+    """Practice sessions fill a thin chapter by generating on demand (off by default)."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "practice_generate_shortfall", True)

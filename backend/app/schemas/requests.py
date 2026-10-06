@@ -49,6 +49,12 @@ class GenerateIn(BaseModel):
     use_figures: bool = False
     figure_ids: list[uuid.UUID] | None = Field(default=None, min_length=1)
 
+    # Not in the contract. Let the server decide, at random, how many of these
+    # questions are diagram-based (and which ones): some are written about figures
+    # from the library, the rest are theory. A chapter with no library figure is
+    # all theory. Ignored when `use_figures` / `figure_ids` is set.
+    mix_figures: bool = False
+
     @field_validator("figure_ids")
     @classmethod
     def figure_ids_unique(cls, v: list[uuid.UUID] | None) -> list[uuid.UUID] | None:

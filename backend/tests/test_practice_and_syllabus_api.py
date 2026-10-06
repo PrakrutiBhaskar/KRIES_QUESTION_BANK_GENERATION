@@ -39,7 +39,7 @@ async def test_session_draws_from_the_stored_bank(client, groq_stub):
     assert len(groq_stub.calls) == calls_before
 
 
-async def test_session_generates_when_the_bank_is_thin(client):
+async def test_session_generates_when_the_bank_is_thin(client, practice_shortfall_on):
     response = await client.post("/practice/sessions", json=SESSION)
     assert response.status_code == 201
     assert len(response.json()["questions"]) == 4

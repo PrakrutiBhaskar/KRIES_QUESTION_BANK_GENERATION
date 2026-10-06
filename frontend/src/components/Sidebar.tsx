@@ -70,7 +70,10 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
         <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2 mt-2">
           Navigation
         </p>
-        {[...NAV_ITEMS, ...(user?.role === 'Admin' ? ADMIN_NAV_ITEMS : [])].map(({ to, icon: Icon, label }) => (
+        {[
+          ...NAV_ITEMS.filter(({ to }) => !(to === '/generate' && user?.role === 'Student')),
+          ...(user?.role === 'Admin' ? ADMIN_NAV_ITEMS : []),
+        ].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}

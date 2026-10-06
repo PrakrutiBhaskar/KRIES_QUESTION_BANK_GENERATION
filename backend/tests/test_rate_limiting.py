@@ -168,7 +168,7 @@ async def test_generation_is_limited_per_user(client, bob_client, limits):
     assert (await bob_client.post("/generate", json=GENERATE)).status_code == 200
 
 
-async def test_practice_sessions_share_the_generation_limit(client, limits):
+async def test_practice_sessions_share_the_generation_limit(client, limits, practice_shortfall_on):
     limits(rate_limit_generate="1/60")
     body = {"subject": "Science", "chapter": "Photosynthesis", "type": "MCQ", "grade": 8, "count": 1}
     assert (await client.post("/practice/sessions", json=body)).status_code == 201

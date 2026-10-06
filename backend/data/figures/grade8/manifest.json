@@ -1,379 +1,899 @@
 {
-  "_comment": "Grade 8 Science figures. Use with: python scripts/upload_figure.py --manifest backend/data/figures/grade8/manifest.json --admin <email>. 'note' is ignored by the uploader.",
+  "_comment": "Grade 8 Science diagrams, one per item of the figure list (65 of 65; the duplicate low-resolution screenshot of 1.4 was dropped). Titles were cropped off the original screenshots so they do not give answers away, and the screenshots were enlarged 1.5x; letters A, B, C... were added to blank answer boxes (boxes already numbered or lettered in the source were left alone). Chapter names are placeholders taken from the figure numbering (1.x = chapter 1) and must be renamed to the exact grade 8 textbook chapter titles before seeding. Entries with a 'note' need a quick check.",
+  "grade": 8,
   "figures": [
     {
-      "file": "01-female-anopheles-mosquito.png",
+      "file": "01-scientific-method-flowchart.png",
       "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Disease-carrying insects",
-      "caption": "Female Anopheles mosquito, the carrier of the malaria parasite",
+      "chapter": "Exploring the World of Science",
+      "topic": "Scientific method",
+      "caption": "A flowchart of seven boxes joined by down arrows: Observe, a blank step, Form a hypothesis, a blank step, Test / Experiment, a blank step, Draw conclusion",
       "labels": [
-        "Antenna",
-        "Proboscis",
-        "Antennas",
-        "Abdominal segments"
+        "Observe",
+        "A: Ask a question",
+        "Form a hypothesis",
+        "B: Make a prediction / plan the experiment",
+        "Test / Experiment",
+        "C: Record and analyse the results",
+        "Draw conclusion"
       ],
-      "note": "Has a 'KTBSSolutions.com' watermark in the image; the label 'Antennas' may be meant as palps."
+      "note": "Letters A-C were added to the three blank steps. The missing steps are my reading of the usual scientific method; check them against your textbook's flowchart."
     },
     {
-      "file": "02-nitrogen-fixing-blue-green-algae.png",
+      "file": "02-common-lab-apparatus.png",
       "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Nitrogen fixation",
-      "caption": "The nitrogen-fixing blue-green algae (Anabaena), with its vegetative cells, heterocyst, akinete and filaments",
+      "chapter": "Exploring the World of Science",
+      "topic": "Common lab apparatus",
+      "caption": "Five pieces of lab equipment, each with a lettered blank box below it for its name",
       "labels": [
-        "Heterocyst",
-        "Anabaena",
-        "Vegetative cell",
-        "Akinete",
-        "Filament",
-        "Filamentous form"
-      ]
-    },
-    {
-      "file": "03-hoe.png",
-      "subject": "Science",
-      "chapter": "Crop Production and Management",
-      "topic": "Agricultural implements",
-      "caption": "Fig. (b): A hoe",
-      "labels": [
-        "Grip",
-        "Handle",
-        "Beam",
-        "Bent plate",
-        "Rod"
-      ]
-    },
-    {
-      "file": "04-plough.png",
-      "subject": "Science",
-      "chapter": "Crop Production and Management",
-      "topic": "Agricultural implements",
-      "caption": "Fig. (a): The plough, drawn by a pair of bullocks",
-      "labels": [
-        "Beam",
-        "Ploughshaft",
-        "Ploughshare"
-      ]
-    },
-    {
-      "file": "05-petroleum-natural-gas-deposits.png",
-      "subject": "Science",
-      "chapter": "Coal and Petroleum",
-      "topic": "Petroleum and natural gas",
-      "caption": "Petroleum and natural gas deposits trapped under impervious rock, reached by wells",
-      "labels": [
-        "Wells",
-        "Impervious rock",
-        "Gas",
-        "Oil",
-        "Reservoir rock",
-        "Water"
+        "A: Beaker",
+        "B: Thermometer",
+        "C: Measuring cylinder",
+        "D: Test tube",
+        "E: Tripod stand"
       ],
-      "note": "Bottom caption is slightly cropped."
+      "note": "Letters A-E were added to the blank boxes."
     },
     {
-      "file": "06-spring-balance.png",
+      "file": "03-scientists-tools-and-fields.png",
       "subject": "Science",
-      "chapter": "Exploring Forces",
-      "topic": "Measuring force",
-      "caption": "A spring balance, with an enlarged view of its scale in grams",
+      "chapter": "Exploring the World of Science",
+      "topic": "Scientist's tools",
+      "caption": "A microscope, a telescope and a rack of test tubes, each with an arrow to a lettered blank box",
       "labels": [
-        "Top loop (for suspension)",
-        "Scales in grams",
-        "Spring and pointer",
-        "Hook (for attaching weight)"
-      ]
-    },
-    {
-      "file": "07-friction-on-table.png",
-      "subject": "Science",
-      "chapter": "Exploring Forces",
-      "topic": "Frictional force",
-      "caption": "A block on a table: the applied force and the opposing frictional force",
-      "labels": [
-        "Direction of applied force",
-        "Frictional force"
+        "A: Microscope",
+        "B: Telescope",
+        "C: Test tubes in a rack"
       ],
-      "note": "Right edge slightly clipped."
+      "note": "Letters A-C were added. If your textbook wants the field of science here (biology, astronomy, chemistry), change these labels."
     },
     {
-      "file": "08-thermoplastic-circuit.png",
+      "file": "04-measuring-length-with-a-ruler.png",
       "subject": "Science",
-      "chapter": "Synthetic Fibres and Plastics",
-      "topic": "Plastics and electricity",
-      "caption": "Circuit with a dry cell and a bulb, testing whether a thermoplastic object between A and B conducts electricity",
+      "chapter": "Exploring the World of Science",
+      "topic": "Measuring length with a ruler",
+      "caption": "A block placed along a ruler with a dashed line from its right end to the scale; below, one eye looking straight at the scale (correct) and two eyes looking from the sides (incorrect)",
       "labels": [
-        "Dry cell",
-        "Bulb",
-        "A thermoplastic object"
+        "Ruler",
+        "Block",
+        "Correct position",
+        "Incorrect positions"
+      ],
+      "note": "The block's start and end readings are not stated; read them from the picture before asking a numeric question. The duplicate low-resolution screenshot of this figure was dropped."
+    },
+    {
+      "file": "05-everyday-objects.png",
+      "subject": "Science",
+      "chapter": "Exploring the World of Science",
+      "topic": "Science-based and everyday objects",
+      "caption": "Nine everyday objects (phone, book, cooking pot, bicycle, potted plant, chair, bottle, football, soap) around a dashed divider, with two boxes below: Science-based and Not science-based",
+      "labels": [
+        "Smartphone",
+        "Book",
+        "Cooking pot",
+        "Bicycle",
+        "Potted plant",
+        "Chair",
+        "Water bottle",
+        "Football",
+        "Soap",
+        "Science-based",
+        "Not science-based"
+      ],
+      "note": "The figure does not show which objects go in which box."
+    },
+    {
+      "file": "06-objects-of-different-materials.png",
+      "subject": "Science",
+      "chapter": "Materials Around Us",
+      "topic": "Objects and the materials they are made of",
+      "caption": "A spoon, a glass tumbler, a wooden block, an eraser and a folded cloth, each with a lettered blank box",
+      "labels": [
+        "A: Spoon (metal)",
+        "B: Glass tumbler (glass)",
+        "C: Wooden block (wood)",
+        "D: Eraser (rubber)",
+        "E: Folded cloth (cloth/fabric)"
+      ],
+      "note": "Letters A-E were added. The materials in brackets are my reading of the drawings."
+    },
+    {
+      "file": "07-transparent-translucent-opaque.png",
+      "subject": "Science",
+      "chapter": "Materials Around Us",
+      "topic": "Transparent, translucent and opaque",
+      "caption": "Three rows, each with a lamp shining on a sheet with a screen behind it: a clear sheet, a patterned sheet and a wooden board, each row with a lettered blank box",
+      "labels": [
+        "A: Transparent (clear glass sheet)",
+        "B: Translucent (frosted / patterned sheet)",
+        "C: Opaque (wooden board)"
+      ],
+      "note": "Letters A-C were added. Black-and-white drawing, so the brightness of the patch on each screen is only roughly shown."
+    },
+    {
+      "file": "08-floating-and-sinking.png",
+      "subject": "Science",
+      "chapter": "Materials Around Us",
+      "topic": "Floating and sinking",
+      "caption": "A beaker of water with a wooden block and a ball floating at the top and a stone and a coin lying at the bottom",
+      "labels": [
+        "Wooden block (floats)",
+        "Ball (floats)",
+        "Stone (sinks)",
+        "Coin (sinks)"
+      ],
+      "note": "I read the round floating object as a ball."
+    },
+    {
+      "file": "09-metals-and-non-metals.png",
+      "subject": "Science",
+      "chapter": "Materials Around Us",
+      "topic": "Metals and non-metals",
+      "caption": "Two columns separated by a dashed line, headed Metals and Non-metals: a nail, coin, key and cooking pot on the left; a lump of coal, a wooden block, an eraser and a bowl on the right",
+      "labels": [
+        "Metals: Nail, Coin, Key, Cooking pot",
+        "Non-metals: Coal, Wooden block, Eraser, Bowl"
       ]
     },
     {
-      "file": "09-iron-stand-thread-plate.png",
+      "file": "10-magnetic-and-non-magnetic.png",
+      "subject": "Science",
+      "chapter": "Materials Around Us",
+      "topic": "Magnetic and non-magnetic materials",
+      "caption": "A horseshoe magnet marked N and S above a row of objects (nail, paper clip, coin, screw, wooden block, clear block, eraser), with two boxes below: Magnetic and Non-magnetic",
+      "labels": [
+        "Horseshoe magnet",
+        "Iron nail",
+        "Paper clip",
+        "Coin",
+        "Screw",
+        "Wooden block",
+        "Clear (glass/plastic) block",
+        "Eraser",
+        "Magnetic",
+        "Non-magnetic"
+      ],
+      "note": "The figure does not show which objects go in which box."
+    },
+    {
+      "file": "11-laboratory-thermometer.png",
+      "subject": "Science",
+      "chapter": "Heat and Temperature",
+      "topic": "Laboratory thermometer",
+      "caption": "A laboratory thermometer with a Celsius scale from 0 to 50 and four arrows pointing to lettered blank boxes: the top of the tube, a mark near 43, the liquid level near 15, and the bulb",
+      "labels": [
+        "A: Glass tube (top)",
+        "B: Scale marking",
+        "C: Liquid (mercury) column",
+        "D: Bulb"
+      ],
+      "note": "Letters A-D were added. A and B are my best reading of what the arrows point to; check them against your textbook's parts list."
+    },
+    {
+      "file": "12-modes-of-heat-transfer.png",
+      "subject": "Science",
+      "chapter": "Heat and Temperature",
+      "topic": "Conduction, convection and radiation",
+      "caption": "Three panels: a metal rod heated at one end by a candle, a beaker of water on a stand heated from below with circulating arrows, and the Sun with rays spreading out",
+      "labels": [
+        "(a) Conduction",
+        "(b) Convection",
+        "(c) Radiation"
+      ]
+    },
+    {
+      "file": "13-spoons-in-hot-water.png",
+      "subject": "Science",
+      "chapter": "Heat and Temperature",
+      "topic": "Good and poor conductors of heat",
+      "caption": "A metal spoon, a plastic spoon and a wooden spoon standing in a mug of hot water",
+      "labels": [
+        "Metal spoon",
+        "Plastic spoon",
+        "Wooden spoon",
+        "Mug of hot water"
+      ]
+    },
+    {
+      "file": "14-hot-warm-cold-water.png",
+      "subject": "Science",
+      "chapter": "Heat and Temperature",
+      "topic": "Hot, warm and cold water",
+      "caption": "Three bowls of water with a lot of steam, a little steam and no steam, labelled Hot water, Warm water and Cold water",
+      "labels": [
+        "Hot water",
+        "Warm water",
+        "Cold water"
+      ]
+    },
+    {
+      "file": "15-sea-breeze-and-land-breeze.png",
+      "subject": "Science",
+      "chapter": "Heat and Temperature",
+      "topic": "Sea breeze and land breeze",
+      "caption": "Two panels showing land with a palm tree beside the sea: Sea breeze (day) with the Sun and a loop of arrows, and Land breeze (night) with the Moon and a loop of arrows in the other direction",
+      "labels": [
+        "Sea breeze (day)",
+        "Land breeze (night)",
+        "Land",
+        "Sea",
+        "Sun",
+        "Moon",
+        "Palm tree"
+      ]
+    },
+    {
+      "file": "16-changes-in-state-of-water.png",
+      "subject": "Science",
+      "chapter": "Changes in Matter",
+      "topic": "Changes of state",
+      "caption": "Ice cubes melting, water boiling in a beaker and water freezing in an ice tray, each captioned with its change of state",
+      "labels": [
+        "Ice melting (solid → liquid)",
+        "Water boiling (liquid → gas)",
+        "Water freezing (liquid → solid)"
+      ]
+    },
+    {
+      "file": "17-physical-and-chemical-changes.png",
+      "subject": "Science",
+      "chapter": "Changes in Matter",
+      "topic": "Physical and chemical changes",
+      "caption": "Four examples: a rusting nail, a burning candle, a raw banana and a ripe banana",
+      "labels": [
+        "Rusting nail",
+        "Burning candle",
+        "Raw banana",
+        "Ripe banana"
+      ],
+      "note": "The figure does not say which examples are physical and which chemical."
+    },
+    {
+      "file": "18-reversible-changes.png",
+      "subject": "Science",
+      "chapter": "Changes in Matter",
+      "topic": "Reversible changes",
+      "caption": "Hands stretching a rubber band, and a sheet of paper being folded",
+      "labels": [
+        "Stretching a rubber band",
+        "Folding paper"
+      ]
+    },
+    {
+      "file": "19-irreversible-changes.png",
+      "subject": "Science",
+      "chapter": "Changes in Matter",
+      "topic": "Irreversible changes",
+      "caption": "A fried egg in a pan, milk curdling in a pot and a baked loaf of bread with slices",
+      "labels": [
+        "Cooking an egg",
+        "Curdling milk",
+        "Baking bread"
+      ],
+      "note": "The bottom of the 'Baking bread' label is slightly clipped in the source image."
+    },
+    {
+      "file": "20-dissolving-and-crystallisation.png",
+      "subject": "Science",
+      "chapter": "Changes in Matter",
+      "topic": "Dissolving and crystallisation",
+      "caption": "A spoon pouring sugar into a beaker of water, then an arrow to a dish with crystals and steam above it",
+      "labels": [
+        "Dissolving sugar in water",
+        "Crystals formed after evaporation"
+      ]
+    },
+    {
+      "file": "21-parts-of-a-plant.png",
+      "subject": "Science",
+      "chapter": "Living Things and Their Habitats",
+      "topic": "Parts of a plant",
+      "caption": "A flowering plant with roots, with four arrows to lettered blank boxes: the flower, a leaf, the stem and the roots",
+      "labels": [
+        "A: Flower",
+        "B: Leaf",
+        "C: Stem",
+        "D: Root"
+      ],
+      "note": "Letters A-D were added."
+    },
+    {
+      "file": "22-animals-in-different-habitats.png",
+      "subject": "Science",
+      "chapter": "Living Things and Their Habitats",
+      "topic": "Habitats",
+      "caption": "Four panels: a camel in a desert, a fish underwater, a deer in a forest and a polar bear on ice",
+      "labels": [
+        "Desert (camel)",
+        "Aquatic (fish)",
+        "Forest (deer)",
+        "Polar (polar bear)"
+      ]
+    },
+    {
+      "file": "23-adaptations-in-living-things.png",
+      "subject": "Science",
+      "chapter": "Living Things and Their Habitats",
+      "topic": "Adaptations",
+      "caption": "A camel's head, a fish's head, a cactus and a bird's head, each with an arrow and a note about its adaptation",
+      "labels": [
+        "Camel: hump stores fat (desert adaptation)",
+        "Fish: gills for breathing in water (aquatic adaptation)",
+        "Cactus: spines reduce water loss (desert adaptation)",
+        "Bird: beak for different food (adaptation for feeding)"
+      ]
+    },
+    {
+      "file": "24-living-and-non-living-things.png",
+      "subject": "Science",
+      "chapter": "Living Things and Their Habitats",
+      "topic": "Living and non-living things",
+      "caption": "Two columns headed Living things and Non-living things: a dog, a tree, a mushroom and a potted plant on the left; a rock, a car, a table and a football on the right",
+      "labels": [
+        "Living: Dog, Tree, Mushroom, Potted plant",
+        "Non-living: Rock, Car, Table, Football"
+      ]
+    },
+    {
+      "file": "25-food-chain-in-a-pond.png",
+      "subject": "Science",
+      "chapter": "Living Things and Their Habitats",
+      "topic": "Food chain",
+      "caption": "A pond food chain drawn bottom to top with arrows: algae, a tiny water animal with a lettered blank box, a small fish and a large bird",
+      "labels": [
+        "Algae (producer)",
+        "A: Primary consumer (tiny water animal)",
+        "Small fish (secondary consumer)",
+        "Large bird (tertiary consumer)"
+      ],
+      "note": "Letter A was added. I read the tiny animal as a primary consumer."
+    },
+    {
+      "file": "26-balanced-diet-plate.png",
+      "subject": "Science",
+      "chapter": "Food and Nutrition",
+      "topic": "Balanced diet",
+      "caption": "A round plate split into four sections of food, each with an arrow to a lettered blank box",
+      "labels": [
+        "A: Cereals / bread (carbohydrates)",
+        "B: Vegetables and fruits",
+        "C: Protein foods (fish, eggs, pulses)",
+        "D: Milk and milk products"
+      ],
+      "note": "Letters A-D were added. The food groups are my reading of the drawn foods; check them against your textbook's plate."
+    },
+    {
+      "file": "27-foods-rich-in-nutrients.png",
+      "subject": "Science",
+      "chapter": "Food and Nutrition",
+      "topic": "Nutrients and food sources",
+      "caption": "A table with four rows of food pictures: Proteins, Carbohydrates, Fats, and Vitamins and minerals",
+      "labels": [
+        "Proteins: eggs, fish, pulses",
+        "Carbohydrates: rice or flour, bread, potatoes",
+        "Fats: oil, butter, groundnuts",
+        "Vitamins and minerals: orange, spinach, carrot"
+      ]
+    },
+    {
+      "file": "28-iodine-test-for-starch.png",
+      "subject": "Science",
+      "chapter": "Food and Nutrition",
+      "topic": "Iodine test for starch",
+      "caption": "A dropper of iodine over a slice before the test (yellow-brown drop) and after the test (blue-black patch)",
+      "labels": [
+        "Before iodine (yellow-brown)",
+        "After iodine (blue-black)",
+        "Dropper",
+        "Slice of bread or potato"
+      ],
+      "note": "I could not tell whether the slice is bread or potato."
+    },
+    {
+      "file": "29-deficiency-diseases.png",
+      "subject": "Science",
+      "chapter": "Food and Nutrition",
+      "topic": "Deficiency diseases",
+      "caption": "Three rows: a mouth with bleeding gums, a child with bowed legs and a child with a swollen belly, each with the disease, its deficiency and its symptoms",
+      "labels": [
+        "Scurvy (vitamin C deficiency): bleeding gums",
+        "Rickets (vitamin D deficiency): weak and bowed bones",
+        "Kwashiorkor (protein deficiency): swollen belly, poor growth"
+      ]
+    },
+    {
+      "file": "30-food-spoilage-and-preservation.png",
+      "subject": "Science",
+      "chapter": "Food and Nutrition",
+      "topic": "Food spoilage and preservation",
+      "caption": "Mould on bread, a jar of pickles, a refrigerator and fish hung on a line to dry",
+      "labels": [
+        "Food spoilage (mould on bread)",
+        "Preservation (pickles)",
+        "Preservation (refrigeration)",
+        "Preservation (drying)"
+      ],
+      "note": "The 'drying' caption is partly cut off at the bottom of the source image."
+    },
+    {
+      "file": "31-push-and-pull.png",
+      "subject": "Science",
+      "chapter": "Force and Pressure",
+      "topic": "Push and pull",
+      "caption": "Four panels: a boy pushing a door and a girl pulling a door (both labelled), a boy kicking a football and a boy pulling a cart, the last two each with a lettered blank box",
+      "labels": [
+        "Push (pushing a door)",
+        "Pull (pulling a door)",
+        "A: Push (kicking a ball)",
+        "B: Pull (pulling a cart)"
+      ],
+      "note": "Letters A and B were added."
+    },
+    {
+      "file": "32-friction-on-different-surfaces.png",
+      "subject": "Science",
+      "chapter": "Force and Pressure",
+      "topic": "Friction",
+      "caption": "A car on a rough surface (more friction, slows down quickly) and on a smooth surface (less friction, moves faster)",
+      "labels": [
+        "Rough surface: more friction (car slows down quickly)",
+        "Smooth surface: less friction (car moves faster)"
+      ]
+    },
+    {
+      "file": "33-balanced-and-unbalanced-forces.png",
+      "subject": "Science",
+      "chapter": "Force and Pressure",
+      "topic": "Balanced and unbalanced forces",
+      "caption": "Two tug-of-war scenes with three children on each side: equal arrows with no movement, and unequal arrows with movement to the right",
+      "labels": [
+        "Balanced forces (no movement)",
+        "Unbalanced forces (movement to the right)"
+      ]
+    },
+    {
+      "file": "34-pressure-on-different-surfaces.png",
+      "subject": "Science",
+      "chapter": "Force and Pressure",
+      "topic": "Pressure",
+      "caption": "A person standing on a bed of sharp spikes and another standing on a flat wooden board",
+      "labels": [
+        "Sharp blade (small area) → high pressure",
+        "Flat board (large area) → low pressure"
+      ]
+    },
+    {
+      "file": "35-magnetic-force.png",
+      "subject": "Science",
+      "chapter": "Force and Pressure",
+      "topic": "Magnetic force",
+      "caption": "A bar magnet (N, S) attracting a pile of paper clips, and two bar magnets (N S and N S) facing each other with arrows spreading outward, labelled Repelling",
+      "labels": [
+        "Attracting (non-contact force)",
+        "Repelling (non-contact force)",
+        "Bar magnet",
+        "Paper clips"
+      ],
+      "note": "CHECK THIS ONE: in the lower picture the S end of the left magnet faces the N end of the right magnet, which would attract, but the picture is labelled Repelling. Replace the image or avoid pole-based questions on it."
+    },
+    {
+      "file": "36-vibrating-objects-produce-sound.png",
       "subject": "Science",
       "chapter": "Sound",
-      "topic": "Vibrations",
-      "caption": "Fig. 1: An iron stand with a thread hanging from the clamp and a small plate suspended from it",
+      "topic": "Sound and vibration",
+      "caption": "A tuning fork vibrating in a bowl of water, and a plucked rubber band stretched over a box",
       "labels": [
-        "Clamp with screw",
-        "Retort stand",
-        "Fine thread",
-        "Suspended small plate",
-        "Heavy base"
+        "Tuning fork vibrating in water",
+        "Plucked rubber band"
       ],
-      "note": "CHECK CHAPTER: I guessed Sound; the diagram does not say which activity it is from."
+      "note": "The right edge of the rubber band picture is cut off in the source image."
     },
     {
-      "file": "10-nitrogen-cycle.png",
+      "file": "37-human-ear-and-its-parts.png",
       "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Nitrogen cycle",
-      "caption": "The nitrogen cycle, from atmospheric nitrogen through lightning, bacteria, plants and animals back to the soil",
+      "chapter": "Sound",
+      "topic": "Parts of the ear",
+      "caption": "A cross-section of the human ear with six arrows to lettered blank boxes: three along the top, three along the bottom",
       "labels": [
-        "Atmospheric nitrogen",
-        "Lightning fixes nitrogen",
-        "Uptake by plants",
-        "Animals eat plants",
-        "Nitrogenous waste from excretion and death",
-        "Compounds of nitrogen in the soil",
-        "Bacteria turn compounds of nitrogen into gaseous nitrogen"
+        "A: Outer ear (pinna)",
+        "B: Ear ossicles (hammer, anvil, stirrup)",
+        "C: Auditory nerve",
+        "D: Eardrum",
+        "E: Eustachian tube",
+        "F: Cochlea"
+      ],
+      "note": "Letters A-F were added. A has two arrows and E and F are small targets, so check these against your textbook's ear diagram."
+    },
+    {
+      "file": "38-string-telephone.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Sound travelling through a string",
+      "caption": "A boy and a girl each holding a cup, the cups joined by a taut string",
+      "labels": [
+        "Cup",
+        "String",
+        "Sound travels through the string (from one cup to the other)"
       ]
     },
     {
-      "file": "11-human-cheek-cells.png",
+      "file": "39-musical-instruments.png",
       "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Animal cell",
-      "caption": "Human cheek cells",
+      "chapter": "Sound",
+      "topic": "Types of musical instruments",
+      "caption": "Three columns: String (guitar, violin), Wind (flute, trumpet) and Percussion (drum, tabla)",
       "labels": [
-        "Nuclear membrane",
-        "Cytoplasm",
-        "Nucleus",
-        "Cell membrane"
+        "String: Guitar, Violin",
+        "Wind: Flute, Trumpet",
+        "Percussion: Drum, Tabla"
+      ],
+      "note": "The right edge of the Percussion heading is cut off in the source image."
+    },
+    {
+      "file": "40-high-and-low-pitch.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Pitch and wavelength",
+      "caption": "A red wave with long wavelength (low pitch) above a blue wave with short wavelength (high pitch)",
+      "labels": [
+        "Low pitch (longer wavelength)",
+        "High pitch (shorter wavelength)"
       ]
     },
     {
-      "file": "12-onion-peel-cells.png",
+      "file": "41-reflection-from-a-plane-mirror.png",
       "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Plant cell",
-      "caption": "Cells observed in an onion peel",
+      "chapter": "Light",
+      "topic": "Reflection of light",
+      "caption": "An incident ray and a reflected ray meeting at a plane mirror, with arcs marked i and r and two arrows to lettered blank boxes",
       "labels": [
-        "Nucleus",
-        "Cytoplasm"
+        "Incident ray",
+        "Reflected ray",
+        "Plane mirror",
+        "A: Angle of incidence (i)",
+        "B: Angle of reflection (r)"
+      ],
+      "note": "Letters A and B were added. The mirror strip is drawn along the dashed normal, so the geometry is a little odd; check against your textbook before asking about the normal."
+    },
+    {
+      "file": "42-shadow-formation.png",
+      "subject": "Science",
+      "chapter": "Light",
+      "topic": "Shadows",
+      "caption": "A bulb, an opaque ball and a screen with a dark shadow, plus three small panels with the light source near, at medium distance and far",
+      "labels": [
+        "Light source",
+        "Opaque object",
+        "Screen",
+        "Light source near",
+        "Light source medium distance",
+        "Light source far"
       ]
     },
     {
-      "file": "13-plant-and-animal-cell.png",
+      "file": "43-pinhole-camera.png",
       "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Plant and animal cells",
-      "caption": "(a) Plant cell and (b) animal cell compared",
+      "chapter": "Light",
+      "topic": "Pinhole camera",
+      "caption": "A tree in front of a box with a tiny hole, and an upside-down tree image on the back wall of the box",
       "labels": [
-        "Cell wall",
-        "Cell membrane",
-        "Vacuole",
-        "Nucleus",
-        "Chloroplast",
-        "Cytoplasm"
+        "Object",
+        "Pinhole",
+        "Inverted image"
       ]
     },
     {
-      "file": "14-candle-flame.png",
+      "file": "44-dispersion-of-white-light.png",
       "subject": "Science",
-      "chapter": "Combustion and Flame",
-      "topic": "Zones of a flame",
-      "caption": "Candle flame and its three zones",
+      "chapter": "Light",
+      "topic": "Dispersion of light",
+      "caption": "A beam of white light passing through a glass prism and spreading into a spectrum",
       "labels": [
-        "Hot outermost zone of complete combustion",
-        "Middle zone of incomplete combustion",
-        "Innermost zone of unburnt wax",
-        "Candle"
-      ],
-      "note": "Right edge has a border artefact."
-    },
-    {
-      "file": "15-larynx-anatomy.png",
-      "subject": "Science",
-      "chapter": "Reaching the Age of Adolescence",
-      "topic": "Voice box (larynx)",
-      "caption": "Larynx anatomy: the position of the voice box in the throat and a close-up of the vocal cords",
-      "labels": [
-        "Vocal cords",
-        "Cartilage"
-      ],
-      "note": "Two label lines in the image have no text. Chapter is not in your syllabus.json."
-    },
-    {
-      "file": "16-nerve-cell.png",
-      "subject": "Science",
-      "chapter": "The Invisible Living World: Beyond Our Naked Eye",
-      "topic": "Specialised cells",
-      "caption": "Nerve cell",
-      "labels": [
-        "Nucleus",
-        "Axon",
-        "Myelin sheath",
-        "Axon terminals"
+        "White light",
+        "Glass prism",
+        "Red",
+        "Orange",
+        "Yellow",
+        "Green",
+        "Blue",
+        "Indigo",
+        "Violet"
       ]
     },
     {
-      "file": "17-endocrine-glands.png",
+      "file": "45-sun-rays-through-a-lens.png",
       "subject": "Science",
-      "chapter": "Reaching the Age of Adolescence",
-      "topic": "Hormones",
-      "caption": "Position of endocrine glands in the human body",
-      "labels": [
-        "Pituitary gland",
-        "Thyroid gland",
-        "Adrenal gland",
-        "Pancreas",
-        "Position of the ovary in the female",
-        "Testis"
-      ],
-      "note": "Chapter is not in your syllabus.json."
-    },
-    {
-      "file": "18-reproduction-in-hydra.png",
-      "subject": "Science",
-      "chapter": "Reproduction in Animals",
-      "topic": "Asexual reproduction",
-      "caption": "Reproduction in Hydra by budding",
-      "labels": [
-        "Parent Hydra",
-        "Bud",
-        "New Hydra on detachment forms a new Hydra"
-      ]
-    },
-    {
-      "file": "19-yeast-budding-binary-fission.png",
-      "subject": "Science",
-      "chapter": "Reproduction in Animals",
-      "topic": "Asexual reproduction",
-      "caption": "Reproduction in yeast by budding (the image's bottom caption reads 'Binary fission in Amoeba')",
-      "labels": [
-        "Cell wall",
-        "Nucleus",
-        "Cell membrane",
-        "Cytoplasm",
-        "Nucleus divides",
-        "Rapid budding colony of yeast",
-        "Yeast cells detached from the colony"
-      ],
-      "note": "Caption in the image doesn't match the drawing (shows yeast budding, not amoeba fission)."
-    },
-    {
-      "file": "20-electrolysis-copper-plating.png",
-      "subject": "Science",
-      "chapter": "Chemical Effects of Electric Current",
-      "topic": "Electroplating",
-      "caption": "Passing current through a salt solution with copper electrodes, with a compass showing the magnetic field around the wire; copper plates onto one electrode",
-      "labels": [
-        "Dry cell (battery)",
-        "Compass",
-        "Magnetic field line (dashed, with north arrow)",
-        "Conductor wire",
-        "Copper/carbon electrodes",
-        "Liquid (salt solution)",
-        "Copper plating on electrode"
-      ],
-      "note": "Left edge has a leftover 'ons.com' watermark fragment."
-    },
-    {
-      "file": "21-fertilisation-zygote-animals.png",
-      "subject": "Science",
-      "chapter": "Reproduction in Animals",
-      "topic": "Fertilisation",
-      "caption": "Fertilisation of the ovum by a sperm, and the zygote formed (the image's bottom caption reads 'Reproduction by Budding and Fission')",
-      "labels": [
-        "Sperms",
-        "Ovum",
-        "Fusing",
-        "Zygote"
-      ],
-      "note": "Caption in the image doesn't match the drawing (shows fertilisation, not budding or fission)."
-    },
-    {
-      "file": "22-solar-system.png",
-      "subject": "Science",
-      "chapter": "Stars and the Solar System",
-      "topic": "The solar system",
-      "caption": "The solar system (not to scale): the Sun and planets in their orbits with the asteroid belt",
+      "chapter": "Light",
+      "topic": "Convex lens",
+      "caption": "The Sun's rays passing through a magnifying glass and meeting at a bright spot on a sheet of paper",
       "labels": [
         "Sun",
-        "Mercury",
-        "Venus",
-        "Earth",
-        "Mars",
-        "Asteroid belt",
-        "Jupiter",
-        "Saturn",
-        "Uranus",
-        "Neptune"
-      ],
-      "note": "Chapter is not in your syllabus.json."
+        "Convex lens (magnifying glass)",
+        "Focused rays (heat)",
+        "Paper"
+      ]
     },
     {
-      "file": "23-ursa-major.png",
+      "file": "46-circuit-symbols.png",
       "subject": "Science",
-      "chapter": "Stars and the Solar System",
+      "chapter": "Electricity and Safety",
+      "topic": "Circuit symbols",
+      "caption": "A two-column table: component names (cell, battery, bulb, switch open, switch closed, connecting wire) and a lettered blank box for each symbol",
+      "labels": [
+        "A: Symbol of a cell",
+        "B: Symbol of a battery",
+        "C: Symbol of a bulb",
+        "D: Symbol of an open switch",
+        "E: Symbol of a closed switch",
+        "F: Symbol of a connecting wire"
+      ],
+      "note": "Letters A-F were added. The answers are symbols to be drawn, not words."
+    },
+    {
+      "file": "47-open-and-closed-circuit.png",
+      "subject": "Science",
+      "chapter": "Electricity and Safety",
+      "topic": "Open and closed circuit",
+      "caption": "Two circuits with a cell, a switch and a bulb: open with an unlit bulb, closed with a glowing bulb",
+      "labels": [
+        "Open circuit (bulb does not glow)",
+        "Closed circuit (bulb glows)",
+        "Cell",
+        "Switch",
+        "Bulb"
+      ]
+    },
+    {
+      "file": "48-conductors-and-insulators.png",
+      "subject": "Science",
+      "chapter": "Electricity and Safety",
+      "topic": "Conductors and insulators",
+      "caption": "A circuit with a cell and a glowing bulb, with gaps where a coin, a rubber and a pencil lead can be placed, each with a lettered blank box",
+      "labels": [
+        "A: Conductor (coin, metal)",
+        "B: Insulator (rubber)",
+        "C: Conductor (pencil lead, graphite)"
+      ],
+      "note": "Letters A-C were added."
+    },
+    {
+      "file": "49-series-and-parallel-arrangement.png",
+      "subject": "Science",
+      "chapter": "Electricity and Safety",
+      "topic": "Series and parallel circuits",
+      "caption": "Two bulbs one after the other in a single loop (series) and two bulbs on separate branches (parallel), each powered by a cell",
+      "labels": [
+        "Series arrangement",
+        "Parallel arrangement"
+      ]
+    },
+    {
+      "file": "50-electrical-safety-hazards.png",
+      "subject": "Science",
+      "chapter": "Electricity and Safety",
+      "topic": "Electrical safety",
+      "caption": "A wet hand touching a socket, an overloaded socket with many plugs, and a bare wire with sparks",
+      "labels": [
+        "Using electrical appliances with wet hands",
+        "Overloaded socket (many appliances)",
+        "Bare wire (danger of electric shock)"
+      ]
+    },
+    {
+      "file": "51-lightning-and-safety-guide.png",
+      "subject": "Science",
+      "chapter": "Natural Phenomena: Lightning, Earthquakes and Cyclones",
+      "topic": "Lightning safety",
+      "caption": "A photograph of lightning above two panels of safety tips: What to do (Indoors) and What to do (Outdoors)",
+      "labels": [
+        "Indoors: stay indoors",
+        "Indoors: close windows and doors",
+        "Indoors: avoid using electrical appliances",
+        "Outdoors: move to a safe shelter or building",
+        "Outdoors: avoid open fields, tall trees and metal objects",
+        "Outdoors: stay away from water bodies"
+      ]
+    },
+    {
+      "file": "52-earthquake-structure.png",
+      "subject": "Science",
+      "chapter": "Natural Phenomena: Lightning, Earthquakes and Cyclones",
+      "topic": "Earthquakes",
+      "caption": "A cross-section of the ground under a house with rings spreading out from a red point, and a red flag on the surface above it",
+      "labels": [
+        "Epicentre (point on surface above focus)",
+        "Focus (point where earthquake starts)",
+        "Seismic waves (move outwards)"
+      ]
+    },
+    {
+      "file": "53-seismograph-and-richter-scale.png",
+      "subject": "Science",
+      "chapter": "Natural Phenomena: Lightning, Earthquakes and Cyclones",
+      "topic": "Seismograph and Richter scale",
+      "caption": "A seismograph drum with a wave record, an amplitude-time graph, and a colour-coded table of Richter magnitudes",
+      "labels": [
+        "Seismograph (record of earthquake waves)",
+        "Richter scale: below 2.0 Micro",
+        "Richter scale: 2.0-3.9 Minor",
+        "Richter scale: 4.0-4.9 Light",
+        "Richter scale: 5.0-5.9 Moderate",
+        "Richter scale: 6.0-6.9 Strong",
+        "Richter scale: 7.0-7.9 Major",
+        "Richter scale: 8.0 and above Great",
+        "Amplitude",
+        "Time (seconds)"
+      ]
+    },
+    {
+      "file": "54-lightning-conductor.png",
+      "subject": "Science",
+      "chapter": "Natural Phenomena: Lightning, Earthquakes and Cyclones",
+      "topic": "Lightning conductor",
+      "caption": "A tall building with a metal rod on top joined by a wire down the wall to a plate buried in the ground",
+      "labels": [
+        "Lightning conductor (metal rod)",
+        "Conducting wire (carries charge to earth)",
+        "Earthing system (safely transfers charge to the ground)"
+      ]
+    },
+    {
+      "file": "55-cyclone-satellite-image.png",
+      "subject": "Science",
+      "chapter": "Natural Phenomena: Lightning, Earthquakes and Cyclones",
+      "topic": "Cyclone",
+      "caption": "A satellite photograph of a cyclone with a spiral of cloud around a small dark centre",
+      "labels": [
+        "Eye (calm centre)"
+      ]
+    },
+    {
+      "file": "56-the-eight-planets.png",
+      "subject": "Science",
+      "chapter": "The Solar System and the Sky",
+      "topic": "Planets of the Solar System",
+      "caption": "The Sun at the left and eight planets in a row, each with a numbered box above it",
+      "labels": [
+        "Sun",
+        "1: Mercury",
+        "2: Venus",
+        "3: Earth",
+        "4: Mars",
+        "5: Jupiter",
+        "6: Saturn",
+        "7: Uranus",
+        "8: Neptune"
+      ],
+      "note": "The planet names are my reading of size and colour; the figure itself shows only the numbers 1-8."
+    },
+    {
+      "file": "57-phases-of-the-moon.png",
+      "subject": "Science",
+      "chapter": "The Solar System and the Sky",
+      "topic": "Phases of the Moon",
+      "caption": "The Earth in the centre with eight Moon phases around it in a ring, each named",
+      "labels": [
+        "New Moon",
+        "Waxing crescent",
+        "First quarter",
+        "Waxing gibbous",
+        "Full Moon",
+        "Waning gibbous",
+        "Last quarter",
+        "Waning crescent"
+      ]
+    },
+    {
+      "file": "58-constellations-and-pole-star.png",
+      "subject": "Science",
+      "chapter": "The Solar System and the Sky",
       "topic": "Constellations",
-      "caption": "(a) The constellation Ursa Major",
-      "labels": [],
-      "note": "Chapter is not in your syllabus.json."
-    },
-    {
-      "file": "24-orion.png",
-      "subject": "Science",
-      "chapter": "Stars and the Solar System",
-      "topic": "Constellations",
-      "caption": "(b) The constellation Orion",
-      "labels": [],
-      "note": "Chapter is not in your syllabus.json."
-    },
-    {
-      "file": "25-human-eye.png",
-      "subject": "Science",
-      "chapter": "Light: Mirrors and Lenses",
-      "topic": "The human eye",
-      "caption": "Human eye",
+      "caption": "A starry sky with the Big Dipper pattern on the left, the Orion pattern on the right and a single star marked with an arrow",
       "labels": [
-        "Ciliary muscle",
-        "Iris",
-        "Lens",
-        "Cornea",
-        "Retina",
-        "Optic nerve"
-      ],
-      "note": "Light is in your syllabus.json under Class 7 only."
+        "Ursa Major (Big Dipper)",
+        "Orion",
+        "Pole Star (Polaris)"
+      ]
     },
     {
-      "file": "26-reflection-of-light.png",
+      "file": "59-solar-and-lunar-eclipses.png",
       "subject": "Science",
-      "chapter": "Light: Mirrors and Lenses",
-      "topic": "Reflection of light",
-      "caption": "Reflection of light: incident ray, reflected ray, normal, angle of incidence (i) and angle of reflection (r)",
+      "chapter": "The Solar System and the Sky",
+      "topic": "Eclipses",
+      "caption": "Two diagrams of the Sun, Earth and Moon in a line: the Moon between the Sun and Earth, and the Earth between the Sun and Moon",
       "labels": [
-        "Angle of reflection (r)",
-        "Angle of incidence (i)",
-        "Reflected ray",
-        "Incident ray",
-        "Normal"
-      ],
-      "note": "Light is in your syllabus.json under Class 7 only."
+        "Solar eclipse (Moon between Sun and Earth)",
+        "Lunar eclipse (Earth between Sun and Moon)",
+        "Sun",
+        "Moon",
+        "Earth"
+      ]
     },
     {
-      "file": "27-regular-and-diffused-reflection.png",
+      "file": "60-day-and-night-due-to-rotation.png",
       "subject": "Science",
-      "chapter": "Light: Mirrors and Lenses",
-      "topic": "Reflection of light",
-      "caption": "Regular reflection from a smooth surface and diffused reflection from a rough surface",
+      "chapter": "The Solar System and the Sky",
+      "topic": "Rotation of the Earth",
+      "caption": "The Earth tilted on its axis with the Sun's rays coming from the right, a lit day side and a dark night side",
       "labels": [
-        "Regular reflection",
-        "Diffused reflection"
+        "Earth's axis (tilted at 23.5°)",
+        "Direction of rotation (west to east)",
+        "Sun's rays",
+        "Day (sunlight)",
+        "Night (dark)"
+      ]
+    },
+    {
+      "file": "61-water-cycle.png",
+      "subject": "Science",
+      "chapter": "Our Environment: Water, Pollution and Waste",
+      "topic": "Water cycle",
+      "caption": "A landscape with sea, mountains, the Sun and clouds, with three numbered blank boxes for the stages: vapour rising from the sea, a curved arrow towards the clouds, and rain falling",
+      "labels": [
+        "1: Evaporation",
+        "2: Condensation",
+        "3: Precipitation (rain)"
       ],
-      "note": "Light is in your syllabus.json under Class 7 only."
+      "note": "The boxes were already numbered 1-3 in the source. The stage names are my reading of the arrows; check them against your textbook."
+    },
+    {
+      "file": "62-types-of-pollution.png",
+      "subject": "Science",
+      "chapter": "Our Environment: Water, Pollution and Waste",
+      "topic": "Types of pollution",
+      "caption": "Four pictures with lettered blank boxes: factory smoke and cars, waste pouring into a river with plastic, a rubbish dump with an excavator, and noisy traffic with a child covering her ears",
+      "labels": [
+        "(a) Air pollution",
+        "(b) Water pollution",
+        "(c) Soil (land) pollution",
+        "(d) Noise pollution"
+      ],
+      "note": "The boxes were already lettered (a)-(d) in the source."
+    },
+    {
+      "file": "63-waste-segregation.png",
+      "subject": "Science",
+      "chapter": "Our Environment: Water, Pollution and Waste",
+      "topic": "Waste segregation",
+      "caption": "Three coloured dustbins (Wet waste, Dry waste, Hazardous waste) above nine pictured items",
+      "labels": [
+        "Wet waste (biodegradable)",
+        "Dry waste (recyclable)",
+        "Hazardous waste (special handling)",
+        "Banana peel",
+        "Plastic bottle",
+        "Used battery",
+        "Vegetable scraps",
+        "Newspaper",
+        "Broken bulb",
+        "Tin can",
+        "Medicine wrapper",
+        "Leaves"
+      ],
+      "note": "The figure does not show which item goes in which bin."
+    },
+    {
+      "file": "64-renewable-vs-non-renewable-energy.png",
+      "subject": "Science",
+      "chapter": "Our Environment: Water, Pollution and Waste",
+      "topic": "Energy sources",
+      "caption": "Two columns of four pictures each: Renewable energy and Non-renewable energy",
+      "labels": [
+        "Renewable: Solar energy, Wind energy, Hydroelectric energy, Biogas (biomass)",
+        "Non-renewable: Coal, Petroleum (oil), Natural gas, Nuclear energy"
+      ]
+    },
+    {
+      "file": "65-the-3rs-of-waste-management.png",
+      "subject": "Science",
+      "chapter": "Our Environment: Water, Pollution and Waste",
+      "topic": "Reduce, reuse, recycle",
+      "caption": "Three coloured bands headed Reduce, Reuse and Recycle, each with two pictured examples",
+      "labels": [
+        "Reduce (use less): avoid single-use plastic bags, use a reusable bottle",
+        "Reuse (use again): reuse glass jars, use old clothes again or donate",
+        "Recycle (make new products): recycle paper, recycle metal cans"
+      ]
     }
   ]
 }

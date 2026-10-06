@@ -92,8 +92,6 @@ export interface GenerateFormData {
   difficulty: Difficulty;
   /** Marks chosen per type; a type with no entry uses its default (see effectiveMarks). */
   marksChoice: Partial<Record<QuestionType, Marks>>;
-  fresh: boolean;           // skip stored questions and force new generation
-  useFigures: boolean;      // write the questions about diagrams from the figure library
 }
 
 // ============================================================

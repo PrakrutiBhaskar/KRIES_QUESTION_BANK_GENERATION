@@ -204,7 +204,7 @@ async def test_papers_can_mix_in_questions_generated_by_others(client, bob_clien
 # --- practice sessions are private --------------------------------------------
 
 
-async def test_practice_sessions_belong_to_their_creator(client, bob_client):
+async def test_practice_sessions_belong_to_their_creator(client, bob_client, practice_shortfall_on):
     created = await client.post("/practice/sessions", json=SESSION)
     assert created.status_code == 201, created.text
     sid = created.json()["id"]

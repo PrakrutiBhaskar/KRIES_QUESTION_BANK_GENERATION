@@ -39,6 +39,7 @@ questions allow.
 from __future__ import annotations
 
 import logging
+import random
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -293,8 +294,8 @@ async def create_blueprint_paper(
     # Fold every slot into (chapter, type, marks, difficulty, figures?) groups,
     # so two sections that ask for the same kind of question share one fetch
     # instead of each fetching (and possibly colliding on) the same stored rows.
-    # Per (chapter, type, marks, difficulty) the first `figure_share(n)` slots,
-    # in paper order, become diagram-based questions; the rest are theory.
+    # Per (chapter, type, marks, difficulty) `figure_share(n)` slots, picked at
+    # random, become diagram-based questions; the rest are theory.
     GroupKey = tuple[str, QuestionType, int, str, bool]
     BaseKey = tuple[str, QuestionType, int, str]
     base_slots: list[list[BaseKey]] = []
@@ -320,14 +321,23 @@ async def create_blueprint_paper(
                 figure_left[key] = 1
                 break
 
+    # Which occurrences (0-based, in paper order) of each group are the diagram
+    # ones: a random pick, so the diagram questions are not always the first
+    # ones of a section.
+    figure_picks: dict[BaseKey, set[int]] = {
+        key: set(random.sample(range(base_total[key]), min(n, base_total[key])))
+        for key, n in figure_left.items()
+    }
+    seen_in_group: dict[BaseKey, int] = {}
+
     needed: dict[GroupKey, int] = {}
     slot_keys: list[list[GroupKey]] = []
     for keys in base_slots:
         resolved: list[GroupKey] = []
         for base in keys:
-            as_figure = figure_left[base] > 0
-            if as_figure:
-                figure_left[base] -= 1
+            occurrence = seen_in_group.get(base, 0)
+            seen_in_group[base] = occurrence + 1
+            as_figure = occurrence in figure_picks[base]
             key: GroupKey = (*base, as_figure)
             resolved.append(key)
             needed[key] = needed.get(key, 0) + 1

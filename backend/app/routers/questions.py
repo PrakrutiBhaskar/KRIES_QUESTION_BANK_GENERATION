@@ -20,7 +20,7 @@ from generation_engine.prompts import supported_combinations
 from generation_engine.schemas import Difficulty, QuestionType, Subject
 
 from ..db import get_session
-from ..deps import get_current_user
+from ..deps import get_current_user, require_generator
 from ..models import User
 from ..schemas import (
     CombinationOut,
@@ -52,7 +52,7 @@ router = APIRouter(tags=["questions"])
 async def generate(
     payload: GenerateIn,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_generator),
 ) -> GenerateOut:
     questions, cached, generated, report = await generation_service.generate_questions(
         session, payload, user_id=user.id
@@ -82,7 +82,7 @@ async def generate(
 async def verify_questions(
     payload: VerifyIn,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_generator),
 ) -> VerifyOut:
     rows = await generation_service.verify_questions(session, payload.question_ids)
     out = [QuestionOut.from_model(r) for r in rows]

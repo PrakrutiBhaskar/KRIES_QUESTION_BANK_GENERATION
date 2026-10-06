@@ -33,6 +33,7 @@ generation stays fast and returns questions as "unverified" until someone asks.
 from __future__ import annotations
 
 import logging
+import random
 import uuid
 from typing import Sequence
 
@@ -156,7 +157,64 @@ async def _figures_for(
     return figures
 
 
+def _random_figure_count(count: int) -> int:
+    """How many of `count` questions to write about figures, chosen at random.
+
+    Between one and half of them when there are two or more (so a bank is never
+    all theory and never mostly diagrams); a lone question is a diagram question
+    about one time in three.
+    """
+    if count < 2:
+        return 1 if random.random() < 1 / 3 else 0
+    return random.randint(1, max(1, count // 2))
+
+
 async def generate_questions(
+    session: AsyncSession, payload: GenerateIn, *, user_id: uuid.UUID
+) -> tuple[list[Question], int, int, dict | None]:
+    """Like `_generate_once`, but honours `payload.mix_figures`.
+
+    With `mix_figures`, a random number of the questions are written about
+    figures from the library and the rest are theory; the result is shuffled so
+    the diagram questions land at random positions. When the chapter has no
+    usable figure, every question is theory.
+    """
+    if not payload.mix_figures or payload.wants_figures:
+        return await _generate_once(session, payload, user_id=user_id)
+
+    theory = payload.model_copy(update={"mix_figures": False})
+    n_figures = _random_figure_count(payload.count)
+    if n_figures == 0:
+        return await _generate_once(session, theory, user_id=user_id)
+
+    figure_payload = theory.model_copy(update={"use_figures": True, "count": n_figures})
+    try:
+        fig_qs, fig_cached, fig_new, fig_report = await _generate_once(
+            session, figure_payload, user_id=user_id
+        )
+    except BadRequestError as exc:
+        if exc.error != "no_figures":
+            raise
+        return await _generate_once(session, theory, user_id=user_id)
+
+    remaining = payload.count - n_figures
+    if remaining <= 0:
+        return fig_qs, fig_cached, fig_new, fig_report
+
+    plain = theory.model_copy(update={"count": remaining})
+    th_qs, th_cached, th_new, th_report = await _generate_once(session, plain, user_id=user_id)
+
+    combined = list(fig_qs)
+    seen = {q.id for q in combined}
+    for q in th_qs:
+        if q.id not in seen:
+            combined.append(q)
+            seen.add(q.id)
+    random.shuffle(combined)
+    return combined, fig_cached + th_cached, fig_new + th_new, th_report or fig_report
+
+
+async def _generate_once(
     session: AsyncSession, payload: GenerateIn, *, user_id: uuid.UUID
 ) -> tuple[list[Question], int, int, dict | None]:
     """

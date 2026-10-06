@@ -70,7 +70,6 @@ export default function QuestionPapersPage() {
   const [subject, setSubject] = useState<Subject>('Science');
   const [grade, setGrade] = useState<Grade>(8);
   const [title, setTitle] = useState('');
-  const [fresh, setFresh] = useState(false);
   const [marksByType, setMarksByType] = useState<MarksByType>(DEFAULT_MARKS_BY_TYPE);
 
   // Chapters available for the subject + grade, and the picked ones with their weightage.
@@ -213,9 +212,9 @@ export default function QuestionPapersPage() {
         totalMarks: marks,
         difficulty,
       })),
-      refresh: fresh,
+      refresh: false,
     }),
-    [title, subject, grade, picked, weights, sections, fresh],
+    [title, subject, grade, picked, weights, sections],
   );
 
   // --- live preview of the split ------------------------------------------------
@@ -531,17 +530,6 @@ export default function QuestionPapersPage() {
               })}
               {sections.length === 0 && <p className="text-xs text-slate-500">Add a section to start the blueprint.</p>}
             </div>
-
-            <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer mt-4 pt-4 border-t border-slate-100">
-              <input type="checkbox" checked={fresh} onChange={(e) => setFresh(e.target.checked)} className="mt-0.5 accent-indigo-600" />
-              <span>
-                Always generate new questions
-                <span className="block text-slate-400">
-                  Off: reuse matching questions already stored, and only generate the shortfall. A repeat of the same
-                  blueprint will then give you the same paper.
-                </span>
-              </span>
-            </label>
           </div>
         </div>
 

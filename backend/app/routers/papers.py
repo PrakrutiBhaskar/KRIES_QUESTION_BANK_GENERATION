@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..deps import get_current_user
+from ..deps import get_current_user, require_generator
 from ..models import User
 from ..schemas import BlueprintIn, BlueprintJobOut, BlueprintPlanOut, ErrorOut, PaperIn, PaperOut, PaperPatch
 from ..services import blueprint as blueprint_service
@@ -67,7 +67,7 @@ async def create_paper(
 async def create_blueprint_paper(
     payload: BlueprintIn,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_generator),
 ) -> PaperOut:
     paper = await blueprint_service.create_blueprint_paper(session, payload, user.id)
     return PaperOut.from_model(paper)
@@ -87,7 +87,7 @@ async def create_blueprint_paper(
     responses={400: {"model": ErrorOut}, 409: {"model": ErrorOut}, 429: {"model": ErrorOut}},
 )
 async def start_blueprint_job(
-    payload: BlueprintIn, user: User = Depends(get_current_user)
+    payload: BlueprintIn, user: User = Depends(require_generator)
 ) -> BlueprintJobOut:
     # Same arithmetic as the preview, so an impossible blueprint is a 400 now
     # rather than an error found halfway through.

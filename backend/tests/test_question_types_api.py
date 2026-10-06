@@ -162,7 +162,7 @@ async def test_default_question_type_preference_accepts_the_new_types(client, ch
     assert (await client.get("/auth/me")).json()["preferences"]["default_question_type"] == choice
 
 
-async def test_practice_session_can_fill_a_shortfall_with_the_new_types(client):
+async def test_practice_session_can_fill_a_shortfall_with_the_new_types(client, practice_shortfall_on):
     base = {"subject": "Science", "chapter": "Photosynthesis", "grade": 8,
             "difficulty": "easy", "count": 2}
     for q_type, marks in (("Fill", 1), ("Match", 3)):

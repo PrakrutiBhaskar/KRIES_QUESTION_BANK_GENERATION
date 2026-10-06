@@ -13,6 +13,7 @@ import QuestionBankDetailPage from './pages/QuestionBankDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import FigureLibraryPage from './pages/FigureLibraryPage';
 import RequireAdmin from './components/RequireAdmin';
+import RequireNotStudent from './components/RequireNotStudent';
 
 export default function App() {
   return (
@@ -28,7 +29,10 @@ export default function App() {
           {/* Protected — wrapped in AppLayout */}
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/generate" element={<GeneratePage />} />
+            <Route
+              path="/generate"
+              element={<RequireNotStudent><GeneratePage /></RequireNotStudent>}
+            />
             <Route path="/question-papers" element={<QuestionPapersPage />} />
             <Route path="/question-banks" element={<QuestionBanksPage />} />
             <Route path="/question-banks/:id" element={<QuestionBankDetailPage />} />
