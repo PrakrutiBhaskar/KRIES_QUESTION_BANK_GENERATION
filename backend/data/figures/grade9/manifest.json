@@ -1,159 +1,941 @@
 {
-  "_comment": "Grade 9 Science figures. python scripts/upload_figure.py --manifest backend/data/figures/grade9/manifest.json --admin <email>. Files in _duplicates/ are lower-quality twins of uploaded figures and are not in the manifest.",
+  "_comment": "Grade 9 Science diagrams, one per item of the figure list (68 of 68). Titles were cropped off the original screenshots so they do not give answers away, and the screenshots were enlarged 1.5x; letters A, B, C... were added to blank answer boxes that point at a part (boxes already lettered in the source, and boxes whose purpose is unclear, were left alone). Chapter names are the NCERT Class 9 titles. A 'note' says what was added or flags a reading I was unsure of (look for 'best guess'); labels are kept under 80 characters for the upload limit.",
+  "grade": 9,
   "figures": [
     {
-      "file": "01-parenchyma-cells.png",
+      "file": "01-particle-arrangement-in-states-of-matter.png",
       "subject": "Science",
-      "chapter": "Tissues",
-      "topic": "Plant tissues",
-      "caption": "Parenchyma cells in long section, showing the cell contents and the spaces between cells",
+      "chapter": "Matter in Our Surroundings",
+      "topic": "Particle arrangement in solid, liquid and gas",
+      "caption": "Three boxes of blue particles: tightly packed in a regular grid, close together but irregular, and far apart and moving, each with a lettered blank box below",
       "labels": [
-        "Cytoplasm",
-        "Nucleus",
-        "Middle lamella",
-        "Chloroplast",
-        "Vacuole",
-        "Intercellular space",
-        "Primary cell wall"
+        "A: Solid",
+        "B: Liquid",
+        "C: Gas"
+      ],
+      "note": "Letters A-C were added."
+    },
+    {
+      "file": "02-heating-curve-of-ice-to-steam.png",
+      "subject": "Science",
+      "chapter": "Matter in Our Surroundings",
+      "topic": "Heating curve of ice to steam",
+      "caption": "A graph of temperature (-20 to 120 degrees C) against time: the red line rises, stays flat at 0 degrees C, rises, stays flat at 100 degrees C, then rises; shaded zones read Ice (solid), Water (liquid), Steam (gas); two lettered blank boxes point to the flat parts",
+      "labels": [
+        "Ice (solid)",
+        "Water (liquid)",
+        "Steam (gas)",
+        "A: Boiling point, 100 °C (latent heat of vaporisation)",
+        "B: Melting point, 0 °C (latent heat of fusion)"
+      ],
+      "note": "Letters A and B were added. A points to the 100 degree C flat part and B to the 0 degree C flat part."
+    },
+    {
+      "file": "03-diffusion-in-water-and-air.png",
+      "subject": "Science",
+      "chapter": "Matter in Our Surroundings",
+      "topic": "Diffusion",
+      "caption": "Three beakers showing ink spreading through water over time, and a bottle of perfume with scent spreading across a room",
+      "labels": [
+        "Ink spreading in water over time",
+        "Perfume spreading across a room"
       ]
     },
     {
-      "file": "02-collenchyma-wall-thickenings.png",
+      "file": "04-factors-affecting-evaporation.png",
       "subject": "Science",
-      "chapter": "Tissues",
-      "topic": "Plant tissues",
-      "caption": "Plant tissue cells with thickened corners in their walls (collenchyma)",
+      "chapter": "Matter in Our Surroundings",
+      "topic": "Factors affecting evaporation",
+      "caption": "Six panels of clothes drying in pairs: sunlight and shade, windy and still air, spread out and folded",
       "labels": [
-        "Wall thickenings",
-        "Nucleus",
-        "Vacuole",
-        "Cell wall"
-      ],
-      "note": "Tissue type is my reading of the drawing (thickened corners); the image itself doesn't name it."
-    },
-    {
-      "file": "03-phloem-tissue.png",
-      "subject": "Science",
-      "chapter": "Tissues",
-      "topic": "Complex permanent tissue",
-      "caption": "Phloem tissue",
-      "labels": [
-        "Sieve plate",
-        "Sieve tube",
-        "Phloem parenchyma",
-        "Component cell"
-      ],
-      "note": "'Component cell' is the image's spelling of companion cell."
-    },
-    {
-      "file": "04-paramoecium.png",
-      "subject": "Science",
-      "chapter": "The Fundamental Unit of Life",
-      "topic": "Unicellular organisms",
-      "caption": "Paramoecium, a single-celled organism",
-      "labels": [
-        "Water vacuole",
-        "Cilia",
-        "Macronucleus",
-        "Micronucleus",
-        "Oral groove",
-        "Cytosome",
-        "Food vacuole",
-        "Cytopyge",
-        "Waste"
-      ],
-      "note": "Image has a stray '2. Paramoecium:' heading."
-    },
-    {
-      "file": "05-permanent-tissue-flowchart.png",
-      "subject": "Science",
-      "chapter": "Tissues",
-      "topic": "Plant tissues",
-      "caption": "Flowchart of permanent tissue: simple tissue (parenchyma, collenchyma, sclerenchyma) and complex tissue (xylem, phloem)",
-      "labels": [
-        "Permanent tissue",
-        "Simple",
-        "Complex",
-        "Parenchyma",
-        "Collenchyma",
-        "Sclerenchyma",
-        "Xylem",
-        "Phloem"
+        "In sunlight (faster evaporation)",
+        "In shade (slower evaporation)",
+        "Windy (faster evaporation)",
+        "Still air (slower evaporation)",
+        "Spread out (faster evaporation)",
+        "Folded (slower evaporation)"
       ]
     },
     {
-      "file": "06-neuron.png",
+      "file": "05-sublimation.png",
       "subject": "Science",
-      "chapter": "Tissues",
-      "topic": "Animal tissues",
-      "caption": "Neuron, the unit of nervous tissue",
+      "chapter": "Matter in Our Surroundings",
+      "topic": "Sublimation",
+      "caption": "Three dishes giving off vapour: dry ice, camphor and ammonium chloride",
       "labels": [
-        "Dendrite",
-        "Nucleus",
-        "Axon",
-        "Nerve ending",
-        "Cell body"
+        "Dry ice (solid CO2)",
+        "Camphor",
+        "Ammonium chloride"
+      ],
+      "note": "The 'Ammonium chloride' caption is partly cut off at the bottom of the source image."
+    },
+    {
+      "file": "06-classification-of-matter.png",
+      "subject": "Science",
+      "chapter": "Is Matter Around Us Pure?",
+      "topic": "Classification of matter",
+      "caption": "A flowchart: Matter splits into Pure substance (fixed composition) and Mixture (variable composition); the pure substance branch has two lettered blank boxes with descriptions under them; the mixture branch splits into homogeneous and heterogeneous",
+      "labels": [
+        "Matter",
+        "Pure substance (fixed composition)",
+        "Mixture (variable composition)",
+        "A: Element (one kind of atom, e.g. iron, oxygen)",
+        "B: Compound (atoms chemically combined, e.g. water)",
+        "Homogeneous mixture (solution)",
+        "Heterogeneous mixture (colloid/suspension)"
+      ],
+      "note": "Letters A and B were added."
+    },
+    {
+      "file": "07-methods-of-separation.png",
+      "subject": "Science",
+      "chapter": "Is Matter Around Us Pure?",
+      "topic": "Methods of separation",
+      "caption": "Four apparatus drawings: (a) filtration, (b) evaporation, (c) distillation and (d) fractional distillation, with parts labelled",
+      "labels": [
+        "(a) Filtration",
+        "(b) Evaporation",
+        "(c) Distillation",
+        "(d) Fractional distillation",
+        "Filter paper, residue (solid), filtrate (liquid)",
+        "Evaporating dish, salt solution",
+        "Thermometer, condenser, distilled water",
+        "Fractionating column, ethanol (~80 °C), water (~100 °C)"
+      ],
+      "note": "The parts are printed in the figure."
+    },
+    {
+      "file": "08-separating-funnel-oil-and-water.png",
+      "subject": "Science",
+      "chapter": "Is Matter Around Us Pure?",
+      "topic": "Separating funnel",
+      "caption": "A separating funnel on a stand holding a yellow layer on top of a blue layer, with a tap at the bottom and a beaker below",
+      "labels": [
+        "Oil (less dense)",
+        "Water (more dense)",
+        "Tap (to drain water)"
       ]
     },
     {
-      "file": "07-prokaryotic-cell.png",
+      "file": "09-chromatography.png",
       "subject": "Science",
-      "chapter": "The Fundamental Unit of Life",
-      "topic": "Prokaryotic cell",
-      "caption": "Prokaryotic cell (a bacterium)",
+      "chapter": "Is Matter Around Us Pure?",
+      "topic": "Chromatography",
+      "caption": "A strip of chromatography paper dipping into a solvent in a beaker, with a black ink spot at the bottom and separated coloured spots above it",
       "labels": [
-        "Plasma membrane",
-        "Ribosomes",
-        "Cell wall",
-        "Nucleoid"
-      ],
-      "note": "The image spells 'Nucleoid' as 'Nuclcoid' and its caption is slightly cut off."
+        "Chromatography paper",
+        "Separated colours",
+        "Ink spot (starting point)",
+        "Solvent"
+      ]
     },
     {
-      "file": "08-atom-energy-levels.png",
+      "file": "10-colloid-suspension-and-true-solution.png",
+      "subject": "Science",
+      "chapter": "Is Matter Around Us Pure?",
+      "topic": "Tyndall effect",
+      "caption": "Three beakers with a torch beam passing through each: salt water, milk and muddy water",
+      "labels": [
+        "True solution (e.g. salt water): light beam not visible",
+        "Colloid (e.g. milk): light beam visible (scattering)",
+        "Suspension (e.g. muddy water): beam visible, particles settle"
+      ]
+    },
+    {
+      "file": "11-daltons-atomic-model-and-symbols.png",
+      "subject": "Science",
+      "chapter": "Atoms and Molecules",
+      "topic": "Dalton's atomic model and symbols",
+      "caption": "A portrait of John Dalton (1766-1844) beside four statements of his atomic theory, and four coloured balls named Hydrogen, Carbon, Oxygen and Iron, each over a lettered blank box",
+      "labels": [
+        "John Dalton (1766-1844)",
+        "Matter is made of tiny indivisible particles called atoms",
+        "Atoms of the same element are identical",
+        "Atoms of different elements are different",
+        "Atoms combine in simple whole number ratios",
+        "A: H (hydrogen)",
+        "B: C (carbon)",
+        "C: O (oxygen)",
+        "D: Fe (iron)"
+      ],
+      "note": "Letters A-D were added to the symbol boxes."
+    },
+    {
+      "file": "12-molecules-ball-and-stick-models.png",
+      "subject": "Science",
+      "chapter": "Atoms and Molecules",
+      "topic": "Molecules as ball-and-stick models",
+      "caption": "Four molecule models with names: H2O (water), CO2 (carbon dioxide), NH3 (ammonia) and O2 (oxygen), each with a blank box below",
+      "labels": [
+        "H2O (water)",
+        "CO2 (carbon dioxide)",
+        "NH3 (ammonia)",
+        "O2 (oxygen)"
+      ],
+      "note": "The blank boxes are not explained in the figure (perhaps atom counts or bonds), so I did not letter them."
+    },
+    {
+      "file": "13-law-of-conservation-of-mass.png",
+      "subject": "Science",
+      "chapter": "Atoms and Molecules",
+      "topic": "Conservation of mass",
+      "caption": "Two flasks on balances, before reaction and after reaction, both reading 150.0 g, with blanks for the total masses and what this shows",
+      "labels": [
+        "Before reaction: balance reads 150.0 g",
+        "After reaction: balance reads 150.0 g",
+        "Total mass before reaction = 150.0 g",
+        "Total mass after reaction = 150.0 g",
+        "Mass is conserved (law of conservation of mass)"
+      ],
+      "note": "The answers are read from the balance displays."
+    },
+    {
+      "file": "14-ions-and-formation-of-sodium-chloride.png",
+      "subject": "Science",
+      "chapter": "Atoms and Molecules",
+      "topic": "Ions and formation of NaCl",
+      "caption": "Bohr-style drawings of a sodium atom losing one electron to form Na+ and a chlorine atom gaining one electron to form Cl-, with blank boxes by the ions and in the NaCl formula line",
+      "labels": [
+        "Sodium atom (Na) loses 1 electron to form Na+",
+        "Chlorine atom (Cl) gains 1 electron to form Cl-",
+        "Na+ and Cl- combine to form NaCl"
+      ],
+      "note": "What each blank box asks for (charge, ion symbol, formula) is not fully clear, so I did not letter them."
+    },
+    {
+      "file": "15-mole-concept.png",
+      "subject": "Science",
+      "chapter": "Atoms and Molecules",
+      "topic": "Mole concept",
+      "caption": "A triangle linking mass (g), number of particles and molar mass (g per mol), with the worked example of water (molar mass 18 g per mol) and blanks for 2 moles and 0.5 mole",
+      "labels": [
+        "Water: molar mass 18 g per mol",
+        "1 mole of water = 18 g = 6.022 × 10^23 molecules",
+        "2 moles of water = 36 g = 1.2044 × 10^24 molecules",
+        "0.5 mole of water = 9 g = 3.011 × 10^23 molecules"
+      ],
+      "note": "The worked answers are calculated from the figure's data."
+    },
+    {
+      "file": "16-thomsons-plum-pudding-model.png",
       "subject": "Science",
       "chapter": "Structure of the Atom",
-      "topic": "Energy levels",
-      "caption": "A few energy levels (shells) in an atom",
+      "topic": "Thomson's model",
+      "caption": "A pink sphere with purple dots embedded in it and two blank boxes with arrows, the right one captioned (electron), above the note that the atom is a sphere of positive charge with electrons embedded in it",
       "labels": [
-        "Nucleus",
-        "K shell (n=1)",
-        "M shell (n=3)",
-        "N shell (n=4)"
+        "A: Positively charged sphere",
+        "B: Electron"
       ],
-      "note": "The L shell (n=2) ring is drawn but not labelled."
+      "note": "Letters A and B were added. A is my reading of the left arrow; B is captioned in the figure."
     },
     {
-      "file": "09-muscle-fibre-types.png",
+      "file": "17-rutherfords-gold-foil-experiment.png",
       "subject": "Science",
-      "chapter": "Tissues",
-      "topic": "Animal tissues",
-      "caption": "Types of muscle fibres: (a) striated muscle, (b) smooth muscle, (c) cardiac muscle",
+      "chapter": "Structure of the Atom",
+      "topic": "Rutherford's experiment",
+      "caption": "An alpha particle source firing particles at a thin gold foil with a curved detecting screen behind it, showing most particles passing straight through and a very few being deflected",
       "labels": [
-        "Nuclei",
-        "Striations",
-        "Spindle-shaped muscle cell",
-        "Nucleus",
-        "Intercalated discs"
+        "Alpha particle source (+ charge)",
+        "Alpha particles",
+        "Thin gold foil",
+        "Detecting screen (ZnS coating)",
+        "Most particles passed straight through",
+        "A very few particles deflected through large angles"
       ],
-      "note": "Left edge of the caption is clipped; (a)/(b)/(c) are the image's own panel labels."
+      "note": "The labels are printed in the figure."
     },
     {
-      "file": "10-amoeba.png",
+      "file": "18-bohr-model-of-sodium.png",
+      "subject": "Science",
+      "chapter": "Structure of the Atom",
+      "topic": "Bohr model",
+      "caption": "A sodium atom (Na, Z = 11) with three electron shells and three lettered blank boxes, each followed by the word shell and an electron count",
+      "labels": [
+        "A: K shell (2 electrons)",
+        "B: L shell (8 electrons)",
+        "C: M shell (1 electron)"
+      ],
+      "note": "Letters A-C were added. The arrows do not clearly match the shells, so rely on the electron counts printed under each box."
+    },
+    {
+      "file": "19-isotopes-of-hydrogen.png",
+      "subject": "Science",
+      "chapter": "Structure of the Atom",
+      "topic": "Isotopes of hydrogen",
+      "caption": "Protium, deuterium and tritium drawn with their protons, neutrons and one electron, above a table with protons filled in and blanks for neutrons and mass number",
+      "labels": [
+        "Protium (1H): 1 proton, 0 neutrons, mass number 1",
+        "Deuterium (2H): 1 proton, 1 neutron, mass number 2",
+        "Tritium (3H): 1 proton, 2 neutrons, mass number 3"
+      ],
+      "note": "The neutron and mass number blanks are answered from the isotope names."
+    },
+    {
+      "file": "20-electron-distribution-first-18-elements.png",
+      "subject": "Science",
+      "chapter": "Structure of the Atom",
+      "topic": "Electron distribution and valency",
+      "caption": "A table of the first 18 elements with atomic number and electron distribution, and a blank valency column",
+      "labels": [
+        "Valency of H to F: 1, 0, 1, 2, 3, 4, 3, 2, 1",
+        "Valency of Ne to Ar: 0, 1, 2, 3, 4, 3, 2, 1, 0"
+      ],
+      "note": "The valency column is mostly unreadable in the source, so the valencies come from the electron distributions."
+    },
+    {
+      "file": "21-animal-cell.png",
       "subject": "Science",
       "chapter": "The Fundamental Unit of Life",
-      "topic": "Unicellular organisms",
-      "caption": "Amoeba, a single-celled organism",
+      "topic": "Animal cell",
+      "caption": "An animal cell with organelles and six arrows to lettered blank boxes",
       "labels": [
-        "Ectoplasm",
-        "Endoplasm",
-        "Mitochondria",
-        "Nucleus",
-        "Crystals",
-        "Food vacuole",
-        "Contractile vacuole",
-        "Advancing pseudopod"
+        "A: Nucleus",
+        "B: Lysosome",
+        "C: Endoplasmic reticulum",
+        "D: Mitochondrion",
+        "E: Small vesicle",
+        "F: Golgi apparatus"
+      ],
+      "note": "Letters A-F were added. A, C, D and F are clear; B and E are my best guesses, so check them against your textbook."
+    },
+    {
+      "file": "22-plant-cell.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Plant cell",
+      "caption": "A plant cell with a thick green outer layer, a large vacuole, a nucleus, chloroplasts and mitochondria, with seven arrows to lettered blank boxes",
+      "labels": [
+        "A: Cell wall",
+        "B: Cell membrane",
+        "C: Cytoplasm",
+        "D: Endoplasmic reticulum",
+        "E: Vacuole",
+        "F: Chloroplast",
+        "G: Cell wall (second arrow)"
+      ],
+      "note": "Letters A-G were added. B, C and G are my best guesses, so check them against your textbook."
+    },
+    {
+      "file": "23-onion-peel-cells.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Onion peel cells",
+      "caption": "A microscope view of onion peel cells with two arrows to lettered blank boxes",
+      "labels": [
+        "A: Nucleus",
+        "B: Cell wall"
+      ],
+      "note": "Letters A and B were added."
+    },
+    {
+      "file": "24-osmosis-raisins-and-potato.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Osmosis",
+      "caption": "Raisins and potato strips in hypotonic, isotonic and hypertonic solutions, with what happens to each",
+      "labels": [
+        "Hypotonic (water): raisin swells, potato strip becomes firm",
+        "Isotonic (medium salt solution): no change",
+        "Hypertonic (concentrated salt): raisin shrinks, potato strip soft"
+      ],
+      "note": "The right edge is cut off in the source image."
+    },
+    {
+      "file": "25-prokaryotic-vs-eukaryotic-cell.png",
+      "subject": "Science",
+      "chapter": "The Fundamental Unit of Life",
+      "topic": "Prokaryotic and eukaryotic cells",
+      "caption": "A bacterium with its features listed above an animal-type cell with its features, with one blank box in the first panel",
+      "labels": [
+        "Prokaryotic cell: no true nucleus, no membrane-bound organelles, smaller",
+        "Eukaryotic cell: true nucleus, membrane-bound organelles, larger"
+      ],
+      "note": "The blank box in the prokaryotic panel is not explained, so I did not letter it."
+    },
+    {
+      "file": "26-types-of-plant-tissue.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Plant tissues",
+      "caption": "Four microscope views lettered (a) to (d) with a hint under each and a blank box for the tissue name",
+      "labels": [
+        "(a) Meristematic tissue (apical region, active division)",
+        "(b) Parenchyma (storage, packing)",
+        "(c) Collenchyma (provides flexibility)",
+        "(d) Sclerenchyma (provides strength)"
+      ],
+      "note": "The figure already has the letters (a)-(d)."
+    },
+    {
+      "file": "27-xylem-and-phloem.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Xylem and phloem",
+      "caption": "Long sections of xylem and phloem with four arrows to lettered blank boxes, two on each",
+      "labels": [
+        "A: Sieve plate (phloem)",
+        "B: Vessel (xylem)",
+        "C: Companion cell (phloem)",
+        "D: Tracheid (xylem)"
+      ],
+      "note": "Letters A-D were added. A and C are clear; B and D are my best guesses, so check them against your textbook."
+    },
+    {
+      "file": "28-epithelial-tissue.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Epithelial tissue",
+      "caption": "Four epithelial tissues lettered (a) to (d), each with a hint under it and a blank box for the type",
+      "labels": [
+        "(a) Squamous epithelium (flat cells)",
+        "(b) Cuboidal epithelium (cube-shaped cells)",
+        "(c) Columnar epithelium (tall cells)",
+        "(d) Ciliated columnar epithelium"
+      ],
+      "note": "The figure already has the letters (a)-(d)."
+    },
+    {
+      "file": "29-muscle-tissue.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Muscle tissue",
+      "caption": "Three muscle types with a microscope view each and boxes for location and function: striated (skeletal), smooth (unstriated) and cardiac",
+      "labels": [
+        "Striated: attached to bones; voluntary movement",
+        "Smooth: walls of gut and blood vessels; involuntary movement",
+        "Cardiac: wall of the heart; pumps blood, involuntary"
+      ],
+      "note": "The location and function answers are the usual textbook ones."
+    },
+    {
+      "file": "30-neuron.png",
+      "subject": "Science",
+      "chapter": "Tissues",
+      "topic": "Neuron",
+      "caption": "A neuron with branched ends, a cell body, a segmented sheath on a long fibre and branched endings, with five arrows to lettered blank boxes",
+      "labels": [
+        "A: Dendrites",
+        "B: Cell body (cyton) with nucleus",
+        "C: Axon (myelin sheath)",
+        "D: Node of Ranvier",
+        "E: Axon terminals"
+      ],
+      "note": "Letters A-E were added. C and D are my best guesses, so check them against your textbook."
+    },
+    {
+      "file": "31-distance-time-graphs.png",
+      "subject": "Science",
+      "chapter": "Motion",
+      "topic": "Distance-time graphs",
+      "caption": "A distance (m) against time (s) graph with a flat green line, a straight blue line and a curved red line, each with a lettered blank box, and three types of motion listed below",
+      "labels": [
+        "A: At rest (flat green line)",
+        "B: Uniform motion, constant speed (straight blue line)",
+        "C: Non-uniform motion, accelerated (curved red line)"
+      ],
+      "note": "The letters A-C are printed in the figure."
+    },
+    {
+      "file": "32-velocity-time-graph-and-displacement.png",
+      "subject": "Science",
+      "chapter": "Motion",
+      "topic": "Velocity-time graph",
+      "caption": "A trapezoid velocity (m/s) against time (s) graph with the velocity rising, staying at 15 m/s and falling, split into regions A, B and C with a blank box above each",
+      "labels": [
+        "A: Uniform acceleration (velocity rising)",
+        "B: Uniform velocity (constant)",
+        "C: Uniform retardation (velocity falling)"
+      ],
+      "note": "The displacement values are not given; read the region boundaries from the axes."
+    },
+    {
+      "file": "33-distance-vs-displacement.png",
+      "subject": "Science",
+      "chapter": "Motion",
+      "topic": "Distance and displacement",
+      "caption": "A runner on an oval track with a dashed straight line from Start to Finish, and blanks for the distance travelled and the displacement in metres",
+      "labels": [
+        "Start",
+        "Finish",
+        "Distance travelled (length of the path along the track)",
+        "Displacement (straight line from start to finish)"
+      ],
+      "note": "The figure gives no numbers, so questions about it should stay conceptual."
+    },
+    {
+      "file": "34-odometer-and-speedometer.png",
+      "subject": "Science",
+      "chapter": "Motion",
+      "topic": "Speedometer and odometer",
+      "caption": "A speedometer dial (0 to 180 km/h) with the needle near 60 and a blank box, above an odometer showing 025364 with a blank box",
+      "labels": [
+        "Speedometer reading: about 60 km/h",
+        "Odometer reading: 25364 km"
+      ],
+      "note": "The needle reading is approximate; check it before using the number."
+    },
+    {
+      "file": "35-free-fall.png",
+      "subject": "Science",
+      "chapter": "Motion",
+      "topic": "Free fall",
+      "caption": "A ball shown at t = 0, 1, 2, 3 and 4 seconds falling down with the gaps between positions growing, and a sentence to complete",
+      "labels": [
+        "t = 0 s to t = 4 s",
+        "Direction of motion (vertically downwards)",
+        "The ball is accelerating under gravity"
       ]
+    },
+    {
+      "file": "36-balanced-vs-unbalanced-forces.png",
+      "subject": "Science",
+      "chapter": "Force and Laws of Motion",
+      "topic": "Balanced and unbalanced forces",
+      "caption": "A block with 10 N pulling each way (balanced), and a block with 5 N to the left and 20 N to the right (unbalanced), each with a blank box below",
+      "labels": [
+        "Balanced forces: 10 N and 10 N, net force = 0",
+        "Unbalanced forces: 5 N and 20 N, net force = 15 N to the right"
+      ],
+      "note": "The blank boxes are not explained; I read them as the net force."
+    },
+    {
+      "file": "37-inertia-demonstrations.png",
+      "subject": "Science",
+      "chapter": "Force and Laws of Motion",
+      "topic": "Inertia",
+      "caption": "(a) A card with a coin on it over a glass being flicked, and (b) a passenger in a bus that starts suddenly and then stops suddenly",
+      "labels": [
+        "Coin drops into the glass due to inertia",
+        "Bus starts suddenly: passenger lurches backward",
+        "Bus stops suddenly: passenger lurches forward"
+      ]
+    },
+    {
+      "file": "38-action-and-reaction-rocket-and-balloon.png",
+      "subject": "Science",
+      "chapter": "Force and Laws of Motion",
+      "topic": "Action and reaction",
+      "caption": "A rocket with gas pushed downward and moving up, and a balloon with air rushing out downward and moving up",
+      "labels": [
+        "Rocket: action pushes gases downward, reaction pushes rocket upward",
+        "Balloon: action air rushes out downward, reaction balloon moves upward"
+      ],
+      "note": "The printed word 'Balloon' is garbled in the source."
+    },
+    {
+      "file": "39-momentum-and-time-of-force.png",
+      "subject": "Science",
+      "chapter": "Force and Laws of Motion",
+      "topic": "Cricket catch",
+      "caption": "A fielder catching a ball with rigid hands (stops quickly) and with hands moving back (stops in longer time), with a sentence to complete",
+      "labels": [
+        "(a) Rigid hands: stops quickly",
+        "(b) Hands move back: stops in longer time",
+        "Force on the hands is decreased"
+      ]
+    },
+    {
+      "file": "40-collision-of-two-trolleys.png",
+      "subject": "Science",
+      "chapter": "Force and Laws of Motion",
+      "topic": "Conservation of momentum",
+      "caption": "Two 1 kg trolleys before and after a collision (the first moving at 2 m/s, and after the collision 0 and 2 m/s), with blanks for the total momentum",
+      "labels": [
+        "Before collision: m1 = 1 kg at 2 m/s, m2 = 1 kg",
+        "After collision: v1 = 0 m/s, v2 = 2 m/s",
+        "Total momentum after collision = 2 kg m/s",
+        "Momentum is conserved"
+      ],
+      "note": "The red trolley's starting speed u2 is garbled in the source, so only the after-collision numbers are certain."
+    },
+    {
+      "file": "41-newtons-cannon-moon-orbiting-earth.png",
+      "subject": "Science",
+      "chapter": "Gravitation",
+      "topic": "Newton's cannon",
+      "caption": "A cannon on a mountain firing at greater and greater speeds around the Earth, with the Moon orbiting it",
+      "labels": [
+        "Projectile keeps falling towards the Earth due to gravity",
+        "At the right speed it orbits the Earth (like the Moon)",
+        "Moon",
+        "Earth"
+      ]
+    },
+    {
+      "file": "42-feather-and-hammer-in-a-vacuum.png",
+      "subject": "Science",
+      "chapter": "Gravitation",
+      "topic": "Falling in air and in a vacuum",
+      "caption": "A feather and a hammer falling in air and under a glass bell jar in a vacuum",
+      "labels": [
+        "In air: the feather falls slower due to air resistance",
+        "In vacuum: both fall at the same rate"
+      ]
+    },
+    {
+      "file": "43-universal-law-of-gravitation.png",
+      "subject": "Science",
+      "chapter": "Gravitation",
+      "topic": "Universal law of gravitation",
+      "caption": "Two spheres of masses m1 and m2 a distance r apart with the formula F = G m1 m2 / r squared",
+      "labels": [
+        "m1 and m2 (the two masses)",
+        "r (distance between them)",
+        "F = G m1 m2 / r^2"
+      ]
+    },
+    {
+      "file": "44-floating-vs-sinking-buoyancy.png",
+      "subject": "Science",
+      "chapter": "Gravitation",
+      "topic": "Floating and sinking",
+      "caption": "A tank with wood, ice and cork floating and a tank with a stone, a coin and an iron key sinking",
+      "labels": [
+        "Floating (buoyant force ≥ weight): wood, ice, cork",
+        "Sinking (weight > buoyant force): stone, coin, iron key"
+      ]
+    },
+    {
+      "file": "45-weight-on-earth-and-the-moon.png",
+      "subject": "Science",
+      "chapter": "Gravitation",
+      "topic": "Weight on Earth and the Moon",
+      "caption": "The Earth and the Moon each showing a mass of 10 kg, with g about 9.8 m/s2 on Earth and 1.6 m/s2 on the Moon",
+      "labels": [
+        "Mass = 10 kg on both",
+        "g on Earth ≈ 9.8 m/s2; on Moon ≈ 1.6 m/s2",
+        "Weight on Earth = 10 × 9.8 = 98 N",
+        "Weight on Moon = 10 × 1.6 = 16 N"
+      ],
+      "note": "The bottom of the figure (probably answer boxes) is cut off in the source; the weights are calculated."
+    },
+    {
+      "file": "46-work-done-or-not.png",
+      "subject": "Science",
+      "chapter": "Work and Energy",
+      "topic": "Work done or not",
+      "caption": "Four scenes: (a) pushing a wall, (b) lifting a bag upwards, (c) holding a weight steady above the head and (d) pushing a crate, each with a Work done box",
+      "labels": [
+        "(a) Pushing a wall: no work done",
+        "(b) Lifting a bag upwards: work done",
+        "(c) Holding a weight steady: no work done",
+        "(d) Pushing a crate that moves: work done"
+      ],
+      "note": "The caption of (d) is garbled in the source."
+    },
+    {
+      "file": "47-pendulum-kinetic-and-potential-energy.png",
+      "subject": "Science",
+      "chapter": "Work and Energy",
+      "topic": "Pendulum",
+      "caption": "A pendulum bob drawn at three positions A, B and C on its swing",
+      "labels": [
+        "A and C: highest points (maximum PE, zero KE)",
+        "B: lowest point (maximum KE, minimum PE)"
+      ],
+      "note": "The bottom of the B label is clipped in the source."
+    },
+    {
+      "file": "48-ball-thrown-upward-energy-changes.png",
+      "subject": "Science",
+      "chapter": "Work and Energy",
+      "topic": "Ball thrown upward",
+      "caption": "A ball thrown up and coming down with four boxes giving KE and PE at the highest point, while moving up, while moving down and at ground level",
+      "labels": [
+        "At the highest point: KE = 0, PE = maximum",
+        "While moving up: KE decreases, PE increases",
+        "While moving down: KE increases, PE decreases",
+        "At ground level: KE = maximum, PE = 0"
+      ],
+      "note": "The answers are the standard ones for a ball thrown upward."
+    },
+    {
+      "file": "49-energy-conversions.png",
+      "subject": "Science",
+      "chapter": "Work and Energy",
+      "topic": "Energy conversions",
+      "caption": "Four devices with the starting energy and blank boxes for the energies they change into: electric fan, hydroelectric dam, solar cell and battery torch",
+      "labels": [
+        "A: Kinetic energy",
+        "B: Heat (and sound) energy",
+        "C: Kinetic energy",
+        "D: Electrical energy",
+        "E: Electrical energy",
+        "F: Light energy",
+        "G: Heat energy"
+      ],
+      "note": "Letters A-G were added. The answers are the standard conversions for each device."
+    },
+    {
+      "file": "50-power-ratings-of-appliances.png",
+      "subject": "Science",
+      "chapter": "Work and Energy",
+      "topic": "Power ratings",
+      "caption": "A table of a bulb (60 W for 2 h), a heater (1000 W for 30 min) and a fan (75 W for 4 h) with blanks for energy used in Wh",
+      "labels": [
+        "Bulb: 60 W × 2 h = 120 Wh",
+        "Heater: 1000 W × 0.5 h = 500 Wh",
+        "Fan: 75 W × 4 h = 300 Wh"
+      ],
+      "note": "The answers are calculated from the table."
+    },
+    {
+      "file": "51-longitudinal-wave-in-a-slinky.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Longitudinal wave",
+      "caption": "A slinky with squeezed and stretched sections marked by a red and a blue bracket with a lettered blank box above each, and an arrow for the direction of the wave",
+      "labels": [
+        "A: Compression (high pressure, particles close together)",
+        "B: Rarefaction (low pressure, particles far apart)",
+        "Direction of wave propagation (sound)"
+      ],
+      "note": "Letters A and B were added."
+    },
+    {
+      "file": "52-amplitude-wavelength-and-frequency.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Wave properties",
+      "caption": "Three waves lettered (a) to (c): a red one with amplitude marked, a blue one with wavelength marked and a green one with many waves, each with a blank box beside it",
+      "labels": [
+        "(a) Amplitude",
+        "(b) Wavelength (λ)",
+        "(c) Frequency (number of waves per second)"
+      ],
+      "note": "The blank boxes are not explained (perhaps units), so I did not letter them."
+    },
+    {
+      "file": "53-reflection-of-sound-echo.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Echo",
+      "caption": "A boy shouting towards a cliff with blue incident waves and red reflected waves, and the distance to the wall marked d",
+      "labels": [
+        "Incident sound wave (sound from boy)",
+        "Reflected sound wave (echo)",
+        "Distance to wall = d"
+      ]
+    },
+    {
+      "file": "54-human-ear.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Parts of the ear",
+      "caption": "A cross-section of the ear with six arrows to lettered blank boxes",
+      "labels": [
+        "A: Pinna (outer ear)",
+        "B: Ear ossicles",
+        "C: Semicircular canals",
+        "D: Cochlea",
+        "E: Eardrum",
+        "F: Eustachian tube"
+      ],
+      "note": "Letters A-F were added. A and C are my best guesses, so check them against your textbook."
+    },
+    {
+      "file": "55-applications-of-ultrasound.png",
+      "subject": "Science",
+      "chapter": "Sound",
+      "topic": "Ultrasound",
+      "caption": "Three panels: a ship using SONAR, a bat using echolocation and a medical ultrasound scan",
+      "labels": [
+        "SONAR: detects depth and location of objects underwater",
+        "Bats (echolocation): find prey and navigate in the dark",
+        "Medical ultrasound: scans inside the body, safe and non-invasive"
+      ]
+    },
+    {
+      "file": "56-pathogens-and-diseases.png",
+      "subject": "Science",
+      "chapter": "Why Do We Fall Ill?",
+      "topic": "Pathogens and diseases",
+      "caption": "A table of four pathogens with pictures (virus, bacteria, fungus, protozoa) and a blank box for an example disease",
+      "labels": [
+        "Virus: e.g. influenza",
+        "Bacteria: e.g. cholera",
+        "Fungus: e.g. ringworm",
+        "Protozoa: e.g. malaria"
+      ],
+      "note": "The example diseases are the usual textbook ones; the figure does not show them."
+    },
+    {
+      "file": "57-modes-of-disease-transmission.png",
+      "subject": "Science",
+      "chapter": "Why Do We Fall Ill?",
+      "topic": "Modes of disease transmission",
+      "caption": "Four rows (droplets from a sneeze, a glass of water, a mosquito and a handshake) each with an example disease and a lettered blank box",
+      "labels": [
+        "A: Air-borne",
+        "B: Water-borne",
+        "C: Vector-borne",
+        "D: Direct contact"
+      ],
+      "note": "Letters A-D were added."
+    },
+    {
+      "file": "58-mosquito-life-cycle.png",
+      "subject": "Science",
+      "chapter": "Why Do We Fall Ill?",
+      "topic": "Mosquito life cycle",
+      "caption": "A cycle of arrows through eggs, larva (wriggler), pupa and adult mosquito on a water surface",
+      "labels": [
+        "Eggs",
+        "Larva (wriggler)",
+        "Pupa",
+        "Adult mosquito"
+      ]
+    },
+    {
+      "file": "59-layers-of-the-atmosphere.png",
+      "subject": "Science",
+      "chapter": "Natural Resources",
+      "topic": "Atmosphere",
+      "caption": "Five bands of the atmosphere from 0 to 700 km altitude (marks at 12, 50, 85 and 700 km) with a satellite, aurora, meteor, balloon and aeroplane, and a lettered blank box in each band",
+      "labels": [
+        "A: Exosphere",
+        "B: Thermosphere",
+        "C: Mesosphere",
+        "D: Stratosphere",
+        "E: Troposphere"
+      ],
+      "note": "Letters A-E were added, top to bottom."
+    },
+    {
+      "file": "60-carbon-cycle.png",
+      "subject": "Science",
+      "chapter": "Natural Resources",
+      "topic": "Carbon cycle",
+      "caption": "A landscape with trees, a cow, a factory and the ground below, linked by arrows to CO2 in the atmosphere, with blank boxes under some of the processes",
+      "labels": [
+        "CO2 in atmosphere",
+        "Photosynthesis",
+        "Respiration",
+        "Combustion",
+        "Dead organisms and waste",
+        "Fossil fuels (coal, petroleum, natural gas)"
+      ],
+      "note": "The blank boxes are not explained, so I did not letter or answer them."
+    },
+    {
+      "file": "61-nitrogen-cycle.png",
+      "subject": "Science",
+      "chapter": "Natural Resources",
+      "topic": "Nitrogen cycle",
+      "caption": "A nitrogen cycle with N2 in the atmosphere, a plant, an animal, ammonium and nitrates, linked by arrows, with four blank boxes",
+      "labels": [
+        "N2 in atmosphere",
+        "Plants",
+        "Animals",
+        "Ammonium (NH4+)",
+        "Nitrates (NO3-)",
+        "Nitrifying bacteria",
+        "Nitrogen-fixing bacteria",
+        "Denitrifying bacteria"
+      ],
+      "note": "The four blank boxes are not explained, so I did not letter or answer them."
+    },
+    {
+      "file": "62-water-cycle.png",
+      "subject": "Science",
+      "chapter": "Natural Resources",
+      "topic": "Water cycle",
+      "caption": "A landscape with the Sun, clouds, mountains, trees and a river with arrows for rising vapour, falling rain and flow, and four lettered blank boxes",
+      "labels": [
+        "A: Condensation",
+        "B: Evaporation",
+        "C: Precipitation",
+        "D: Collection (runoff)"
+      ],
+      "note": "Letters A-D were added. The stage names are my reading of the arrows."
+    },
+    {
+      "file": "63-greenhouse-effect-and-ozone-depletion.png",
+      "subject": "Science",
+      "chapter": "Natural Resources",
+      "topic": "Greenhouse effect and ozone depletion",
+      "caption": "Top: sunlight reaching the Earth with heat bouncing back from greenhouse gases; bottom: CFCs breaking down to give free chlorine while UV radiation reaches the ozone layer; with blank boxes",
+      "labels": [
+        "Greenhouse gases (CO2, CH4, etc.)",
+        "CFCs",
+        "Cl (free chlorine)",
+        "UV radiation",
+        "Ozone layer (O3)"
+      ],
+      "note": "The blank boxes are not explained, so I did not letter or answer them."
+    },
+    {
+      "file": "64-crop-seasons-kharif-and-rabi.png",
+      "subject": "Science",
+      "chapter": "Improvement in Food Resources",
+      "topic": "Kharif and Rabi crops",
+      "caption": "Two columns, Kharif crops (monsoon season) and Rabi crops (winter season), with four crop pictures each and a blank box beside each",
+      "labels": [
+        "Kharif: Rice, Maize, Cotton, Groundnut",
+        "Rabi: Wheat, Gram, Mustard, Pea"
+      ],
+      "note": "The blank boxes are not explained, so I did not letter them."
+    },
+    {
+      "file": "65-composite-fish-culture.png",
+      "subject": "Science",
+      "chapter": "Improvement in Food Resources",
+      "topic": "Composite fish culture",
+      "caption": "A pond with five fish at different depths, each row with a feeding type and an example species, and a blank box beside each",
+      "labels": [
+        "Surface feeder (e.g. Catla)",
+        "Column feeder (e.g. Rohu)",
+        "Bottom feeder (e.g. Mrigal)",
+        "Bottom cleaner (e.g. Common carp)",
+        "Weed feeder (e.g. Grass carp)"
+      ],
+      "note": "The blank boxes are not explained, so I did not letter them."
+    },
+    {
+      "file": "66-beehive-and-apiculture.png",
+      "subject": "Science",
+      "chapter": "Improvement in Food Resources",
+      "topic": "Beehive",
+      "caption": "A wooden beehive on a stand with an opened frame of honeycomb and a magnified view of bees, with five arrows to lettered blank boxes",
+      "labels": [
+        "A: Hive roof (cover)",
+        "B: Frame with honeycomb",
+        "C: Hive body (brood chamber)",
+        "D: Landing board (entrance)",
+        "E: Stand"
+      ],
+      "note": "Letters A-E were added. B to E are my best reading of the arrows, so check them against your textbook."
+    },
+    {
+      "file": "67-cropping-patterns.png",
+      "subject": "Science",
+      "chapter": "Improvement in Food Resources",
+      "topic": "Cropping patterns",
+      "caption": "Three panels: (a) crop rotation over Year 1 to Year 3, (b) mixed cropping and (c) intercropping, each with a Helps in blank box",
+      "labels": [
+        "(a) Crop rotation: Year 1, Year 2, Year 3",
+        "(b) Mixed cropping",
+        "(c) Intercropping"
+      ],
+      "note": "The 'Helps in' blanks are not answered here."
+    },
+    {
+      "file": "68-manure-fertilisers-and-pesticides.png",
+      "subject": "Science",
+      "chapter": "Improvement in Food Resources",
+      "topic": "Manure, fertilisers and pesticides",
+      "caption": "Eight pictured items under headings Manure (organic, natural), Fertilisers (chemical, nutrient-rich) and Pesticides (control pests), each with a blank box to classify it",
+      "labels": [
+        "Cow dung: manure",
+        "Urea: fertiliser",
+        "Neem oil: pesticide",
+        "Compost: manure",
+        "NPK (17-17-17): fertiliser",
+        "Vermicompost: manure",
+        "Insecticide spray: pesticide",
+        "Bone meal: fertiliser"
+      ],
+      "note": "Bone meal is the only debatable one (an organic fertiliser). The right column of the source is slightly cut off."
     }
   ]
 }
