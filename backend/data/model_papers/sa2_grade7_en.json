@@ -1,0 +1,1578 @@
+{
+ "paper": "SA-2 Model Question Paper, March 2026",
+ "grade": 7,
+ "questions": [
+  {
+   "subject": "Math",
+   "chapter": "Comparing Quantities",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "Ratio form of 2/3 is",
+   "options": [
+    "2:3",
+    "23",
+    "3:2",
+    "32"
+   ],
+   "answer": "2:3",
+   "explanation": "The fraction a/b is written as the ratio a:b.",
+   "topic": "Ratio",
+   "review": null,
+   "paper_q": "I.1",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Rational Numbers",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "A rational number with no reciprocal is",
+   "options": [
+    "-1",
+    "0",
+    "3/5",
+    "1"
+   ],
+   "answer": "0",
+   "explanation": "The reciprocal of 0 would be 1/0, which is undefined.",
+   "topic": "Reciprocal",
+   "review": null,
+   "paper_q": "I.2",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Perimeter and Area",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "Distance of circular path of a circle is",
+   "options": [
+    "area",
+    "chord",
+    "arc",
+    "circumference"
+   ],
+   "answer": "circumference",
+   "explanation": "The distance around a circle is its circumference.",
+   "topic": "Circle",
+   "review": null,
+   "paper_q": "I.3",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Exponents and Powers",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "In 5^2, the power is",
+   "options": [
+    "25",
+    "5",
+    "2",
+    "10"
+   ],
+   "answer": "2",
+   "explanation": "In a^n, a is the base and n is the power (exponent).",
+   "topic": "Base and power",
+   "review": null,
+   "paper_q": "I.4",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Symmetry",
+   "type": "Fill",
+   "marks": 1,
+   "text": "The order of rotational symmetry of a square is ____________.",
+   "options": null,
+   "answer": "4",
+   "explanation": "A square maps onto itself 4 times in a full turn (at 90°, 180°, 270° and 360°).",
+   "topic": "Rotational symmetry",
+   "review": null,
+   "paper_q": "II.5",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Visualising Solid Shapes",
+   "type": "Fill",
+   "marks": 1,
+   "text": "An example for a sphere is ____________.",
+   "options": null,
+   "answer": "A ball (football / globe)",
+   "explanation": "",
+   "topic": "Solid shapes",
+   "review": null,
+   "paper_q": "II.6",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Rational Numbers",
+   "type": "Fill",
+   "marks": 1,
+   "text": "Use a suitable sign (>, <, =) in the blank: 1/(-11) ____________ (-1)/11",
+   "options": null,
+   "answer": "=",
+   "explanation": "1/(-11) = -1/11.",
+   "topic": "Comparing rational numbers",
+   "review": "Fraction layout was lost in the PDF text; read as 1/(-11) ___ (-1)/11. Check against the PDF.",
+   "paper_q": "II.7",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Perimeter and Area",
+   "type": "Fill",
+   "marks": 1,
+   "text": "The name of the line drawn perpendicular to its base in a parallelogram is ____________.",
+   "options": null,
+   "answer": "Height (altitude)",
+   "explanation": "",
+   "topic": "Area of parallelogram",
+   "review": null,
+   "paper_q": "II.8",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Algebraic Expressions",
+   "type": "Short",
+   "marks": 1,
+   "text": "Write the coefficient of x in the expression ab + 3ax.",
+   "options": null,
+   "answer": "3a",
+   "explanation": "In the term 3ax, the factor that multiplies x is 3a.",
+   "topic": "Coefficients",
+   "review": null,
+   "paper_q": "III.9",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Exponents and Powers",
+   "type": "Short",
+   "marks": 1,
+   "text": "Which is the base number in 6^1?",
+   "options": null,
+   "answer": "6",
+   "explanation": "",
+   "topic": "Base and power",
+   "review": null,
+   "paper_q": "III.10",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Symmetry",
+   "type": "Short",
+   "marks": 1,
+   "text": "What is the order of rotational symmetry of the letter 'C'?",
+   "options": null,
+   "answer": "1",
+   "explanation": "'C' looks the same only after a full 360° turn.",
+   "topic": "Rotational symmetry",
+   "review": null,
+   "paper_q": "III.11",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Visualising Solid Shapes",
+   "type": "Short",
+   "marks": 1,
+   "text": "Mention the total number of faces in a cuboid.",
+   "options": null,
+   "answer": "6",
+   "explanation": "",
+   "topic": "Solid shapes",
+   "review": null,
+   "paper_q": "III.12",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Math",
+   "chapter": "Algebraic Expressions",
+   "type": "Short",
+   "marks": 2,
+   "text": "Identify and write the like terms among the following terms: 5n, 8a, 9a, 3n, 19n",
+   "options": null,
+   "answer": "Like terms: 5n, 3n, 19n (all contain n) and 8a, 9a (both contain a).",
+   "explanation": "",
+   "topic": "Like terms",
+   "review": null,
+   "paper_q": "IV.13",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Symmetry",
+   "type": "Short",
+   "marks": 2,
+   "text": "List out the English alphabets which have linear symmetry.",
+   "options": null,
+   "answer": "A, B, C, D, E, H, I, K, M, O, T, U, V, W, X, Y",
+   "explanation": "Each can be folded along a vertical or horizontal line so the two halves match.",
+   "topic": "Line symmetry",
+   "review": null,
+   "paper_q": "IV.14",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Comparing Quantities",
+   "type": "Short",
+   "marks": 2,
+   "text": "Calculate the value of: 20% of 10 litre.",
+   "options": null,
+   "answer": "2 litre",
+   "explanation": "20/100 × 10 = 2.",
+   "topic": "Percentage",
+   "review": null,
+   "paper_q": "IV.15",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Rational Numbers",
+   "type": "Short",
+   "marks": 2,
+   "text": "Find the simplest form of: 128/(-64)",
+   "options": null,
+   "answer": "-2",
+   "explanation": "Divide numerator and denominator by 64: 2/(-1) = -2.",
+   "topic": "Simplest form",
+   "review": null,
+   "paper_q": "IV.16",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Algebraic Expressions",
+   "type": "Short",
+   "marks": 2,
+   "text": "Construct a factor tree for 12x²y².",
+   "options": null,
+   "answer": "12x²y² = 12 × x² × y²; 12 = 2 × 2 × 3, x² = x × x, y² = y × y. So 12x²y² = 2 × 2 × 3 × x × x × y × y.",
+   "explanation": "",
+   "topic": "Factors of algebraic terms",
+   "review": "Factor-tree drawing; the key gives the final factorisation only.",
+   "paper_q": "IV.17",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Exponents and Powers",
+   "type": "Short",
+   "marks": 2,
+   "text": "Simplify: 6^0 × 4^3",
+   "options": null,
+   "answer": "64",
+   "explanation": "6^0 = 1 and 4^3 = 64, so the product is 1 × 64 = 64.",
+   "topic": "Laws of exponents",
+   "review": null,
+   "paper_q": "IV.18",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Symmetry",
+   "type": "Short",
+   "marks": 2,
+   "text": "Draw any two figures which do not have linear symmetry.",
+   "options": null,
+   "answer": "Any two, e.g. a scalene triangle and a (non-rectangular) parallelogram; letters such as F, G, J, L, N, P, Q, R, S, Z also have no line of symmetry.",
+   "explanation": "",
+   "topic": "Line symmetry",
+   "review": "Drawing question; answer is guidance for the marker.",
+   "paper_q": "IV.19",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Visualising Solid Shapes",
+   "type": "Short",
+   "marks": 2,
+   "text": "Write the names of the following solids: (i) a rectangular box, (ii) a pyramid with a triangular base, (iii) a cone, (iv) a square box (figures shown in the paper).",
+   "options": null,
+   "answer": "(i) Cuboid, (ii) Triangular pyramid, (iii) Cone, (iv) Cube",
+   "explanation": "",
+   "topic": "Solid shapes",
+   "review": "Question depends on a picture. Names are read from the PDF image; confirm them and consider attaching a figure.",
+   "paper_q": "IV.20",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Fractions and Decimals",
+   "type": "Short",
+   "marks": 2,
+   "text": "In a class of 50 students, if 2/5 of them are girls, find the number of boys present in the class.",
+   "options": null,
+   "answer": "30 boys",
+   "explanation": "Girls = 2/5 × 50 = 20, so boys = 50 − 20 = 30.",
+   "topic": "Fractions of a quantity",
+   "review": null,
+   "paper_q": "IV.21",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Symmetry",
+   "type": "Short",
+   "marks": 2,
+   "text": "Copy the given figure (a 5 × 5 grid with some shaded squares), construct any one diagonal in it, and shade some more regions to make it a symmetrical figure.",
+   "options": null,
+   "answer": "Draw the grid, draw one diagonal as the line of symmetry, and shade the mirror image of each shaded square on the other side of the diagonal.",
+   "explanation": "",
+   "topic": "Line symmetry",
+   "review": "Drawing question with a figure; answer is guidance for the marker.",
+   "paper_q": "IV.22",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Math",
+   "chapter": "Comparing Quantities",
+   "type": "Long",
+   "marks": 4,
+   "text": "For a certain amount, the interest at 5% rate for a time period of 3 years is ₹450. Find the amount.",
+   "options": null,
+   "answer": "₹3000",
+   "explanation": "I = PTR/100, so 450 = P × 3 × 5/100, giving P = 450 × 100 / 15 = ₹3000.",
+   "topic": "Simple interest",
+   "review": "Paper marks this 4. Stored as 5 only if --four-mark-as 5 is used.",
+   "paper_q": "V.23",
+   "paper_marks": 4,
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ]
+  },
+  {
+   "subject": "Math",
+   "chapter": "Practical Geometry",
+   "type": "Long",
+   "marks": 4,
+   "text": "Draw a circle of radius 5 cm and mark the centre 'O', radius 'OA' and diameter 'AB'.",
+   "options": null,
+   "answer": "Mark O; with the compass set to 5 cm draw the circle; mark A on the circle and join OA (5 cm); extend AO to meet the circle at B so that AB = 10 cm passes through O.",
+   "explanation": "",
+   "topic": "Circle construction",
+   "review": "Paper marks this 4. Construction question.",
+   "paper_q": "V.24",
+   "paper_marks": 4,
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ]
+  },
+  {
+   "subject": "Science",
+   "chapter": "Measurement of Time and Motion",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "The rate that represents pulse is,",
+   "options": [
+    "Pulse rate",
+    "Speed",
+    "Velocity",
+    "Heartbeat"
+   ],
+   "answer": "Pulse rate",
+   "explanation": "Pulse rate is the number of heartbeats felt per minute.",
+   "topic": "Pulse",
+   "review": "Question wording is ambiguous (pulse rate vs heartbeat). Confirm the intended answer.",
+   "paper_q": "I.1",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Measurement of Time and Motion",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "An object moving in a circular path starts from point A and returns to point A. The distance travelled is:",
+   "options": [
+    "πr²",
+    "2πr",
+    "πr",
+    "π"
+   ],
+   "answer": "2πr",
+   "explanation": "The distance for one full round is the circumference, 2πr.",
+   "topic": "Distance",
+   "review": null,
+   "paper_q": "I.2",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Electricity: Circuits and their Components",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "In the electric circuit diagram shown (battery, bulb, wires and a safety-pin arrangement), which object is used as a switch?",
+   "options": [
+    "Battery",
+    "Bulb",
+    "Safety pin",
+    "Electric wire"
+   ],
+   "answer": "Safety pin",
+   "explanation": "Pressing the safety pin onto the pin/drawing pin closes the circuit, so it acts as the switch.",
+   "topic": "Switch",
+   "review": "Depends on a circuit diagram; answer read from the picture.",
+   "paper_q": "I.3",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Light: Shadows and Reflections",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "The lens used in microscopes is:",
+   "options": [
+    "Biconvex lens",
+    "Concave lens",
+    "Spherical lens",
+    "Convex lens"
+   ],
+   "answer": "Convex lens",
+   "explanation": "A convex lens magnifies small objects.",
+   "topic": "Lenses",
+   "review": "Biconvex is also a convex lens; confirm which option the textbook expects.",
+   "paper_q": "I.4",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Life Processes in Plants",
+   "type": "Fill",
+   "marks": 1,
+   "text": "In plant reproduction, seeds are dispersed by birds and wind through ____________.",
+   "options": null,
+   "answer": "seed dispersal (agents such as animals and wind)",
+   "explanation": "",
+   "topic": "Seed dispersal",
+   "review": "Blank is loosely worded; confirm the expected word.",
+   "paper_q": "II.1",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Measurement of Time and Motion",
+   "type": "Fill",
+   "marks": 1,
+   "text": "The SI unit of time is ____________.",
+   "options": null,
+   "answer": "second",
+   "explanation": "",
+   "topic": "Units",
+   "review": null,
+   "paper_q": "II.2",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Electricity: Circuits and their Components",
+   "type": "Fill",
+   "marks": 1,
+   "text": "If the electric current is high, the fuse wire ____________.",
+   "options": null,
+   "answer": "melts",
+   "explanation": "The heat of a large current melts the fuse wire and breaks the circuit.",
+   "topic": "Fuse",
+   "review": null,
+   "paper_q": "II.3",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": null,
+   "type": "Fill",
+   "marks": 1,
+   "text": "Forests prevent ____________ erosion.",
+   "options": null,
+   "answer": "soil",
+   "explanation": "",
+   "topic": "Forests",
+   "review": null,
+   "paper_q": "II.4",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Life Processes in Plants",
+   "type": "Short",
+   "marks": 1,
+   "text": "What is the male reproductive part of a flower?",
+   "options": null,
+   "answer": "Stamen",
+   "explanation": "",
+   "topic": "Flower",
+   "review": null,
+   "paper_q": "III.1",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Light: Shadows and Reflections",
+   "type": "Short",
+   "marks": 1,
+   "text": "What is a source of light?",
+   "options": null,
+   "answer": "An object that gives out its own light, e.g. the Sun.",
+   "explanation": "",
+   "topic": "Light",
+   "review": null,
+   "paper_q": "III.2",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": null,
+   "type": "Short",
+   "marks": 1,
+   "text": "What happens if we throw waste into water bodies?",
+   "options": null,
+   "answer": "The water gets polluted, harming aquatic life and making the water unsafe to use.",
+   "explanation": "",
+   "topic": "Water pollution",
+   "review": null,
+   "paper_q": "III.3",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": null,
+   "type": "Short",
+   "marks": 1,
+   "text": "On which day is World Water Day celebrated?",
+   "options": null,
+   "answer": "22 March",
+   "explanation": "",
+   "topic": "Water",
+   "review": null,
+   "paper_q": "III.4",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Science",
+   "chapter": "Life Processes in Animals",
+   "type": "Short",
+   "marks": 2,
+   "text": "List the differences between arteries and veins.",
+   "options": null,
+   "answer": "Arteries carry oxygen-rich blood away from the heart (except the pulmonary artery); they have thick, elastic walls and no valves. Veins carry blood back to the heart (oxygen-poor, except the pulmonary vein); they have thinner walls and valves.",
+   "explanation": "",
+   "topic": "Blood vessels",
+   "review": null,
+   "paper_q": "IV.1",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Life Processes in Animals",
+   "type": "Short",
+   "marks": 2,
+   "text": "What are the parts included in the human excretory system?",
+   "options": null,
+   "answer": "Two kidneys, two ureters, the urinary bladder and the urethra.",
+   "explanation": "",
+   "topic": "Excretion",
+   "review": null,
+   "paper_q": "IV.2",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Measurement of Time and Motion",
+   "type": "Short",
+   "marks": 2,
+   "text": "Uniform motion is called effortless motion. Why?",
+   "options": null,
+   "answer": "In uniform motion the speed and direction stay constant, so no extra force or effort is needed to change the motion once it has started.",
+   "explanation": "",
+   "topic": "Uniform motion",
+   "review": "Textbook reasoning may differ; check wording.",
+   "paper_q": "IV.3",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Measurement of Time and Motion",
+   "type": "Short",
+   "marks": 2,
+   "text": "A bicycle travels 5 km in 20 minutes. What is its average speed?",
+   "options": null,
+   "answer": "15 km/h",
+   "explanation": "20 min = 1/3 h; speed = 5 ÷ (1/3) = 15 km/h.",
+   "topic": "Speed",
+   "review": null,
+   "paper_q": "IV.4",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Electricity: Circuits and their Components",
+   "type": "Short",
+   "marks": 2,
+   "text": "Why is nichrome wire used in electric stoves?",
+   "options": null,
+   "answer": "Nichrome has high resistance and a high melting point, so it gets very hot without melting and does not oxidise easily.",
+   "explanation": "",
+   "topic": "Heating effect",
+   "review": null,
+   "paper_q": "IV.5",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Electricity: Circuits and their Components",
+   "type": "Short",
+   "marks": 2,
+   "text": "List two devices that work based on the heating effect of electric current.",
+   "options": null,
+   "answer": "Electric heater and electric iron (also toaster, geyser, electric kettle).",
+   "explanation": "",
+   "topic": "Heating effect",
+   "review": null,
+   "paper_q": "IV.6",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Light: Shadows and Reflections",
+   "type": "Short",
+   "marks": 2,
+   "text": "What is the use of a plane mirror?",
+   "options": null,
+   "answer": "A plane mirror is used to see our own image (e.g. dressing mirrors) and in devices like periscopes and kaleidoscopes.",
+   "explanation": "",
+   "topic": "Plane mirror",
+   "review": null,
+   "paper_q": "IV.7",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": "Light: Shadows and Reflections",
+   "type": "Short",
+   "marks": 2,
+   "text": "The image seen in a stainless steel plate is erect and of the same size as the object. Why?",
+   "options": null,
+   "answer": "A polished steel plate acts like a plane mirror and reflects light regularly, so the image is erect and the same size as the object.",
+   "explanation": "",
+   "topic": "Reflection",
+   "review": null,
+   "paper_q": "IV.8",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": null,
+   "type": "Short",
+   "marks": 2,
+   "text": "As a responsible person, how can we reduce sewage waste?",
+   "options": null,
+   "answer": "Use water carefully, do not throw solid waste, oil or chemicals into drains, and reuse or treat waste water.",
+   "explanation": "",
+   "topic": "Sewage",
+   "review": null,
+   "paper_q": "IV.9",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": null,
+   "type": "Short",
+   "marks": 2,
+   "text": "How can the impurities in sewage water be classified?",
+   "options": null,
+   "answer": "Impurities in sewage are classified as suspended, dissolved and biological (microbial) impurities; they can also be grouped as organic and inorganic.",
+   "explanation": "",
+   "topic": "Sewage",
+   "review": "Classification scheme differs between sources; check against the textbook.",
+   "paper_q": "IV.10",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Science",
+   "chapter": null,
+   "type": "Long",
+   "marks": 4,
+   "text": "Explain the role of forests in maintaining ecological balance.",
+   "options": null,
+   "answer": "Forests keep the oxygen–carbon dioxide balance, help rainfall, prevent soil erosion, conserve groundwater and give food and shelter to wildlife.",
+   "explanation": "",
+   "topic": "Forests",
+   "review": "Paper marks this 4.",
+   "paper_q": "V.1",
+   "paper_marks": 4,
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ]
+  },
+  {
+   "subject": "Science",
+   "chapter": "Life Processes in Plants",
+   "type": "Long",
+   "marks": 4,
+   "text": "Draw a labeled diagram showing fertilization in plants.",
+   "options": null,
+   "answer": "Diagram of a carpel: stigma, style, ovary, ovule, pollen tube carrying male gametes to the egg cell, with the zygote formed in the ovule.",
+   "explanation": "",
+   "topic": "Fertilisation",
+   "review": "Paper marks this 4. Drawing question.",
+   "paper_q": "V.2",
+   "paper_marks": 4,
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ]
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "First War of Indian Independence (1857 – 58 C.E)",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "He regarded the 1857 revolt as India's First War of Independence.",
+   "options": [
+    "V.D. Savarkar",
+    "Jawaharlal Nehru",
+    "Pattabhi Sitaramayya",
+    "The British"
+   ],
+   "answer": "V.D. Savarkar",
+   "explanation": "V.D. Savarkar's book described the 1857 revolt as the First War of Indian Independence.",
+   "topic": "1857",
+   "review": null,
+   "paper_q": "I.1",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Unification of Karnataka and Border Disputes",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "In this literary work it is mentioned that Karnataka extends from the Kaveri to the Godavari.",
+   "options": [
+    "Gadhayuddha",
+    "Kavirajamarga",
+    "Vaddaradhane",
+    "Shantipurana"
+   ],
+   "answer": "Kavirajamarga",
+   "explanation": "Kavirajamarga (c. 9th century) describes the Kannada land between the Kaveri and the Godavari.",
+   "topic": "Karnataka",
+   "review": "Chapter is a best guess.",
+   "paper_q": "I.2",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Social and Religious Reforms",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "In this year the Atmiya Sabha (Friendly Society) was established.",
+   "options": [
+    "1819",
+    "1816",
+    "1814",
+    "1828"
+   ],
+   "answer": "1814",
+   "explanation": "Raja Ram Mohan Roy founded the Atmiya Sabha in Calcutta in 1814.",
+   "topic": "Raja Ram Mohan Roy",
+   "review": "Some sources give 1815; 1814 is the only listed option near it. Confirm with the textbook.",
+   "paper_q": "I.3",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Australia",
+   "type": "MCQ",
+   "marks": 1,
+   "text": "It is about twice the size of India and is the 7th continent of the world. (A map of the continent is shown in the paper.)",
+   "options": [
+    "Asia",
+    "Europe",
+    "North America",
+    "Australia"
+   ],
+   "answer": "Australia",
+   "explanation": "Australia is the smallest continent and about twice the size of India.",
+   "topic": "Continents",
+   "review": null,
+   "paper_q": "I.4",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Freedom Movement (1885 C.E - 1919 C.E)",
+   "type": "Short",
+   "marks": 1,
+   "text": "Who gave the slogan \"If you give me blood, I will give you freedom\"?",
+   "options": null,
+   "answer": "Netaji Subhas Chandra Bose",
+   "explanation": "",
+   "topic": "Freedom movement",
+   "review": "Chapter is a best guess.",
+   "paper_q": "II.5",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Social and Religious Reforms",
+   "type": "Short",
+   "marks": 1,
+   "text": "Whom did Dr. B.R. Ambedkar consider his philosophical guide?",
+   "options": null,
+   "answer": "Gautama Buddha",
+   "explanation": "",
+   "topic": "Dr. B.R. Ambedkar",
+   "review": "Chapter is a best guess; Ambedkar also named Kabir and Jyotiba Phule as gurus.",
+   "paper_q": "II.6",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Pro-Social Movements of Karnataka",
+   "type": "Short",
+   "marks": 1,
+   "text": "What is the Chipko Movement?",
+   "options": null,
+   "answer": "A movement in which villagers hugged trees to stop them being cut down.",
+   "explanation": "",
+   "topic": "Environmental movements",
+   "review": "Chapter is a best guess.",
+   "paper_q": "II.7",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Pro-Social Movements of Karnataka",
+   "type": "Short",
+   "marks": 1,
+   "text": "What are natural resources?",
+   "options": null,
+   "answer": "Resources that nature provides, such as water, soil, forests, minerals and air.",
+   "explanation": "",
+   "topic": "Natural resources",
+   "review": "Chapter is a best guess.",
+   "paper_q": "II.8",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "United Nations Organization (U.N.O.)",
+   "type": "Fill",
+   "marks": 1,
+   "text": "The total number of member states of the United Nations is ____________.",
+   "options": null,
+   "answer": "193",
+   "explanation": "",
+   "topic": "UN membership",
+   "review": null,
+   "paper_q": "III.9",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Australia",
+   "type": "Fill",
+   "marks": 1,
+   "text": "'Black Wood' in the continent of Australia is ____________.",
+   "options": null,
+   "answer": "Acacia (Australian blackwood)",
+   "explanation": "",
+   "topic": "Vegetation of Australia",
+   "review": "Confirm the textbook's term.",
+   "paper_q": "III.10",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Defence Forces",
+   "type": "Fill",
+   "marks": 1,
+   "text": "The defence portfolios of our nation are given to the ____________.",
+   "options": null,
+   "answer": "Ministry of Defence (headed by the Defence Minister)",
+   "explanation": "",
+   "topic": "Defence",
+   "review": "Confirm the expected word.",
+   "paper_q": "III.11",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Antarctica",
+   "type": "Fill",
+   "marks": 1,
+   "text": "____________ continent is reserved only for scientific research.",
+   "options": null,
+   "answer": "Antarctica",
+   "explanation": "",
+   "topic": "Antarctica",
+   "review": null,
+   "paper_q": "III.12",
+   "grade": 7,
+   "difficulty": "easy",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 1
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Social and Religious Reforms",
+   "type": "Short",
+   "marks": 2,
+   "text": "What were the major movements led by Dr. B.R. Ambedkar against untouchability and social discrimination?",
+   "options": null,
+   "answer": "The Mahad Satyagraha (1927) for the right to use public water, the Kalaram temple-entry movement (1930), and the founding of the Bahishkrit Hitakarini Sabha to uplift the depressed classes.",
+   "explanation": "",
+   "topic": "Dr. B.R. Ambedkar",
+   "review": "Chapter is a best guess.",
+   "paper_q": "IV.13",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Unification of Karnataka and Border Disputes",
+   "type": "Short",
+   "marks": 2,
+   "text": "Name the organizations that contributed to the unification of Karnataka.",
+   "options": null,
+   "answer": "Karnataka Vidyavardhaka Sangha, Karnataka Sahitya Parishat, Karnataka Sabha and the Karnataka Ekikarana Sabha.",
+   "explanation": "",
+   "topic": "Unification of Karnataka",
+   "review": null,
+   "paper_q": "IV.14",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Pro-Social Movements of Karnataka",
+   "type": "Short",
+   "marks": 2,
+   "text": "Name the major environmental movements.",
+   "options": null,
+   "answer": "Chipko Movement, Appiko Movement, Silent Valley Movement and Narmada Bachao Andolan.",
+   "explanation": "",
+   "topic": "Environmental movements",
+   "review": "Chapter is a best guess.",
+   "paper_q": "IV.15",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Karnataka - Economic and Social Transformation",
+   "type": "Short",
+   "marks": 2,
+   "text": "What were the benefits of land reform measures?",
+   "options": null,
+   "answer": "Tenants became owners of the land they tilled, landlord exploitation reduced, land ceilings spread land more fairly, and farm output and rural incomes rose.",
+   "explanation": "",
+   "topic": "Land reforms",
+   "review": "Chapter is a best guess.",
+   "paper_q": "IV.16",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Progress in Different Fields",
+   "type": "Short",
+   "marks": 2,
+   "text": "Analyze the role of mass media in the development of a country.",
+   "options": null,
+   "answer": "Mass media spread information and awareness, educate people, shape public opinion, keep governments accountable and support trade and culture.",
+   "explanation": "",
+   "topic": "Mass media",
+   "review": "Chapter is a best guess.",
+   "paper_q": "IV.17",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Judiciary",
+   "type": "Short",
+   "marks": 2,
+   "text": "Why do we need courts?",
+   "options": null,
+   "answer": "Courts settle disputes, punish wrongdoers, protect fundamental rights and make sure laws and the Constitution are followed.",
+   "explanation": "",
+   "topic": "Courts",
+   "review": null,
+   "paper_q": "IV.18",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Defence Forces",
+   "type": "Short",
+   "marks": 2,
+   "text": "What are the responsibilities of the defence forces?",
+   "options": null,
+   "answer": "They protect the country from external attack, guard its borders, help in disasters and keep peace.",
+   "explanation": "",
+   "topic": "Defence",
+   "review": null,
+   "paper_q": "IV.19",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "India and Neighbouring Countries",
+   "type": "Short",
+   "marks": 2,
+   "text": "State (list) the neighbouring countries of India.",
+   "options": null,
+   "answer": "Pakistan, Afghanistan, China, Nepal, Bhutan, Bangladesh and Myanmar; Sri Lanka and the Maldives are island neighbours.",
+   "explanation": "",
+   "topic": "Neighbours",
+   "review": null,
+   "paper_q": "IV.20",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "United Nations Organization (U.N.O.)",
+   "type": "Short",
+   "marks": 2,
+   "text": "Name the important heads of state who played a prominent role in the establishment of the United Nations.",
+   "options": null,
+   "answer": "Franklin D. Roosevelt (USA), Winston Churchill (UK) and Joseph Stalin (USSR).",
+   "explanation": "",
+   "topic": "UN formation",
+   "review": null,
+   "paper_q": "IV.21",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Antarctica",
+   "type": "Short",
+   "marks": 2,
+   "text": "List the Indian research centres in Antarctica.",
+   "options": null,
+   "answer": "Dakshin Gangotri, Maitri and Bharati.",
+   "explanation": "",
+   "topic": "Antarctica",
+   "review": null,
+   "paper_q": "IV.22",
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ],
+   "paper_marks": 2
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "Social and Religious Reforms",
+   "type": "Long",
+   "marks": 4,
+   "text": "Analyze the role of the Brahma Samaj in eliminating social evils in India.",
+   "options": null,
+   "answer": "Founded by Raja Ram Mohan Roy in 1828, it opposed sati, idol worship and caste discrimination, supported widow remarriage and women's education, and promoted a rational, one-God religion.",
+   "explanation": "",
+   "topic": "Brahma Samaj",
+   "review": "Paper marks this 4.",
+   "paper_q": "V.23",
+   "paper_marks": 4,
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ]
+  },
+  {
+   "subject": "Social Science",
+   "chapter": "First War of Indian Independence (1857 – 58 C.E)",
+   "type": "Long",
+   "marks": 4,
+   "text": "Draw the map of India and mark the following: Delhi, Gwalior, Allahabad, Kanpur.",
+   "options": null,
+   "answer": "Outline map of India with the four 1857 centres marked at their correct positions and labelled.",
+   "explanation": "",
+   "topic": "Map work",
+   "review": "Paper marks this 4. Map question.",
+   "paper_q": "V.24",
+   "paper_marks": 4,
+   "grade": 7,
+   "difficulty": "medium",
+   "tags": [
+    "previous-paper",
+    "SA-2 2026 model paper",
+    "grade-7"
+   ]
+  }
+ ]
+}
