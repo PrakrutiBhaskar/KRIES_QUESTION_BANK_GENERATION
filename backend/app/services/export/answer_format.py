@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from generation_engine.schemas import parse_match_answer
+from generation_engine.schemas import _MATCH_LEFT_LINE_RE, match_left_items, parse_match_answer
 
 # Numbered ("1." / "1)") or bulleted markers. Trailing whitespace is required so
 # decimals such as "2.5 kg" are not mistaken for markers.
@@ -186,3 +186,28 @@ def match_key_label(answer: str) -> str:
     if not mapping:
         return answer
     return ",   ".join(f"{n} - {mapping[n].lower()}" for n in sorted(mapping))
+
+
+MATCH_COLUMN_HEADINGS = ("Column A", "Column B")
+
+
+def match_layout(text: str, options) -> tuple[str, list[tuple[str, str]]] | None:
+    """A Match question laid out for a two-column table, or None to print it as before.
+
+    Returns ``(stem, rows)``: the lead-in sentence with the numbered Column A
+    lines taken out, and one ``("1. item", "(a) option")`` row per pair. Column B
+    uses the same lowercase letters the answer key prints.
+    """
+    left = match_left_items(text)
+    opts = [str(o) for o in (options or [])]
+    if not left or not opts:
+        return None
+    stem = "\n".join(
+        line for line in _MATCH_LEFT_LINE_RE.sub("", text or "").splitlines() if line.strip()
+    ).strip()
+    rows = []
+    for i in range(max(len(left), len(opts))):
+        a = f"{i + 1}. {left[i]}" if i < len(left) else ""
+        b = f"({chr(97 + i)}) {opts[i]}" if i < len(opts) else ""
+        rows.append((a, b))
+    return stem or "Match the following:", rows

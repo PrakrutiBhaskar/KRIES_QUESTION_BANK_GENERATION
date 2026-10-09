@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { Fragment, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Wand2,
@@ -23,9 +23,10 @@ import {
   fetchCombinations,
   generateQuestions,
   planBatches,
-  effectiveMarks,
+  effectiveMarksList,
   ALL_QUESTION_TYPES,
   renumber,
+  sortByMarks,
   verifyAnswers,
 } from '../lib/api';
 import type {
@@ -47,6 +48,8 @@ import {
   VerificationNote,
   VerificationWarning,
   isKeyOption,
+  MatchTable,
+  parseMatch,
   TYPE_LABELS,
 } from '../components/ui';
 import { FigureImage } from '../components/FigureImage';
@@ -55,7 +58,7 @@ const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Ka
 const GRADES: Grade[] = [7, 8, 9];
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 // Fallback used only if GET /generation/combinations can't be reached.
-const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1, 2, 3, 5], Short: [1, 2, 3], Long: [3, 5], Fill: [1, 2, 3, 5], Match: [3, 5] };
+const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [3, 5], Fill: [1], Match: [3, 5] };
 
 // ============================================================
 // Question Card
@@ -73,6 +76,7 @@ interface QuestionCardProps {
 
 function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMoveDown, isFirst, isLast }: QuestionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const match = parseMatch(question);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -95,12 +99,13 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
           </div>
 
           {/* Question text */}
-          <p className="text-sm font-medium text-slate-900 mb-1 leading-snug whitespace-pre-line">{question.text}</p>
+          <p className="text-sm font-medium text-slate-900 mb-1 leading-snug whitespace-pre-line">{match ? match.stem : question.text}</p>
           {question.figure && <FigureImage figure={question.figure} className="my-2" />}
           <VerificationWarning question={question} />
 
           {/* MCQ options, or Column B of a Match question (no single option is "the answer") */}
-          {question.options && question.options.length > 0 && (
+          {match && <MatchTable rows={match.rows} />}
+          {!match && question.options && question.options.length > 0 && (
             <ol className="list-none space-y-1 my-2">
               {question.options.map((opt, i) => (
                 <li key={i} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${isKeyOption(question, opt) ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-medium' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
@@ -270,10 +275,17 @@ export default function GeneratePage() {
   const selectedTypes = ALL_QUESTION_TYPES.filter((t) => form.questionTypes.includes(t));
   /** A saved default marks value only applies when a single type is chosen. */
   const preferredMarks = selectedTypes.length === 1 ? settings.defaultMarks : undefined;
-  const marksFor = (t: QuestionType): Marks =>
-    effectiveMarks(t, marksByType[t], form.marksChoice[t], preferredMarks);
-  const setMarksFor = (t: QuestionType, m: Marks) =>
-    setForm((p) => ({ ...p, marksChoice: { ...p.marksChoice, [t]: m } }));
+  const marksFor = (t: QuestionType): Marks[] =>
+    effectiveMarksList(t, marksByType[t], form.marksChoice[t], preferredMarks);
+  /** Select or deselect one marks value for a type; at least one always stays selected. */
+  const toggleMarksFor = (t: QuestionType, m: Marks) =>
+    setForm((p) => {
+      const current = effectiveMarksList(t, marksByType[t], p.marksChoice[t], preferredMarks);
+      const has = current.includes(m);
+      if (has && current.length === 1) return p;
+      const next = has ? current.filter((x) => x !== m) : [...current, m];
+      return { ...p, marksChoice: { ...p.marksChoice, [t]: marksByType[t].filter((x) => next.includes(x)) } };
+    });
 
   /** Generate `count` more questions using the current form settings. */
   const generateBatches = async (count: number, refresh: boolean) => {
@@ -319,7 +331,7 @@ export default function GeneratePage() {
     setSaved(false);
     try {
       const questions = await generateBatches(form.questionCount, false);
-      setGenerated(renumber(questions));
+      setGenerated(renumber(sortByMarks(questions)));
       if (questions.length < form.questionCount) {
         showToast(
           `Generated ${questions.length} unique questions (asked for ${form.questionCount}). ` +
@@ -391,7 +403,7 @@ export default function GeneratePage() {
         showToast('The generator returned a question that is already in your list. Try again.', 'warning');
         return;
       }
-      setGenerated((prev) => renumber([...prev, ...added]));
+      setGenerated((prev) => renumber(sortByMarks([...prev, ...added])));
       showToast('New question added.', 'success');
     } catch (err) {
       showToast(errorMessage(err), 'error');
@@ -634,7 +646,7 @@ export default function GeneratePage() {
             </h3>
             <div className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">Marks per Question</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">Marks per Question <span className="font-normal text-slate-400">(pick one or more)</span></label>
                 <div className="space-y-2">
                   {selectedTypes.map((t) => (
                     <div key={t} className="flex items-center gap-2">
@@ -646,9 +658,9 @@ export default function GeneratePage() {
                           <button
                             key={m}
                             type="button"
-                            aria-pressed={marksFor(t) === m}
-                            onClick={() => setMarksFor(t, m)}
-                            className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${marksFor(t) === m ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
+                            aria-pressed={marksFor(t).includes(m)}
+                            onClick={() => toggleMarksFor(t, m)}
+                            className={`flex-1 py-1.5 text-sm rounded-lg border font-medium transition-colors ${marksFor(t).includes(m) ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-300'}`}
                           >
                             {m}
                           </button>
@@ -659,7 +671,7 @@ export default function GeneratePage() {
                 </div>
                 {selectedTypes.length > 1 && (
                   <p className="mt-1.5 text-xs text-slate-400">
-                    Questions are spread evenly across the chosen types.
+                    Questions are spread evenly across the chosen types and marks.
                   </p>
                 )}
               </div>
@@ -788,8 +800,13 @@ export default function GeneratePage() {
               {/* Question cards */}
               <div className="space-y-3">
                 {generated.map((q, i) => (
+                  <Fragment key={q.id}>
+                  {(i === 0 || generated[i - 1].marks !== q.marks) && (
+                    <h3 className="pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Section — {q.marks}-mark question{q.marks > 1 ? 's' : ''} ({generated.filter((x) => x.marks === q.marks).length})
+                    </h3>
+                  )}
                   <QuestionCard
-                    key={q.id}
                     question={q}
                     onDelete={(id) => setDeleteId(id)}
                     onRegenerate={handleRegenerate}
@@ -799,6 +816,7 @@ export default function GeneratePage() {
                     isFirst={i === 0}
                     isLast={i === generated.length - 1}
                   />
+                  </Fragment>
                 ))}
               </div>
 

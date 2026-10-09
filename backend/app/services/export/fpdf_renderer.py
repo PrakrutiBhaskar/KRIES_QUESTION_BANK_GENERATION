@@ -17,8 +17,8 @@ from io import BytesIO
 from pathlib import Path
 
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import format_answer, match_key_label, split_label
-from .html import item_section, section_totals
+from .answer_format import MATCH_COLUMN_HEADINGS, format_answer, match_key_label, match_layout, split_label
+from .html import item_section, ordered_items, section_totals
 
 FONT_DIR = Path(__file__).resolve().parents[3] / "assets" / "fonts"
 
@@ -111,7 +111,7 @@ def render_fpdf(paper, include_answer_key: bool = True) -> bytes:
             pdf.set_x(_LEFT + indent)
             write(figure.caption, w=epw - indent, style="I", size=9, h=4.6, color=(85, 85, 85))
 
-    ordered = sorted(paper.items, key=lambda i: i.order_index)
+    ordered = ordered_items(paper)
     grades = sorted({item.question.grade for item in ordered})
     grade_label = ", ".join(str(g) for g in grades) if grades else "-"
 
@@ -163,9 +163,29 @@ def render_fpdf(paper, include_answer_key: bool = True) -> bytes:
         pdf.set_xy(_LEFT + epw - _MARKS_W, y0)
         pdf.cell(_MARKS_W, 5.6, f"[{item.effective_marks}]", align="R")
         pdf.set_xy(_LEFT, y0)
-        write(f"{n}. {q.text}", w=epw - _MARKS_W)
+        match = match_layout(q.text, q.options) if q.type.value == "Match" else None
+        write(f"{n}. {match[0] if match else q.text}", w=epw - _MARKS_W)
         draw_figure(q_fig, 8)
-        if q.options:
+        if match:
+            from fpdf.fonts import FontFace
+
+            pdf.ln(1)
+            pdf.set_font("Noto", "", 10.5)
+            pdf.set_text_color(17, 17, 17)
+            with pdf.table(
+                col_widths=((epw - 8) / 2, (epw - 8) / 2), width=epw - 8, align="RIGHT",
+                text_align="LEFT", v_align="T", padding=1.4, line_height=5.2, first_row_as_headings=True,
+                headings_style=FontFace(emphasis="BOLD", fill_color=(240, 240, 240)),
+            ) as grid:
+                head = grid.row()
+                for h in MATCH_COLUMN_HEADINGS:
+                    head.cell(h)
+                for a, b in match[1]:
+                    r = grid.row()
+                    r.cell(a)
+                    r.cell(b)
+            pdf.set_x(_LEFT)
+        elif q.options:
             for label, option in zip(_OPTION_LABELS, q.options):
                 pdf.set_x(_LEFT + 8)
                 write(f"({label}) {option}", w=epw - 8, size=10.5, h=5.2)

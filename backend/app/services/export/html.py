@@ -13,12 +13,27 @@ import base64
 from html import escape
 
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import format_answer, match_key_label, split_label
+from .answer_format import MATCH_COLUMN_HEADINGS, format_answer, match_key_label, match_layout, split_label
 
 
 def item_section(item) -> str | None:
     """The item's section, or None. Tolerates items that predate sections."""
     return getattr(item, "section", None) or None
+
+
+def ordered_items(paper) -> list:
+    """The paper's items as printed: ascending by marks (1, 2, 3, 5), stable within a mark.
+
+    Blueprint papers keep their sections in the order the teacher set (Section A,
+    B, ...) and are sorted by marks inside each section; papers built by hand have
+    no sections, so the whole paper is sorted. The Answer Key uses the same order
+    and numbering.
+    """
+    by_position = sorted(paper.items, key=lambda i: i.order_index)
+    rank: dict[str | None, int] = {}
+    for item in by_position:
+        rank.setdefault(item_section(item), len(rank))
+    return sorted(by_position, key=lambda i: (rank[item_section(i)], i.effective_marks))
 
 
 def section_totals(ordered_items) -> dict[str, int]:
@@ -55,6 +70,9 @@ body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
 .fig img { display: block; }
 .fig .cap { font-size: 9pt; color: #555; font-style: italic; margin-top: 2px; }
 .key .fig { margin-left: 30px; }
+table.match { border-collapse: collapse; margin: 6px 36px 2px 30px; width: calc(100% - 66px); }
+table.match th, table.match td { border: 1px solid #444; padding: 4px 8px; text-align: left; vertical-align: top; width: 50%; }
+table.match th { background: #f0f0f0; }
 .options { margin: 4px 0 0 30px; padding: 0; list-style: none; }
 .options li { margin: 2px 0; }
 .section-break { page-break-before: always; }
@@ -132,7 +150,7 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
         f"<div class='instructions'>{_instructions(paper)}</div>",
     ]
 
-    ordered = sorted(paper.items, key=lambda i: i.order_index)
+    ordered = ordered_items(paper)
     section_marks = section_totals(ordered)
 
     current_section = None
@@ -147,11 +165,18 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
             )
         parts.append("<div class='q'><div class='q-head'>")
         parts.append(f"<span class='q-num'>{n}.</span>")
-        parts.append(f"<span class='q-text'>{escape(q.text)}</span>")
+        match = match_layout(q.text, q.options) if q.type.value == "Match" else None
+        parts.append(f"<span class='q-text'>{escape(match[0] if match else q.text)}</span>")
         parts.append(f"<span class='q-marks'>[{item.effective_marks}]</span>")
         parts.append("</div>")
         parts.append(figure_html(loaded_figure(q, "figure")))
-        if q.options:
+        if match:
+            h1, h2 = MATCH_COLUMN_HEADINGS
+            parts.append(f"<table class='match'><thead><tr><th>{h1}</th><th>{h2}</th></tr></thead><tbody>")
+            for a, b in match[1]:
+                parts.append(f"<tr><td>{escape(a)}</td><td>{escape(b)}</td></tr>")
+            parts.append("</tbody></table>")
+        elif q.options:
             parts.append("<ul class='options'>")
             for label, option in zip(_OPTION_LABELS, q.options):
                 parts.append(f"<li>({label}) {escape(str(option))}</li>")

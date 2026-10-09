@@ -65,10 +65,10 @@ VALID_GRADES = {7, 8, 9}
 # /generation/combinations endpoint, blueprint validation and the UI selectors
 # all derive from it.
 VALID_MARKS_BY_TYPE = {
-    QuestionType.MCQ: {1, 2, 3, 5},
+    QuestionType.MCQ: {1},
     QuestionType.SHORT: {1, 2, 3},
     QuestionType.LONG: {3, 5},
-    QuestionType.FILL: {1, 2, 3, 5},
+    QuestionType.FILL: {1},
     QuestionType.MATCH: {3, 5},
 }
 

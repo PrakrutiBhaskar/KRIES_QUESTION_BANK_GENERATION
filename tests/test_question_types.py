@@ -101,11 +101,11 @@ def match_raw(pairs=PAIRS_3, **extra):
 
 
 def test_new_types_are_registered_with_their_marks():
-    assert VALID_MARKS_BY_TYPE[QuestionType.FILL] == {1, 2, 3, 5}
+    assert VALID_MARKS_BY_TYPE[QuestionType.FILL] == {1}
     assert VALID_MARKS_BY_TYPE[QuestionType.MATCH] == {3, 5}
     combos = supported_combinations()
     assert (QuestionType.FILL, 1) in combos
-    assert (QuestionType.FILL, 5) in combos
+    assert (QuestionType.FILL, 5) not in combos
     assert (QuestionType.MATCH, 3) in combos
     assert (QuestionType.MATCH, 5) in combos
 

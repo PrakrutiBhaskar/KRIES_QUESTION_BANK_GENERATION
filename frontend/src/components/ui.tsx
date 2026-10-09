@@ -47,6 +47,47 @@ export function isKeyOption(question: { type: QuestionType; answer: string }, op
   return question.type !== 'Match' && opt === question.answer;
 }
 
+/** A Match question split for display: the lead-in line plus one Column A / Column B row per pair. */
+export function parseMatch(question: { type: QuestionType; text: string; options?: string[] | null }) {
+  if (question.type !== 'Match' || !question.options?.length) return null;
+  const re = /^\s*(\d{1,2})\s*[.)]\s+(\S.*?)\s*$/;
+  const left: string[] = [];
+  const stem: string[] = [];
+  for (const line of question.text.split('\n')) {
+    const m = re.exec(line);
+    if (m) left.push(m[2]);
+    else if (line.trim()) stem.push(line.trim());
+  }
+  if (left.length === 0) return null;
+  const rows = Array.from({ length: Math.max(left.length, question.options.length) }, (_, i) => ({
+    a: left[i] ? `${i + 1}. ${left[i]}` : '',
+    b: question.options?.[i] ? `(${String.fromCharCode(97 + i)}) ${question.options[i]}` : '',
+  }));
+  return { stem: stem.join('\n') || 'Match the following:', rows };
+}
+
+/** Match the Following as a two-column table. */
+export function MatchTable({ rows }: { rows: { a: string; b: string }[] }) {
+  return (
+    <table className="w-full my-2 text-xs border-collapse">
+      <thead>
+        <tr className="bg-slate-100 text-slate-700">
+          <th className="w-1/2 text-left font-semibold border border-slate-300 px-3 py-1.5">Column A</th>
+          <th className="w-1/2 text-left font-semibold border border-slate-300 px-3 py-1.5">Column B</th>
+        </tr>
+      </thead>
+      <tbody className="text-slate-600">
+        {rows.map((r, i) => (
+          <tr key={i}>
+            <td className="border border-slate-300 px-3 py-1.5 align-top">{r.a}</td>
+            <td className="border border-slate-300 px-3 py-1.5 align-top">{r.b}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export function TypeBadge({ type }: { type: QuestionType | 'Mixed' | string }) {
   const label = TYPE_LABELS[type] ?? type;
   return (

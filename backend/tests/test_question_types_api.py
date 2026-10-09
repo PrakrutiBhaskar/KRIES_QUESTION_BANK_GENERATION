@@ -36,16 +36,16 @@ def option_for(question: dict, number: int) -> str:
 
 async def test_combinations_list_the_new_types(client):
     rows = {r["type"]: r["marks"] for r in (await client.get("/generation/combinations")).json()}
-    assert rows["Fill"] == [1, 2, 3, 5]
+    assert rows["Fill"] == [1]
     assert rows["Match"] == [3, 5]
-    assert rows["MCQ"] == [1, 2, 3, 5]
+    assert rows["MCQ"] == [1]
     assert rows["Short"] == [1, 2, 3]
     assert rows["Long"] == [3, 5]
 
 
 @pytest.mark.parametrize(
     "q_type,marks",
-    [("Fill", 4), ("Match", 1), ("Match", 2), ("Match", 4), ("MCQ", 4), ("Long", 1), ("Short", 5)],
+    [("Fill", 2), ("Fill", 4), ("Match", 1), ("Match", 2), ("Match", 4), ("MCQ", 2), ("MCQ", 3), ("MCQ", 4), ("Long", 1), ("Short", 5)],
 )
 async def test_unsupported_marks_for_the_new_types_are_a_400(client, groq_stub, q_type, marks):
     body = {
@@ -204,6 +204,10 @@ async def test_html_export_keeps_columns_and_shows_a_lettered_key(client, db_ses
     out = html_service.render_paper_html(paper)
 
     assert "white-space: pre-line" in html_service._STYLE  # one numbered item per line
+    # Match the Following is printed as a two-column table, not a list
+    assert "<table class='match'>" in out
+    assert "<th>Column A</th><th>Column B</th>" in out
+    assert "<li>(a)" not in out.split("<table class='match'>")[1].split("</table>")[0]
     assert "fill-in-the-blank questions, write the missing word" in out
     assert "match-the-following questions, write the letter" in out
     # Column B prints as (a) (b) (c), and the key uses the same lowercase letters
@@ -233,6 +237,8 @@ async def test_pdf_export_prints_match_and_fill_questions(client, db_session, mo
     assert "match-the-following questions" in flat
     assert "fill-in-the-blank questions" in flat
     assert "_____" in text
+    # Match the Following is a table with Column A / Column B headings
+    assert "Column A" in flat and "Column B" in flat
     # Column A is laid out one numbered item per line, not run together in a paragraph
     left = match_left_items(match[0]["text"])
     assert re.search(rf"^\s*1\.\s*{re.escape(left[0][:20])}", text, re.M), text
@@ -268,7 +274,7 @@ async def test_blueprint_sections_can_use_the_new_types(client):
 
 
 @pytest.mark.parametrize(
-    "q_type,marks", [("Fill", 4), ("Match", 2), ("Match", 4), ("Long", 2)]
+    "q_type,marks", [("Fill", 2), ("Fill", 4), ("MCQ", 2), ("Match", 2), ("Match", 4), ("Long", 2)]
 )
 async def test_blueprint_rejects_marks_the_type_does_not_support(client, groq_stub, q_type, marks):
     body = {
@@ -305,3 +311,22 @@ async def test_orm_enum_accepts_the_new_values(db_session):
 
     allowed = set(Question.__table__.c.type.type.enums)
     assert {"MCQ", "Short", "Long", "Fill", "Match"} <= allowed
+
+
+async def test_exports_print_questions_in_ascending_order_of_marks(client, db_session, monkeypatch):
+    """The paper was built Fill, Match, MCQ (1, 1, 3, 3, 1 marks); every export prints 1, 1, 1, 3, 3."""
+    from app.services.export.fpdf_renderer import fpdf_available
+    from .test_export_rendering import _pdf_text
+
+    paper, _ = await _mixed_paper(client, db_session)
+    assert [i.effective_marks for i in sorted(paper.items, key=lambda i: i.order_index)] == [1, 1, 3, 3, 1]
+
+    html = html_service.render_paper_html(paper, include_answer_key=False)
+    assert [int(m) for m in re.findall(r"class='q-marks'>\[(\d+)\]", html)] == [1, 1, 1, 3, 3]
+
+    choices = ["reportlab"] + (["fpdf"] if fpdf_available() else [])
+    for choice in choices:
+        monkeypatch.setattr(renderer_service.settings, "pdf_renderer", choice)
+        monkeypatch.setattr(renderer_service, "weasyprint_available", lambda: False)
+        text = _pdf_text(renderer_service.render_pdf(paper, include_answer_key=False))
+        assert [int(m) for m in re.findall(r"\[(\d+)\]", text)] == [1, 1, 1, 3, 3], choice

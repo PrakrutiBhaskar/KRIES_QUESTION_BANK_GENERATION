@@ -90,8 +90,8 @@ export interface GenerateFormData {
   /** One or more types; the questions are spread across them. */
   questionTypes: QuestionType[];
   difficulty: Difficulty;
-  /** Marks chosen per type; a type with no entry uses its default (see effectiveMarks). */
-  marksChoice: Partial<Record<QuestionType, Marks>>;
+  /** Marks chosen per type (one or more); a type with no entry uses its default (see effectiveMarksList). */
+  marksChoice: Partial<Record<QuestionType, Marks[]>>;
 }
 
 // ============================================================

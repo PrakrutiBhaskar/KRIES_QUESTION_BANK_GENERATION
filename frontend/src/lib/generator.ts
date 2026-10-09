@@ -150,7 +150,8 @@ export function generateMockQuestions(formData: GenerateFormData): Question[] {
     }
 
     const effectiveMarks = (() => {
-      if (marksChoice[qType]) return marksChoice[qType] as Marks;
+      const picks = marksChoice[qType];
+      if (picks?.length) return picks[i % picks.length] as Marks;
       if (qType === 'MCQ') return 1;
       if (qType === 'Short') return 2;
       return diff === 'hard' ? 5 : 3;

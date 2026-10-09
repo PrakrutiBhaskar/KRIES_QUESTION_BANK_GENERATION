@@ -35,7 +35,7 @@ const TYPE_LABEL: Record<QuestionType, string> = {
 };
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 // Used only if GET /generation/combinations can't be reached.
-const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1, 2, 3, 5], Short: [1, 2, 3], Long: [3, 5], Fill: [1, 2, 3, 5], Match: [3, 5] };
+const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [3, 5], Fill: [1], Match: [3, 5] };
 // Limits enforced by the backend (schemas/requests.py); checked here so the
 // user sees the problem next to the field instead of after a failed request.
 const MAX_QUESTIONS = 100;

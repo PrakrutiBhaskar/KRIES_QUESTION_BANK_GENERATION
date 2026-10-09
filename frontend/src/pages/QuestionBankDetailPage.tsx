@@ -23,6 +23,8 @@ import {
   VerificationNote,
   VerificationWarning,
   isKeyOption,
+  MatchTable,
+  parseMatch,
 } from '../components/ui';
 import { BankDetailSkeleton } from '../components/Skeleton';
 import { FigureImage } from '../components/FigureImage';
@@ -48,6 +50,7 @@ interface QuestionRowProps {
 
 function QuestionRow({ question, onDelete }: QuestionRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const match = parseMatch(question);
 
   return (
     <div className="border border-slate-200 rounded-xl bg-white overflow-hidden">
@@ -69,14 +72,15 @@ function QuestionRow({ question, onDelete }: QuestionRowProps) {
           </div>
 
           {/* Question text */}
-          <p className="text-sm font-medium text-slate-900 leading-snug whitespace-pre-line">{question.text}</p>
+          <p className="text-sm font-medium text-slate-900 leading-snug whitespace-pre-line">{match ? match.stem : question.text}</p>
           <VerificationWarning question={question} />
 
           {/* Diagram printed with the question */}
           {question.figure && <FigureImage figure={question.figure} className="mt-2" />}
 
           {/* MCQ options */}
-          {question.options && question.options.length > 0 && (
+          {match && <MatchTable rows={match.rows} />}
+          {!match && question.options && question.options.length > 0 && (
             <ol className="list-none space-y-1 mt-2">
               {question.options.map((opt, i) => (
                 <li

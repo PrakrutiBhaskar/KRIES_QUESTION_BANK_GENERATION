@@ -27,9 +27,9 @@ from pathlib import Path
 from ...config import settings
 from ...errors import ServiceUnavailableError
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import format_answer, match_key_label, split_label
+from .answer_format import MATCH_COLUMN_HEADINGS, format_answer, match_key_label, match_layout, split_label
 from .fpdf_renderer import fpdf_available, render_fpdf
-from .html import item_section, render_paper_html, section_totals
+from .html import item_section, ordered_items, render_paper_html, section_totals
 
 logger = logging.getLogger("backend.export")
 
@@ -214,7 +214,7 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
         author="Question Bank Generator",
     )
 
-    ordered = sorted(paper.items, key=lambda i: i.order_index)
+    ordered = ordered_items(paper)
     grades = sorted({item.question.grade for item in ordered})
     grade_label = ", ".join(str(g) for g in grades) if grades else "-"
 
@@ -256,9 +256,10 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
                 f"{_esc(section)} &nbsp;&nbsp;({section_marks[section]} marks)",
                 styles["section"],
             ))
+        match = match_layout(q.text, q.options) if q.type.value == "Match" else None
         row = Table(
             [[
-                Paragraph(f"{n}. {_esc(q.text)}".replace("\n", "<br/>"), styles["q"]),
+                Paragraph(f"{n}. {_esc(match[0] if match else q.text)}".replace("\n", "<br/>"), styles["q"]),
                 Paragraph(f"[{item.effective_marks}]", styles["marks"]),
             ]],
             colWidths=[doc.width - 18 * mm, 18 * mm],
@@ -272,7 +273,22 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
         block = [row]
         fig_block = figure_flowables(loaded_figure(q, "figure"), 8)
         block.extend(fig_block)
-        if q.options:
+        if match:
+            head = ParagraphStyle("qb-match-head", parent=styles["opt"], fontName=bold_font)
+            data = [[Paragraph(_esc(h), head) for h in MATCH_COLUMN_HEADINGS]]
+            data += [[Paragraph(_esc(a), styles["opt"]), Paragraph(_esc(b), styles["opt"])] for a, b in match[1]]
+            col = (doc.width - 26 * mm) / 2
+            grid = Table(data, colWidths=[col, col], hAlign="RIGHT", repeatRows=1)
+            grid.setStyle(TableStyle([
+                ("GRID", (0, 0), (-1, -1), 0.6, "#444444"),
+                ("BACKGROUND", (0, 0), (-1, 0), "#f0f0f0"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]))
+            block.append(Spacer(1, 3))
+            block.append(grid)
+        elif q.options:
             for label, option in zip(_OPTION_LABELS, q.options):
                 block.append(Paragraph(f"({label}) {_esc(str(option))}", styles["opt"]))
         # A figure must stay on the same page as the question it belongs to.

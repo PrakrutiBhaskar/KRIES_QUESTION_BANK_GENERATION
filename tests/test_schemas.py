@@ -43,9 +43,14 @@ def test_mcq_requires_justification():
         make_mcq(explanation="")
 
 
-@pytest.mark.parametrize("marks", [1, 2, 3, 5])
-def test_mcq_can_carry_any_mark_on_the_scale(marks):
-    assert make_mcq(marks=marks).marks == marks
+def test_mcq_is_always_one_mark():
+    assert make_mcq(marks=1).marks == 1
+
+
+@pytest.mark.parametrize("marks", [2, 3, 5])
+def test_mcq_rejects_more_than_one_mark(marks):
+    with pytest.raises(ValidationError):
+        make_mcq(marks=marks)
 
 
 def test_mcq_rejects_a_mark_off_the_scale():

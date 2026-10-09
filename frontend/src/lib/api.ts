@@ -852,16 +852,33 @@ export function effectiveMarks(
 }
 
 /**
+ * Every marks value a type will be generated with: the user's picks that the
+ * type allows (kept in the type's own order), else the single `effectiveMarks`
+ * fallback. Never empty.
+ */
+export function effectiveMarksList(
+  type: QuestionType,
+  allowed: Marks[],
+  chosen?: Marks[],
+  preferred?: Marks,
+): Marks[] {
+  const picked = allowed.filter((m) => chosen?.includes(m));
+  return picked.length > 0 ? picked : [effectiveMarks(type, allowed, undefined, preferred)];
+}
+
+/**
  * Turn the form into concrete (type, marks, difficulty, count) batches: `count`
  * questions spread round-robin over every (type x difficulty) cell, varying the
- * type fastest so even a small count touches every chosen type.
+ * type fastest so even a small count touches every chosen type. Within a cell the
+ * questions rotate through that type's chosen marks values, so picking several
+ * marks for a type gives a mix of them.
  */
 export function planBatches(
   form: {
     questionCount: number;
     questionTypes: QuestionType[];
     difficulty: Difficulty;
-    marksChoice: Partial<Record<QuestionType, Marks>>;
+    marksChoice: Partial<Record<QuestionType, Marks[]>>;
   },
   marksByType: MarksByType,
   preferredMarks?: Marks,
@@ -871,15 +888,42 @@ export function planBatches(
     form.difficulty === 'mixed' ? ['easy', 'medium', 'hard'] : [form.difficulty];
   const preferred = types.length === 1 ? preferredMarks : undefined;
 
-  const cells = difficulties.flatMap((difficulty) => types.map((type) => ({ type, difficulty })));
-  const counts = new Array(cells.length).fill(0);
-  for (let i = 0; i < form.questionCount; i++) counts[i % cells.length]++;
+  const cells = difficulties.flatMap((difficulty) =>
+    types.map((type) => ({
+      type,
+      difficulty,
+      marksList: effectiveMarksList(type, marksByType[type], form.marksChoice[type], preferred),
+    })),
+  );
+  // tally[cell][marks] = questions of that marks value in that cell
+  const tally: Map<Marks, number>[] = cells.map(() => new Map());
+  const used = new Array(cells.length).fill(0);
+  for (let i = 0; i < form.questionCount; i++) {
+    const ci = i % cells.length;
+    const m = cells[ci].marksList[used[ci]++ % cells[ci].marksList.length];
+    tally[ci].set(m, (tally[ci].get(m) ?? 0) + 1);
+  }
 
-  return cells
-    .map((c, i) => ({
-      ...c,
-      marks: effectiveMarks(c.type, marksByType[c.type], form.marksChoice[c.type], preferred),
-      count: counts[i],
-    }))
-    .filter((b) => b.count > 0);
+  const diffOrder: QuestionDifficulty[] = ['easy', 'medium', 'hard'];
+  const batches = cells.flatMap((c, ci) =>
+    c.marksList
+      .filter((m) => tally[ci].has(m))
+      .map((m) => ({ type: c.type, marks: m, difficulty: c.difficulty, count: tally[ci].get(m) as number })),
+  );
+  // Section-wise: all 1-mark questions first, then 2-mark, 3-mark, 5-mark; within a
+  // section by type, then easy -> hard.
+  return batches.sort(
+    (a, b) =>
+      a.marks - b.marks ||
+      ALL_QUESTION_TYPES.indexOf(a.type) - ALL_QUESTION_TYPES.indexOf(b.type) ||
+      diffOrder.indexOf(a.difficulty) - diffOrder.indexOf(b.difficulty),
+  );
+}
+
+/** Stable sort of questions into marks sections (1, 2, 3, 5), keeping their order within a section. */
+export function sortByMarks<T extends { marks: number }>(questions: T[]): T[] {
+  return questions
+    .map((q, i) => ({ q, i }))
+    .sort((a, b) => a.q.marks - b.q.marks || a.i - b.i)
+    .map((x) => x.q);
 }

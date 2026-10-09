@@ -25,10 +25,10 @@ def req(t, m):
 
 def test_the_matrix_is_exactly_what_the_format_allows():
     assert VALID_MARKS_BY_TYPE == {
-        QuestionType.MCQ: {1, 2, 3, 5},
+        QuestionType.MCQ: {1},
         QuestionType.SHORT: {1, 2, 3},
         QuestionType.LONG: {3, 5},
-        QuestionType.FILL: {1, 2, 3, 5},
+        QuestionType.FILL: {1},
         QuestionType.MATCH: {3, 5},
     }
 
@@ -42,12 +42,6 @@ def test_valid_combinations_validate_and_build_a_prompt(t, m):
     assert validate_request_combination(req(t, m)) == []
     system, user = build_prompt(req(t, m))
     assert user and system
-
-
-@pytest.mark.parametrize("t,m", [c for c in VALID if c[0] in (QuestionType.MCQ, QuestionType.FILL) and c[1] > 1])
-def test_heavier_single_pick_questions_are_asked_to_be_more_demanding(t, m):
-    _, user = build_prompt(req(t, m))
-    assert f"worth {m} marks" in user
 
 
 @pytest.mark.parametrize("t,m", INVALID)
