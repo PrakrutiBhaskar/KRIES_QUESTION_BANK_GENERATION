@@ -4,16 +4,13 @@ An AI-powered question bank generator for the **Karnataka State Board, grades 7�
 It generates syllabus-aligned practice questions — MCQ, short answer, long
 answer, fill in the blank, and match the following — complete with answer keys, difficulty tagging, and marks-aware answer
 formatting. Teachers use it to assemble question papers; students use it for
-self-study practice. Built by a 3-person team, one module per person.
+self-study practice.
 
 **Status:** the generation engine and the FastAPI backend work end to end, and both
 automated suites pass (307 + 677 tests). The React web app covers sign-up/sign-in,
 password reset, question banks, blueprint-based question papers, an admin-managed figure
 library for diagram questions, answer-key verification, PDF export with an optional
-student copy (including Kannada), per-user settings and a dark theme. **One thing is
-broken right now:** `npm run build` in `frontend/` fails because of seven leftover
-prototype files (details under [Current status](#current-status)). That section also
-lists what is verified and what is still open.
+student copy , per-user settings and a dark theme. 
 
 ## What problem this solves
 
@@ -21,7 +18,7 @@ Setting good practice questions per chapter, per grade, per mark value is slow
 manual work for teachers. This tool generates a batch of them on demand from an
 LLM, validates that each one is actually usable (schema-correct, non-duplicate,
 answer depth matching the marks it's worth), stores it, and lets a teacher
-assemble a subset into a printable question paper — or a student pull a subset
+assemble a subset into a printable question paper or a student pull a subset
 into a self-check practice session with answers withheld until revealed.
 
 ## Locked project decisions
@@ -29,18 +26,18 @@ into a self-check practice session with answers withheld until revealed.
 | Area | Decision |
 |---|---|
 | Board / Grades | Karnataka State Board, grades 7–9 |
-| Subjects | Math, Science, Social Science, English, Kannada |
+| Subjects | Math, Science, Social Science, English(1st language), Kannada(1st language) |
 | Question types | MCQ, Short answer, Long answer, Fill in the blank, Match the following |
 | LLM API for generation | Groq |
-| Frontend | **React + TypeScript + Vite + Tailwind web app** (built). The original plan was React Native for Web + Android; the web app shipped first and an Android build is still open |
+| Frontend | **React + TypeScript + Vite + Tailwind web app** (built)|
 | Backend | Python, FastAPI |
 | Database | PostgreSQL |
-| Auth | Sign-up / sign-in with JWT bearer tokens; roles Teacher, Student and Admin (Admin is granted on the server with `scripts/make_admin.py`, never self-assigned); password reset by emailed single-use link; papers and practice sessions are private to their owner; per-user and per-IP rate limits (see `docs/api-contract.md` and `backend/README.md`) |
+| Auth | Sign-up / sign-in with JWT bearer tokens; roles Teacher, Student and Admin; password reset by emailed single-use link; papers and practice sessions are private to their owner; per-user and per-IP rate limits (see `docs/api-contract.md` and `backend/README.md`) |
 | Syllabus data source | Parsed from textbook PDFs. The ingestion CLIs are built; the shipped `syllabus.json` (296 chapter names across the five subjects, scoped per grade) was transcribed by hand from textbook contents pages, not produced by the CLI |
-| Diagrams | A shared figure library, managed by administrators only. Questions can carry a diagram in the paper and a (possibly different) one in the answer key |
-| Hosting | AWS preferred, Render as fallback |
+| Diagrams | A shared figure library, managed by administrators only. Questions can carry a diagram in the paper and a possibly different one in the answer key |
+| Hosting | AWS |
 
-## Architecture — three modules, one per team member
+## Architecture 
 
 ```
 generation_engine/   Module A — prompts → Groq → validated Question objects
@@ -66,11 +63,6 @@ Generation Engine (generation_engine/)
 Groq API
 ```
 
-The backend calls the generation engine as a Python import, not over HTTP —
-there's no separate "Module A service" to deploy. The generation engine itself
-has no storage and no HTTP layer; everything gets persisted by the backend
-after the engine returns a validated batch.
-
 ### The shared contract every module builds against
 
 ```json
@@ -94,13 +86,9 @@ after the engine returns a validated batch.
 }
 ```
 
-The last three fields were added after the original contract. For a Match question, Column A is
-the numbered lines in `text`, Column B is `options`, and `answer` is the key (`1-C, 2-A, ...`);
-a Fill question marks its blank with three or more underscores. See `docs/api-contract.md`.
-
 Syllabus hierarchy is `Subject → Chapter → Questions`. `topic` is a free-text
 tag on the question's answer key describing the sub-topic within the chapter —
-it is *not* a separate hierarchy level.
+it is not a separate hierarchy level.
 
 ### The most important domain rule: marks-aware answers
 
