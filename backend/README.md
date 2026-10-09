@@ -13,8 +13,9 @@ cd backend
 python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r ../requirements.txt -r requirements.txt
 
-cp .env.example .env          # local dev: the default SQLite DATABASE_URL works as-is
-                              # GROQ_API_KEY goes in the repo-root .env (or backend/.env)
+# create backend/.env. Local dev works on the default SQLite DATABASE_URL, so a minimal file is just
+#   JWT_SECRET=<any long random string>
+# GROQ_API_KEY goes in the repo-root .env or here. Every setting and its default is in app/config.py.
 alembic upgrade head          # PostgreSQL only; SQLite creates its tables on startup
 
 uvicorn app.main:app --reload
@@ -35,26 +36,37 @@ app/
   main.py            app factory, CORS, rate-limit middleware, lifespan, /health
   config.py          settings from env / .env
   db.py              async engine, per-request session, ensure_schema (SQLite upgrades)
-  models.py          ORM — 8 tables: subjects, chapters, questions, papers,
+  models.py          ORM — 9 tables: subjects, chapters, figures, questions, papers,
                      paper_questions, practice_sessions, practice_session_questions, users
   errors.py          normalises every error to {"error", "detail"}
   security.py        scrypt password hashing, access / download / reset tokens
   ratelimit.py       sliding-window rate limits (in memory)
   deps.py            get_current_user
   schemas/           request + response models (incl. schemas/auth.py)
-  routers/           auth, questions, papers, export, practice, syllabus
+  routers/           auth, questions, figures, papers, export, practice, syllabus
   services/          business logic; routers stay thin
     auth.py          accounts, login lockout, password reset, profile + preferences
     mailer.py        SMTP sender for reset emails (logs the link when SMTP is unset)
     generation.py    the bridge to Module A (caching + error mapping)
+    generation_budget.py  the per-request / per-day cap on what students may have generated
+    questions.py     storing, searching, editing and verifying questions
+    papers.py        question banks / papers (create, reorder, marks override)
     blueprint.py     blueprint papers: allocation arithmetic + building the paper
-    export/          HTML template, PDF renderers, file handling
+    blueprint_jobs.py  the same build in the background, with progress (in memory)
+    figures.py       the figure library: upload re-encoding, storage on disk
+    practice.py      practice sessions (answers withheld until revealed)
+    syllabus.py      loads and seeds syllabus.json / ingested textbooks
+    export/          HTML template, PDF renderers (WeasyPrint, ReportLab, fpdf), answer-key formatting
 assets/fonts/        Noto Sans + Noto Sans Kannada, used by the fpdf renderer
-data/syllabus.json   interim chapter list (see data/README.md)
+data/                syllabus.json (see data/README.md), figures/ (diagram library + manifests),
+                     model_papers/ (previous papers as JSON), textbooks/ (ingested corpus)
+scripts/             bulk_generate.py, bulk/ (per grade and subject wrappers), seed_figures.py,
+                     seed_model_papers.py
 migrations/          Alembic (async env): 0001 schema, 0002 users, 0003 ownership,
                      0004 paper sections, 0005 user preferences, 0006 figures,
-                     0007 answer verification, 0008 figure metadata
-tests/               575 tests, no network and no real database
+                     0007 answer verification, 0008 figure metadata,
+                     0009 Fill and Match question types
+tests/               677 tests (1 skipped without WeasyPrint), no network and no real database
 ```
 
 ## Endpoints
@@ -71,6 +83,7 @@ password reset, the download link, and `/health`.
 | `POST` | `/auth/reset-password` | `{token, password}` → sets a new password; the link is single-use |
 | `POST` | `/generate` | Generate a batch. Serves from cache unless `"refresh": true` |
 | `GET` | `/generation/combinations` | Which marks are valid for which question type |
+| `POST` | `/questions/verify` | Check answer keys: rule checks, then an independent AI pass. Teacher/Admin only |
 | `GET` | `/questions` | Filter/search/paginate |
 | `GET` `PATCH` `DELETE` | `/questions/{id}` | Fetch, curate, discard (only the creator can edit/discard) |
 | `POST` `GET` | `/papers` | Create / list your papers |
@@ -80,7 +93,7 @@ password reset, the download link, and `/health`.
 | `POST` `GET` | `/papers/blueprint/jobs`, `/papers/blueprint/jobs/{id}` | The same build in the background: returns a job id at once, then reports `done` / `total` questions and finally the paper (what the Question Papers page uses for its progress bar). In-memory, one build per user at a time |
 | `POST` `GET` | `/figures` | Upload a diagram (**administrators only**) / list the shared library (anyone signed in) |
 | `GET` `PATCH` `DELETE` | `/figures/{id}` | Metadata; edit and delete are administrators only (`409` while in use). `GET /figures/{id}/file` is the image |
-| `POST` | `/export/{paper_id}` | Render PDF, returns a signed `download_url` |
+| `POST` | `/export/{paper_id}` | Render PDF, returns a signed `download_url`. Body `{"include_answer_key": false}` gives a student copy without answers (default `true`) |
 | `GET` | `/export/files/{filename}` | What `download_url` points at (short-lived signed token, no header needed) |
 | `POST` | `/practice/sessions` | Start a session (answers withheld) |
 | `GET` | `/practice/sessions/{id}` | Resume a session |
@@ -89,7 +102,8 @@ password reset, the download link, and `/health`.
 | `GET` | `/subjects/{subject}/chapters` | Chapters + question counts |
 
 Beyond the original contract: `GET /papers`, `GET /practice/sessions/{id}`,
-`GET /generation/combinations`, blueprint papers, and everything under `/auth`.
+`GET /generation/combinations`, blueprint papers and their background jobs, `/questions/verify`,
+`/figures`, the `include_answer_key` export option, and everything under `/auth`.
 `docs/api-contract.md` covers sign-up, sign-in and `/auth/me` but not yet password
 reset, `PATCH /auth/me` or the blueprint endpoints; this README and `/docs` are the
 current reference for those.
@@ -169,7 +183,7 @@ The logic is in `app/services/generation_budget.py`; `generate_questions` and
 ## Rate limiting
 
 All limits answer `429` with the usual error body and a `Retry-After` header. Each is `<requests>/<seconds>`
-in `.env` (see `.env.example`); `RATE_LIMIT_ENABLED=false` turns them all off (the test suite does this).
+in `backend/.env` (defaults in `app/config.py`); `RATE_LIMIT_ENABLED=false` turns them all off (the test suite does this).
 
 | Bucket | Applies to | Default | Keyed by |
 |---|---|---|---|
@@ -179,6 +193,7 @@ in `.env` (see `.env.example`); `RATE_LIMIT_ENABLED=false` turns them all off (t
 | `password-reset` | `/auth/forgot-password`, `/auth/reset-password` | 5 / 15 min | IP |
 | `generate` | `/generate`, `/practice/sessions`, `/papers/blueprint` | 30 / min | user |
 | `export` | `POST /export/{id}` | 10 / min | user |
+| `upload` | `POST /figures` | 20 / min | user |
 
 Counters live in this process's memory: right for one uvicorn worker, but each worker or instance keeps
 its own counts, so move them to Redis before scaling out. Set `TRUST_PROXY_HEADERS=true` only behind a
@@ -207,6 +222,12 @@ again to get a different one.
 **Ownership.** Papers and practice sessions are filtered by owner on every endpoint, so one user can never
 list, read, change, export or delete another's. The question pool is shared; only a question's creator can
 edit or discard it. Rows created before sign-in existed have no owner and stay hidden.
+
+**Question types.** MCQ, Short, Long, Fill and Match. A Fill question marks its blank with three or more
+underscores. A Match question keeps Column A (numbered lines) in `text`, Column B in the existing `options`
+column and its key (`1-C, 2-A, ...`) in `answer`, so no new columns were needed; migration `0009` only adds
+the two values to the PostgreSQL `question_type` enum (a no-op on SQLite). Valid marks per type are listed
+at `GET /generation/combinations`.
 
 **Soft deletes.** `DELETE /questions/{id}` flips `is_active` rather than removing the row, so papers and
 practice sessions that reference the question stay intact.
@@ -242,7 +263,9 @@ Three backends, selected by `PDF_RENDERER` (`auto` | `weasyprint` | `reportlab` 
   ReportLab is never used for Kannada.
 
 `auto` uses WeasyPrint when importable and falls back to ReportLab. `/health` reports which one is live.
-Blueprint sections ("Section A … 10 marks") render in all three. The answer key is always included.
+Blueprint sections ("Section A … 10 marks") render in all three. The answer key is included by default;
+send `include_answer_key: false` to `POST /export/{id}` for a question-paper-only copy (the question bank
+page in the web app has a toggle for it).
 
 Exports are written to `EXPORT_DIR`; `POST /export/{id}` returns a link with a signed, 10-minute token bound to
 that one file (a new browser tab can't send an Authorization header). On multi-instance AWS this should become S3
@@ -290,6 +313,13 @@ python scripts/upload_figure.py --manifest backend/data/figures/manifest.json --
 
 Re-running skips figures whose subject, chapter and caption are already in the library (`--force` adds anyway).
 
+`backend/data/figures/` also has `grade7/`, `grade8/` and `grade9/` folders, each with its own `manifest.json`.
+`backend/scripts/seed_figures.py` loads them through the same `POST /figures` endpoint the admin page uses
+(`--token <ADMIN_JWT>`, `--grades 7 8 9`, `--dry-run`; the default is grades 7 and 8, and it is safe to re-run).
+If diagram questions stop appearing, run `python scripts/check_figures.py` from the repo root: it lists figures
+whose chapter no longer matches the syllabus, or whose image file is missing from `FIGURE_DIR`, and
+`--apply` retags them using `backend/data/figures/chapter_map.json`.
+
 Teachers and administrators see a figure's subject / chapter / topic / labels; students don't (the labels are
 an answer key). The old `FIGURE_ADMIN_TOKEN` / `X-Admin-Token` mechanism is gone.
 
@@ -332,9 +362,24 @@ cache or used in practice sessions. Settings: `ENABLE_ANSWER_RULE_CHECKS`, `ENAB
 - The answer is read-only, so a `verified` badge always describes the stored answer. Editing a question's
   `text` or `options` still does not re-run verification.
 
+## Bulk generation and model papers
+
+- **`scripts/bulk_generate.py`** fills the bank through the normal `POST /generate` endpoint, so every usual check
+  applies (syllabus allow-list, marks-aware answer rules, duplicate skipping). Run it from `backend/` with the
+  backend up and a Teacher/Admin token: `python scripts/bulk_generate.py --token <JWT> --grade 9`. It sends
+  `refresh=true`, paces itself under the generate rate limit and retries 429s. Useful flags: `--dry-run`,
+  `--subjects`, `--per-subject`, `--seed` (re-run with a new seed for more), `--verify`. The 15 files in
+  `scripts/bulk/` (for example `grade7_math.py`) are one-line wrappers that pass `--grade` and `--subjects` for you.
+- **`scripts/seed_model_papers.py`** stores previous / model papers from `data/model_papers/`
+  (`sa2_grade7_en.json`, `sa2_grade8_en.json`, `sa2_grade9_en.json`) as questions tagged `previous-paper`. It
+  validates them like generated ones, skips duplicates, and lists what it skipped: questions with no matching
+  chapter, and 4-mark questions (the system allows 1, 2, 3 and 5 marks; pass `--four-mark-as 5` or `3` to keep them).
+  Run from the repo root; `--dry-run` shows the plan.
+
 ## Syllabus data
 
-`data/syllabus.json` ships a hand-curated, grade-scoped chapter list for the five subjects (see `data/README.md`),
+`data/syllabus.json` ships a hand-transcribed, grade-scoped chapter list for the five subjects (296 chapter names;
+see `data/README.md` for how each subject was sourced and what still needs confirming),
 loaded through `SYLLABUS_JSON_PATH` and seeded into the database at startup so the chapter picker isn't empty.
 With a syllabus loaded, unknown chapters, and chapters outside the requested grade, are rejected with a 400. Leave `SYLLABUS_JSON_PATH=` empty to run without
 one; chapters are then created on first use, case-insensitively. To replace the list with real textbook data use
@@ -350,15 +395,16 @@ Figure requests (`use_figures`) are written from the figures' metadata and skip 
 ## Tests
 
 ```bash
-cd backend && pytest          # 539 tests
-cd .. && pytest               # Module A's 161 tests
+cd backend && pytest          # 677 passed, 1 skipped (needs WeasyPrint)
+cd .. && pytest               # Module A's 307 tests
 ```
 
 In-memory SQLite and a stubbed Groq client, so no database or API key is needed. The suite covers every endpoint's
 success and error paths, filters and pagination, the "no partial data stored" guarantee, caching, reorder and
 marks-override persistence, answer masking, PDF byte checks (including Kannada), ownership between users, rate
 limiting, sign-up/sign-in, password reset (single use, expiry, no account enumeration), profile and preference
-saving, blueprint allocation, and upgrading an older database (`ensure_schema` and Alembic up/down).
+saving, blueprint allocation, the figure library and figure-based generation, answer verification, the Fill and Match
+types, student generation limits, and upgrading an older database (`ensure_schema` and Alembic up/down).
 
 Production runs on PostgreSQL. The models use portable column types with PostgreSQL variants (`jsonb`, `text[]`,
 native enums) so the suite can run without one. It has **not** yet been run against a live PostgreSQL; do that before
@@ -374,9 +420,12 @@ DATABASE_URL=postgresql+asyncpg://... pytest
   grows large.
 - Exports are never cleaned up — add a retention job, or move to S3 lifecycle rules.
 - Rate-limit counters are per process (see above).
-- The answer key can't be left out of an exported PDF.
-- Figures: uploaded images are not yet used by the generator itself (the LLM never sees them), and there is no
-  shared figure library or crop/annotate tool. Orphaned files (an upload never attached) stay on disk until deleted.
+- Figures: the generator writes questions from a figure's text metadata, not from the image itself, and there is no
+  crop/annotate tool. Images are stored on local disk (`FIGURE_DIR`), so a host without a persistent volume loses
+  them on redeploy while the database rows survive; move `services/figures.py` to object storage before deploying.
+  Orphaned files (an upload never attached) stay on disk until deleted.
+- Practice sessions (`/practice/...`) have no screen in the web app yet.
+- Editing a question's `text` or `options` does not re-run answer verification.
 - Reset emails have only been tested with a stubbed sender, not a real SMTP server.
 - `docs/api-contract.md`, `docs/db-schema.md` and `docs/task-tracker.md` still describe the pre-auth design in places.
 
