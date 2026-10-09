@@ -278,6 +278,16 @@ every endpoint, since all errors use the `{error, detail}` shape above.
 By default a repeated identical request is served from stored questions
 instead of regenerating. Send `"refresh": true` for a "generate more" action.
 
+**Student accounts.** `POST /generate`, `POST /papers/blueprint` and
+`POST /papers/blueprint/jobs` are open to students, database first: stored
+questions are served before the model is asked for anything, only the shortfall
+is generated, and `refresh` is ignored. The new questions a student may create
+are capped per request and per UTC day (`STUDENT_MAX_NEW_QUESTIONS_PER_REQUEST`,
+`STUDENT_MAX_NEW_QUESTIONS_PER_DAY`); a request that would exceed the allowance
+returns `429 generation_allowance_used` and stores nothing (a paper is refused
+before any model call). `POST /questions/verify` stays teacher/admin only
+(`403 generation_disabled_for_students` for a student).
+
 **`POST /generate` extra response fields.**
 
 ```json

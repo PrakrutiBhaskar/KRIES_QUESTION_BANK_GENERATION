@@ -190,7 +190,7 @@ uvicorn app.main:app --reload
 Interactive API docs: `http://localhost:8000/docs`. Health check: `/health`.
 
 ```bash
-pytest    # 592 tests, in-memory SQLite + a stubbed Groq client — no network, no real DB needed
+pytest    # 677 tests, in-memory SQLite + a stubbed Groq client — no network, no real DB needed
 ```
 
 **Database:** for local development use SQLite (`DATABASE_URL=sqlite+aiosqlite:///./question_bank.db`),
@@ -286,6 +286,13 @@ re-discovers them the hard way:
   (`users.preferences`, migration `0005`). They follow the user across devices. The **email can't be
   changed**: the endpoint answers 403. Choosing a theme previews it immediately and it is applied
   app-wide (Light, Dark, or System), before first paint.
+- **Students and generation** — students can generate question banks and build papers, database
+  first: stored questions are always used before the model is asked for anything, only the shortfall
+  is generated, students cannot force fresh generation (`refresh` is ignored), and the new questions
+  they may create are capped per request and per day (`STUDENT_MAX_NEW_QUESTIONS_PER_REQUEST` = 10,
+  `STUDENT_MAX_NEW_QUESTIONS_PER_DAY` = 30; teachers are not capped). A paper that would not fit is
+  refused up front, before any API call. The AI answer-key check ("Verify answers") stays teacher-only.
+  Details in `backend/README.md`.
 - **Ownership** — papers and practice sessions are private to their owner; the question pool is
   shared (anyone signed in can reuse stored questions, only the creator can edit or discard one).
 
@@ -333,7 +340,7 @@ with `/generate` because it can make many LLM calls.
 
 - ✅ Generation engine — prompts, Groq client with retry/backoff, validation, marks-aware checks (210 tests)
 - ✅ Backend — every endpoint in `docs/api-contract.md`, plus papers list, blueprint papers, auth,
-  password reset and profile/preferences (592 tests)
+  password reset and profile/preferences (677 tests)
 - ✅ Frontend — sign-in/up, forgot/reset password, dashboard, generate, blueprint question papers,
   question banks, settings, light/dark/system theme (builds with `npm run build`; no automated UI tests)
 - ✅ PDF export — WeasyPrint, ReportLab and fpdf renderers; Kannada papers export correctly via

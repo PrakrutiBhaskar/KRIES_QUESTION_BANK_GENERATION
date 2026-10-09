@@ -31,8 +31,8 @@ site's real address too.
 | `/forgot-password` | Ask for a reset email (same confirmation whether or not the account exists, with a resend timer) |
 | `/reset-password?token=…` | Choose a new password from the emailed link; shows "Link expired" for a bad, used or expired link |
 | `/dashboard` | Overview of your question banks |
-| `/generate` | Generate questions for a subject/chapter, edit or discard them, save as a bank |
-| `/question-papers` | Build a board-style paper from a blueprint (chapter weightage + sections) |
+| `/generate` | Generate questions for a subject/chapter, edit or discard them, save as a bank. Open to students too: they get stored questions first and a daily limit on new ones, and don't see Regenerate / Add Question / Verify answers (those always call the AI) |
+| `/question-papers` | Build a board-style paper from a blueprint (chapter weightage + sections); students too, from the stored bank first |
 | `/question-banks`, `/question-banks/:id` | Browse, rename, edit, delete and export saved banks |
 | `/settings` | Profile and preferences (below) |
 

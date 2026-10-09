@@ -54,14 +54,16 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
 
 
 async def require_generator(user: User = Depends(get_current_user)) -> User:
-    """Gate for anything that calls the AI model (generation, verification, paper builds).
+    """Gate for actions that always call the AI model and have no stored-question path.
 
-    Students work from the questions already in the bank; only teachers and
-    administrators can trigger live generation.
+    That is answer-key verification: it exists to run a model pass, so it stays
+    with teachers and administrators. Generating question banks and papers is
+    open to students too (`get_current_user`), but database first and with a
+    capped allowance for new questions: see services/generation_budget.py.
     """
     if user.role == "Student":
         raise ForbiddenError(
-            "Live question generation is turned off for student accounts.",
+            "Answer verification is only available to teacher accounts.",
             error="generation_disabled_for_students",
         )
     return user

@@ -113,6 +113,21 @@ class Settings(BaseSettings):
         default=True, alias="ENABLE_GENERATION_CACHE"
     )
 
+    # --- Student generation allowance ---
+    # Students may generate question banks and papers, but the database comes
+    # first: stored questions are always used before the model is asked for
+    # anything. Only the shortfall (what the bank cannot supply) reaches the
+    # API, and it is capped so a student cannot run up model calls:
+    #   * per request  - new questions one generate / paper build may create
+    #   * per day      - new questions one student may create in a UTC day
+    # Teachers and administrators are not limited. 0 turns student generation off.
+    student_max_new_per_request: int = Field(
+        default=10, alias="STUDENT_MAX_NEW_QUESTIONS_PER_REQUEST", ge=0
+    )
+    student_max_new_per_day: int = Field(
+        default=30, alias="STUDENT_MAX_NEW_QUESTIONS_PER_DAY", ge=0
+    )
+
     # --- Export ---
     export_dir: Path = Field(default=REPO_ROOT / "var" / "exports", alias="EXPORT_DIR")
     # Used to build the absolute `download_url` returned by POST /export/{id}.

@@ -136,6 +136,36 @@ rejected. They are stored as JSON in `users.preferences` (migration `0005`, also
 for SQLite). An account that never saved anything is reported with the defaults. Sending `email`, or an
 `Admin` changing their own role, returns 403.
 
+## Students and generation
+
+Students can generate question banks (`POST /generate`) and build papers
+(`POST /papers/blueprint`, `/papers/blueprint/jobs`), but **the question bank comes first and the
+AI model is only a fallback**:
+
+1. Stored questions that match the request are always served first; they cost nothing.
+2. Only the *shortfall* (what the bank lacks) is sent to the model.
+3. A student cannot force fresh generation: `refresh: true` is ignored for student accounts, so a
+   repeat request returns stored questions rather than burning API calls.
+4. What a student may have the model write is capped (teachers and administrators are not capped):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `STUDENT_MAX_NEW_QUESTIONS_PER_REQUEST` | 10 | New questions one generate call or one paper build may create |
+| `STUDENT_MAX_NEW_QUESTIONS_PER_DAY` | 30 | New questions one student may create per UTC day (counted from `questions.created_by` / `created_at`, no extra table) |
+
+A request that needs more new questions than the allowance left gets `429 generation_allowance_used`
+and nothing is stored. A paper is checked **before the first model call**: the backend counts what the
+bank already holds for each (chapter, type, marks, difficulty) group, and refuses the whole paper if the
+shortfall would not fit, so no API calls are wasted on a paper that could not be finished. Set either
+value to `0` to turn student generation off.
+
+`POST /questions/verify` (the AI answer-key check) has no stored-question path, so it stays
+teacher/admin only (`403 generation_disabled_for_students` for students). Practice mode is unchanged:
+it uses stored questions only unless `PRACTICE_GENERATE_SHORTFALL=true`.
+
+The logic is in `app/services/generation_budget.py`; `generate_questions` and
+`create_blueprint_paper` take an optional `budget`, which is `None` for teachers.
+
 ## Rate limiting
 
 All limits answer `429` with the usual error body and a `Retry-After` header. Each is `<requests>/<seconds>`

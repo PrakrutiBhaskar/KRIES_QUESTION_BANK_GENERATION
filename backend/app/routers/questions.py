@@ -34,6 +34,7 @@ from ..schemas import (
     VerifyOut,
 )
 from ..services import generation as generation_service
+from ..services.generation_budget import budget_for, is_student
 from ..services import questions as question_service
 
 router = APIRouter(tags=["questions"])
@@ -52,10 +53,15 @@ router = APIRouter(tags=["questions"])
 async def generate(
     payload: GenerateIn,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_generator),
+    user: User = Depends(get_current_user),
 ) -> GenerateOut:
+    # Students use the stored questions first and the model only for what is
+    # missing: they cannot force fresh generation, and what they may create is capped.
+    if is_student(user.role) and payload.refresh:
+        payload = payload.model_copy(update={"refresh": False})
+    budget = await budget_for(session, user_id=user.id, role=user.role)
     questions, cached, generated, report = await generation_service.generate_questions(
-        session, payload, user_id=user.id
+        session, payload, user_id=user.id, budget=budget
     )
     return GenerateOut(
         questions=[QuestionOut.from_model(q) for q in questions],

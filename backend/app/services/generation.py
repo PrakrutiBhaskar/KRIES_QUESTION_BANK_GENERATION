@@ -57,6 +57,7 @@ from ..models import Question
 from ..schemas.requests import GenerateIn
 from . import figures as figure_service
 from . import questions as question_service
+from .generation_budget import GenerationBudget
 from .syllabus import get_corpus, get_syllabus_index, resolve_chapter
 
 logger = logging.getLogger("backend.generation")
@@ -128,6 +129,38 @@ async def _cached_questions(
     return list((await session.scalars(stmt)).all())
 
 
+async def count_stored(
+    session: AsyncSession,
+    *,
+    chapter_id,
+    q_type,
+    grade: int,
+    marks: int,
+    difficulty: str,
+    with_figures: bool,
+) -> int:
+    """How many stored questions could serve a request with this signature.
+
+    Same filters as `_cached_questions`; used to estimate, before any model call,
+    how many new questions a paper would need (see blueprint.py). For a figure
+    request any stored diagram question in the chapter counts.
+    """
+    stmt = select(func.count(Question.id)).where(
+        Question.is_active.is_(True),
+        Question.chapter_id == chapter_id,
+        Question.type == q_type,
+        Question.grade == grade,
+        Question.marks == marks,
+        Question.difficulty == difficulty,
+        or_(
+            Question.verification_status.is_(None),
+            Question.verification_status != "flagged",
+        ),
+        Question.figure_id.is_not(None) if with_figures else Question.figure_id.is_(None),
+    )
+    return int((await session.scalar(stmt)) or 0)
+
+
 async def _figures_for(
     session: AsyncSession, payload: GenerateIn, chapter_name: str
 ) -> list:
@@ -170,9 +203,17 @@ def _random_figure_count(count: int) -> int:
 
 
 async def generate_questions(
-    session: AsyncSession, payload: GenerateIn, *, user_id: uuid.UUID
+    session: AsyncSession,
+    payload: GenerateIn,
+    *,
+    user_id: uuid.UUID,
+    budget: GenerationBudget | None = None,
 ) -> tuple[list[Question], int, int, dict | None]:
     """Like `_generate_once`, but honours `payload.mix_figures`.
+
+    `budget` (set for student accounts, see generation_budget.py) caps how many
+    new questions the model may be asked for; stored questions are always used
+    first and never count against it.
 
     With `mix_figures`, a random number of the questions are written about
     figures from the library and the rest are theory; the result is shuffled so
@@ -180,29 +221,31 @@ async def generate_questions(
     usable figure, every question is theory.
     """
     if not payload.mix_figures or payload.wants_figures:
-        return await _generate_once(session, payload, user_id=user_id)
+        return await _generate_once(session, payload, user_id=user_id, budget=budget)
 
     theory = payload.model_copy(update={"mix_figures": False})
     n_figures = _random_figure_count(payload.count)
     if n_figures == 0:
-        return await _generate_once(session, theory, user_id=user_id)
+        return await _generate_once(session, theory, user_id=user_id, budget=budget)
 
     figure_payload = theory.model_copy(update={"use_figures": True, "count": n_figures})
     try:
         fig_qs, fig_cached, fig_new, fig_report = await _generate_once(
-            session, figure_payload, user_id=user_id
+            session, figure_payload, user_id=user_id, budget=budget
         )
     except BadRequestError as exc:
         if exc.error != "no_figures":
             raise
-        return await _generate_once(session, theory, user_id=user_id)
+        return await _generate_once(session, theory, user_id=user_id, budget=budget)
 
     remaining = payload.count - n_figures
     if remaining <= 0:
         return fig_qs, fig_cached, fig_new, fig_report
 
     plain = theory.model_copy(update={"count": remaining})
-    th_qs, th_cached, th_new, th_report = await _generate_once(session, plain, user_id=user_id)
+    th_qs, th_cached, th_new, th_report = await _generate_once(
+        session, plain, user_id=user_id, budget=budget
+    )
 
     combined = list(fig_qs)
     seen = {q.id for q in combined}
@@ -215,7 +258,11 @@ async def generate_questions(
 
 
 async def _generate_once(
-    session: AsyncSession, payload: GenerateIn, *, user_id: uuid.UUID
+    session: AsyncSession,
+    payload: GenerateIn,
+    *,
+    user_id: uuid.UUID,
+    budget: GenerationBudget | None = None,
 ) -> tuple[list[Question], int, int, dict | None]:
     """
     Returns (questions, cached_count, generated_count, report).
@@ -283,6 +330,12 @@ async def _generate_once(
             return cached[: payload.count], payload.count, 0, None
 
     shortfall = payload.count - len(cached)
+
+    # Only the shortfall ever reaches the model. A student's allowance is
+    # charged now, before the call, so a request they cannot afford is refused
+    # without spending anything.
+    if budget is not None:
+        budget.reserve(shortfall)
 
     # `GenerationRequest` caps `count` at 25 as a pydantic constraint, which
     # would surface as an unhandled ValidationError (500) rather than the 400

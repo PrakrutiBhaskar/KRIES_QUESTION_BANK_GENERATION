@@ -71,7 +71,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
           Navigation
         </p>
         {[
-          ...NAV_ITEMS.filter(({ to }) => !(to === '/generate' && user?.role === 'Student')),
+          ...NAV_ITEMS,
           ...(user?.role === 'Admin' ? ADMIN_NAV_ITEMS : []),
         ].map(({ to, icon: Icon, label }) => (
           <NavLink

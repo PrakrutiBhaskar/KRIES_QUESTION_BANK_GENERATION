@@ -69,6 +69,13 @@ class TooManyRequestsError(APIError):
         super().__init__(detail or f"Too many requests. Try again in {seconds} {unit}.")
 
 
+class GenerationAllowanceError(APIError):
+    """A student's allowance for new (API-generated) questions is used up."""
+
+    status_code = 429
+    error = "generation_allowance_used"
+
+
 class NotFoundError(APIError):
     status_code = status.HTTP_404_NOT_FOUND
     error = "not_found"

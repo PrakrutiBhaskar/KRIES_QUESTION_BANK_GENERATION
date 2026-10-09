@@ -58,10 +58,11 @@ from ..schemas.responses import (
     BlueprintSectionPlanOut,
 )
 from ..config import settings
+from .generation_budget import GenerationBudget
 from . import figures as figure_service
 from . import generation as generation_service
 from .papers import compute_total_marks
-from .syllabus import get_or_create_subject
+from .syllabus import get_or_create_subject, resolve_chapter
 
 logger = logging.getLogger("backend.blueprint")
 
@@ -202,6 +203,7 @@ async def _fetch_group(
     count: int,
     user_id: uuid.UUID,
     use_figures: bool = False,
+    budget: GenerationBudget | None = None,
     on_progress: Callable[[int], None] | None = None,
 ) -> list[Question]:
     """`count` distinct questions for one (chapter, type, marks, difficulty).
@@ -225,7 +227,7 @@ async def _fetch_group(
             use_figures=use_figures,
         )
         rows, *_ = await generation_service.generate_questions(
-            session, payload, user_id=user_id
+            session, payload, user_id=user_id, budget=budget
         )
         before = len(got)
         for row in rows:
@@ -261,8 +263,12 @@ async def create_blueprint_paper(
     blueprint: BlueprintIn,
     user_id: uuid.UUID,
     on_progress: Callable[[int, int], None] | None = None,
+    budget: GenerationBudget | None = None,
 ) -> Paper:
     """Build and store the paper.
+
+    `budget` (student accounts only) caps how many new questions the model may
+    write for the whole paper; stored questions are used first and are free.
 
     `on_progress(done, total)` is called with the number of questions gathered so
     far (stored or newly generated) out of the number the paper needs, once at the
@@ -355,6 +361,28 @@ async def create_blueprint_paper(
         if on_progress is not None:
             on_progress(gathered, total)
 
+    # A student's allowance for new questions is checked for the whole paper
+    # before the first model call, so a paper they cannot afford is refused
+    # without spending anything (rather than failing halfway and rolling back).
+    if budget is not None:
+        chapter_rows = {
+            name: await resolve_chapter(session, blueprint.subject, name)
+            for name in dict.fromkeys(key[0] for key in needed)
+        }
+        estimated_new = 0
+        for (chapter, q_type, marks, difficulty, with_figures), count in needed.items():
+            stored = await generation_service.count_stored(
+                session,
+                chapter_id=chapter_rows[chapter].id,
+                q_type=q_type,
+                grade=blueprint.grade,
+                marks=marks,
+                difficulty=difficulty,
+                with_figures=with_figures,
+            )
+            estimated_new += max(count - stored, 0)
+        budget.check(estimated_new)
+
     report()
     pools: dict[GroupKey, list[Question]] = {}
     for key, count in needed.items():
@@ -369,6 +397,7 @@ async def create_blueprint_paper(
             count=count,
             user_id=user_id,
             use_figures=with_figures,
+            budget=budget,
             on_progress=report,
         )
 

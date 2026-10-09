@@ -35,6 +35,7 @@ from ..db import SessionLocal
 from ..errors import APIError, ConflictError, NotFoundError
 from ..schemas import BlueprintIn, BlueprintJobOut, PaperOut
 from . import blueprint as blueprint_service
+from .generation_budget import budget_for
 
 logger = logging.getLogger("backend.blueprint_jobs")
 
@@ -85,15 +86,16 @@ def _forget_old_jobs() -> None:
         del _jobs[job_id]
 
 
-async def _run(job: Job, blueprint: BlueprintIn) -> None:
+async def _run(job: Job, blueprint: BlueprintIn, role: str | None) -> None:
     def progress(done: int, total: int) -> None:
         job.done, job.total = done, total
 
     try:
         async with _session_factory() as session:
             try:
+                budget = await budget_for(session, user_id=job.user_id, role=role)
                 paper = await blueprint_service.create_blueprint_paper(
-                    session, blueprint, job.user_id, on_progress=progress
+                    session, blueprint, job.user_id, on_progress=progress, budget=budget
                 )
                 job.paper = PaperOut.from_model(paper)
                 await session.commit()
@@ -117,7 +119,7 @@ async def _run(job: Job, blueprint: BlueprintIn) -> None:
         job.finished_at = time.monotonic()
 
 
-def start(blueprint: BlueprintIn, user_id: uuid.UUID) -> Job:
+def start(blueprint: BlueprintIn, user_id: uuid.UUID, role: str | None = None) -> Job:
     _forget_old_jobs()
     if any(j.user_id == user_id and j.status == "running" for j in _jobs.values()):
         raise ConflictError(
@@ -126,7 +128,7 @@ def start(blueprint: BlueprintIn, user_id: uuid.UUID) -> Job:
         )
     job = Job(id=uuid.uuid4(), user_id=user_id)
     _jobs[job.id] = job
-    task = asyncio.create_task(_run(job, blueprint))
+    task = asyncio.create_task(_run(job, blueprint, role))
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
     return job

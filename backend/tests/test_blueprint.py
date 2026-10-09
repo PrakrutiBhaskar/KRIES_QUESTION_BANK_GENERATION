@@ -412,7 +412,7 @@ async def test_only_one_build_at_a_time_per_user(client, monkeypatch):
 
     gate = asyncio.Event()
 
-    async def slow(session, bp, user_id, on_progress=None):
+    async def slow(session, bp, user_id, on_progress=None, budget=None):
         on_progress(3, 30)
         await gate.wait()
         raise RuntimeError("released")

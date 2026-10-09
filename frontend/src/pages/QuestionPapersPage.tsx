@@ -64,7 +64,8 @@ function sectionQuestions(s: BlueprintSection): number | null {
 }
 
 export default function QuestionPapersPage() {
-  const { upsertBank, showToast, settings } = useApp();
+  const { upsertBank, showToast, settings, user } = useApp();
+  const isStudent = user?.role === 'Student';
   const navigate = useNavigate();
 
   const [subject, setSubject] = useState<Subject>('Science');
@@ -282,6 +283,12 @@ export default function QuestionPapersPage() {
           Describe the paper — marks per section and weightage per chapter — and the system picks the questions to fit,
           like a board exam paper.
         </p>
+        {isStudent && (
+          <p className="text-xs text-slate-500 mt-1">
+            Questions come from the stored question bank first. New ones are written by AI only when the bank
+            has too few, and only up to a daily limit; a request that needs more than that is declined.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

@@ -72,9 +72,11 @@ interface QuestionCardProps {
   onMoveDown: (id: string) => void;
   isFirst: boolean;
   isLast: boolean;
+  /** Regenerating always asks the model for a new question; students work from the stored bank instead. */
+  canRegenerate?: boolean;
 }
 
-function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMoveDown, isFirst, isLast }: QuestionCardProps) {
+function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMoveDown, isFirst, isLast, canRegenerate = true }: QuestionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const match = parseMatch(question);
 
@@ -166,15 +168,17 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
           >
             <ChevronDown className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => onRegenerate(question.id)}
-            disabled={busy}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 transition-colors"
-            aria-label="Regenerate question"
-            title="Regenerate"
-          >
-            <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
-          </button>
+          {canRegenerate && (
+            <button
+              onClick={() => onRegenerate(question.id)}
+              disabled={busy}
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 transition-colors"
+              aria-label="Regenerate question"
+              title="Regenerate"
+            >
+              <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
+            </button>
+          )}
           <button
             onClick={() => onDelete(question.id)}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
@@ -193,8 +197,12 @@ function QuestionCard({ question, onDelete, onRegenerate, busy, onMoveUp, onMove
 // Generate Page
 // ============================================================
 export default function GeneratePage() {
-  const { upsertBank, showToast, settings } = useApp();
+  const { upsertBank, showToast, settings, user } = useApp();
   const navigate = useNavigate();
+  // Students generate from the stored question bank first; the server only asks the
+  // model for what the bank lacks (and within a daily limit), and never on demand.
+  // So the controls that always call the model (regenerate, add one, verify) are teacher-only.
+  const isStudent = user?.role === 'Student';
 
   const [form, setForm] = useState<GenerateFormData>({
     subject: 'Science',
@@ -492,6 +500,12 @@ export default function GeneratePage() {
         <p className="text-sm text-slate-500 mt-0.5">
           Configure your question bank and let AI generate syllabus-aligned questions.
         </p>
+        {isStudent && (
+          <p className="text-xs text-slate-500 mt-1">
+            Questions come from the stored question bank first. New ones are written by AI only when the bank
+            has too few, and only up to a daily limit; a request that needs more than that is declined.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -757,22 +771,26 @@ export default function GeneratePage() {
                   <p className="text-xs text-slate-500">{form.chapter} — Grade {form.grade}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => void handleVerify()}
-                    disabled={verifying || allVerified}
-                    title="Check each answer key (calculation rules, then an independent AI pass)"
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 disabled:opacity-60 transition-colors"
-                  >
-                    {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-                    {verifying ? 'Verifying…' : allVerified ? 'Answers verified' : 'Verify answers'}
-                  </button>
-                  <button
-                    onClick={handleAddQuestion}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Question
-                  </button>
+                  {!isStudent && (
+                    <>
+                      <button
+                        onClick={() => void handleVerify()}
+                        disabled={verifying || allVerified}
+                        title="Check each answer key (calculation rules, then an independent AI pass)"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 disabled:opacity-60 transition-colors"
+                      >
+                        {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                        {verifying ? 'Verifying…' : allVerified ? 'Answers verified' : 'Verify answers'}
+                      </button>
+                      <button
+                        onClick={handleAddQuestion}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Question
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={handleSaveBank}
                     disabled={saved || saving}
@@ -815,6 +833,7 @@ export default function GeneratePage() {
                     onMoveDown={handleMoveDown}
                     isFirst={i === 0}
                     isLast={i === generated.length - 1}
+                    canRegenerate={!isStudent}
                   />
                   </Fragment>
                 ))}

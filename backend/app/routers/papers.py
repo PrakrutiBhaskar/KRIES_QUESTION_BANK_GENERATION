@@ -19,12 +19,13 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..deps import get_current_user, require_generator
+from ..deps import get_current_user
 from ..models import User
 from ..schemas import BlueprintIn, BlueprintJobOut, BlueprintPlanOut, ErrorOut, PaperIn, PaperOut, PaperPatch
 from ..services import blueprint as blueprint_service
 from ..services import blueprint_jobs
 from ..services import papers as paper_service
+from ..services.generation_budget import budget_for, is_student
 
 router = APIRouter(prefix="/papers", tags=["papers"])
 
@@ -67,9 +68,14 @@ async def create_paper(
 async def create_blueprint_paper(
     payload: BlueprintIn,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(require_generator),
+    user: User = Depends(get_current_user),
 ) -> PaperOut:
-    paper = await blueprint_service.create_blueprint_paper(session, payload, user.id)
+    if is_student(user.role) and payload.refresh:
+        payload = payload.model_copy(update={"refresh": False})
+    budget = await budget_for(session, user_id=user.id, role=user.role)
+    paper = await blueprint_service.create_blueprint_paper(
+        session, payload, user.id, budget=budget
+    )
     return PaperOut.from_model(paper)
 
 
@@ -87,12 +93,14 @@ async def create_blueprint_paper(
     responses={400: {"model": ErrorOut}, 409: {"model": ErrorOut}, 429: {"model": ErrorOut}},
 )
 async def start_blueprint_job(
-    payload: BlueprintIn, user: User = Depends(require_generator)
+    payload: BlueprintIn, user: User = Depends(get_current_user)
 ) -> BlueprintJobOut:
+    if is_student(user.role) and payload.refresh:
+        payload = payload.model_copy(update={"refresh": False})
     # Same arithmetic as the preview, so an impossible blueprint is a 400 now
     # rather than an error found halfway through.
     blueprint_service.build_plan(payload)
-    return blueprint_jobs.start(payload, user.id).to_out()
+    return blueprint_jobs.start(payload, user.id, user.role).to_out()
 
 
 @router.get(
