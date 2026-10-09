@@ -113,14 +113,6 @@ Supported (type, marks) combinations, enforced by the engine and exposed at
 | Fill | 1 | one or more blanks written as `___` |
 | Match | 3, 5 | marks = number of pairs; Column A items and Column B items must each be distinct |
 
-This is subject-specific — Math's 5-mark answers need step-by-step
-derivations, Social Science's need labeled sections (causes/effects), Science
-should reference diagrams where relevant. MCQs always get one correct option
-plus a 1-line justification, regardless of marks. This rule is enforced by
-`generation_engine/subject_formats.py` and re-checked server-side whenever a
-question is edited (`PATCH /questions/{id}`), so a hand-edit (for example
-changing the marks) can't leave an answer that no longer fits. The answer
-itself is read-only.
 
 ## Strictly Karnataka State Board, from the textbook
 
@@ -262,40 +254,6 @@ should mean a passing CI run and vice versa. If a test ever starts requiring
 a real `GROQ_API_KEY` or `DATABASE_URL` to pass, that's a regression, not a
 CI config gap to patch around.
 
-## Known gotchas (already fixed / worth knowing about)
-
-These came up during first-time setup and are worth flagging so nobody
-re-discovers them the hard way:
-
-- **`DATABASE_URL` needs the `+asyncpg` driver.** A bare `postgresql://...`
-  URL fails at startup (`ModuleNotFoundError: psycopg2`) — both the app and
-  Alembic use the async engine. Must be
-  `postgresql+asyncpg://user:pass@host:5432/dbname`.
-- **`CORS_ORIGINS=*` in `.env` used to crash settings load.** Fixed in
-  `backend/app/config.py` by annotating the field with pydantic-settings'
-  `NoDecode` — otherwise pydantic-settings tries to JSON-decode any
-  list-typed env value before the comma-split validator runs, and `*` isn't
-  valid JSON.
-- **PDF export used to silently corrupt special characters.** Groq's output
-  routinely contains non-breaking hyphens and subscript/superscript digits
-  (`CO₂`, `O₂`, `light‑dependent`). Base-14 PDF fonts — and some system TTFs,
-  depending on what's installed on the host — have no glyph for these, and
-  ReportLab drops or box-renders them silently rather than erroring. Fixed in
-  `backend/app/services/export/renderer.py` by normalizing to plain ASCII
-  before layout, so it's correct regardless of which font ends up registered
-  on a given machine.
-- **Reset links point at `FRONTEND_URL`.** It defaults to `http://localhost:5173`; if you
-  deploy and leave it, users get a reset link that opens localhost. Set it to the real
-  frontend origin.
-- **Rate limits are per process.** Counters live in memory, so with several workers or
-  instances each keeps its own counts. Move the store to Redis before scaling out.
-- **PowerShell isn't bash.** `createdb`/`psql` are PostgreSQL client binaries,
-  not shell builtins — need PostgreSQL's `bin` folder on `PATH`, or skip them
-  entirely by using a hosted Postgres (Supabase). Inline env vars
-  (`VAR=value command`) don't work in PowerShell — use `$env:VAR = "value"`
-  on its own line first. `curl` is aliased to `Invoke-WebRequest`, which
-  takes different flags than real curl — use `Invoke-RestMethod` for JSON
-  APIs, or call `curl.exe` explicitly for the real thing.
 
 ## Accounts and settings
 
@@ -358,12 +316,6 @@ How it works (`backend/app/services/blueprint.py`):
 3. **All-or-nothing.** The request is one transaction; if any generation call fails
    (502/422) no paper and no new questions are stored.
 
-Sections are stored on `paper_questions.section` (migration `0004`; `ensure_schema`
-adds the column on startup for databases created without Alembic), so the bank page and
-all three PDF renderers show "Section A ... 10 marks" headings. Papers built by hand
-have no sections and render exactly as before. A blueprint paper may have at most 100
-questions, and `POST /papers/blueprint` shares the per-user `RATE_LIMIT_GENERATE` budget
-with `/generate` because it can make many LLM calls.
 
 ## Diagrams, answer verification and bulk data
 
@@ -405,60 +357,6 @@ with `/generate` because it can make many LLM calls.
   export, settings, light/dark/system theme, and an admin-only Figure Library. `npm run lint` reports
   0 errors (7 warnings). There are no automated UI tests.
 
-**Broken right now — the frontend build.** `npm run build` fails with 42 type errors, all in seven
-leftover prototype files that nothing in the live app imports:
-
-```
-frontend/src/pages/AnalyticsPage.tsx
-frontend/src/data/mockData.ts   frontend/src/data/syllabus.ts   frontend/src/data/analytics.ts
-frontend/src/lib/analytics.ts   frontend/src/lib/generator.ts   frontend/src/lib/storage.ts
-```
-
-They refer to things that no longer exist (Bloom's level, bank descriptions, API helpers that were
-removed) and to `recharts`, which is not in `package.json`. The Analytics page is not routed. Deleting
-the seven files is the fix: with them removed the type-check and `vite build` pass. `npm run dev`
-still works because Vite does not type-check.
-
-**Verified by hand against live services** (a real Groq key and a Supabase Postgres, in an earlier pass):
-`POST /generate` writing real rows, paper creation, PDF export (including the character-encoding fix),
-syllabus seeding on an empty database, and the syllabus PDF-ingestion CLI. The auth, password-reset,
-settings and blueprint features were tested with the automated suite only, and this README does not
-record a live check of what came later (figure library, answer verification, Fill and Match types,
-background paper jobs).
-
-**Still open** (`docs/task-tracker.md` has the full board, and may lag behind this list):
-
-- ⬜ Fix the frontend build (above), then add it to CI
-- ⬜ Android build — only the web app exists; React Native was the original plan
-- ⬜ Frontend has no automated tests
-- ⬜ Syllabus accuracy: `backend/data/syllabus.json` was transcribed by hand. Math comes from published
-  KTBS contents (third-party mirrors); Science, Social Science, English and Kannada come from photos of
-  contents pages with the grade assigned from content or upload order, and are marked "confirm" in the
-  file. Nothing has been run through the PDF ingestion CLIs, and `backend/data/textbooks/` is empty, so
-  textbook-grounded generation has not been used against real books
-- ⬜ Practice sessions exist in the API only; the web app has no practice screen
-- ⬜ The backend suite has never been run against a live PostgreSQL database (only in-memory SQLite,
-  which masks Postgres-only behaviour such as native enums, `jsonb` and `text[]`). CI runs the same suite
-- ⬜ Rate limiting is in-memory (single process); needs a shared store before running several instances
-- ⬜ Figure images live on local disk (`FIGURE_DIR`): on a host without a persistent volume they vanish
-  on redeploy while the database rows survive (`scripts/check_figures.py` reports this). Needs object storage
-- ⬜ Password-reset email has been tested with a stubbed sender, not against a real SMTP server
-- ⬜ Production hosting target (AWS vs. Render) not decided; the frontend is not deployed
-- ⬜ Export files are never cleaned up — no retention policy yet
-- ⬜ Generation quality: the duplicate-similarity threshold (0.90) and word-count bounds are first
-  estimates. Answer keys get rule checks and a second AI opinion on demand, but no human fact-check per
-  subject, and editing a question's text or options does not re-run verification
-
-**Housekeeping**
-
-- `generation_engine/test_prompts.py`, `test_schemas.py` and `test_validation.py` are stale copies of
-  older tests. Pytest and CI never collect them (`testpaths = tests`), and 27 of their 34 tests fail if
-  you run them directly. Delete them or bring them up to date
-- `generation_engine/Unconfirmed 568007.crdownload` is a stray browser download; delete it
-- There is no `.env.example` for the repo root or `backend/` (only `frontend/.env.example`); adding
-  them would make first-time setup easier. Every backend setting is defined in `backend/app/config.py`
-  and every engine setting in `generation_engine/config.py`
-- `docs/api-contract.md`, `docs/db-schema.md` and `docs/task-tracker.md` still lag the code in places
 
 ## Tech stack summary
 
