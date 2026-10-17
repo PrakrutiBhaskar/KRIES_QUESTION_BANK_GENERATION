@@ -31,6 +31,7 @@ from .requests import (
     PaperItemPatch,
     PaperPatch,
     PracticeSessionIn,
+    QuestionIn,
     QuestionPatch,
     VerifyIn,
 )
@@ -84,6 +85,7 @@ __all__ = [
     "PaperItemPatch",
     "PaperPatch",
     "PracticeSessionIn",
+    "QuestionIn",
     "QuestionPatch",
     "VerifyIn",
     "VerifyOut",

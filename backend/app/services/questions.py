@@ -29,7 +29,7 @@ from generation_engine.validation import check_marks_format
 from ..errors import BadRequestError, ForbiddenError, NotFoundError
 from ..models import Chapter, Question, Subject
 from . import figures as figure_service
-from .syllabus import resolve_chapter
+from .syllabus import get_syllabus_index, resolve_chapter
 
 _WS = re.compile(r"\s+")
 
@@ -234,6 +234,126 @@ async def get_questions_by_ids(
     return {row.id: row for row in rows}
 
 
+async def create_manual_question(
+    session: AsyncSession, payload: Any, *, user_id: uuid.UUID
+) -> Question:
+    """Store a question the teacher wrote by hand.
+
+    It goes through the same checks as a generated one (shape for its type, marks
+    allowed for the type, answer length for the marks), so a hand-written question
+    cannot break a paper or the PDF export. It is stored as "unverified" because
+    nobody has run the answer check on it, and it is owned by its author.
+    """
+    index = get_syllabus_index()
+    if index is not None and not index.canonical_chapter(payload.subject, payload.chapter):
+        raise BadRequestError(
+            f'"{payload.chapter}" is not a chapter of {payload.subject.value}.'
+        )
+
+    candidate = {
+        "subject": payload.subject,
+        "chapter": payload.chapter,
+        "type": payload.type,
+        "grade": payload.grade,
+        "text": payload.text,
+        "options": [o.strip() for o in payload.options] if payload.options else None,
+        "answer": payload.answer,
+        "explanation": payload.explanation,
+        "marks": payload.marks,
+        "difficulty": payload.difficulty,
+        "topic": payload.topic,
+        "tags": [],
+    }
+    try:
+        validated = EngineQuestion(**candidate)
+    except ValidationError as exc:
+        raise BadRequestError(_first_error(exc)) from exc
+
+    problems = check_marks_format(validated)
+    if problems:
+        raise BadRequestError("; ".join(problems))
+
+    chapter = await resolve_chapter(session, payload.subject, payload.chapter)
+    new_id = uuid.uuid4()
+    # Salted with the id: a hand-written question is always its author's own row and
+    # is never merged into (or replaced by) a stored question with the same wording.
+    unique_hash = hashlib.sha256(
+        f"{content_hash(payload.subject.value, chapter.id, validated.text)}|manual:{new_id}".encode(
+            "utf-8"
+        )
+    ).hexdigest()
+    row = Question(
+        id=new_id,
+        subject_id=chapter.subject_id,
+        chapter_id=chapter.id,
+        type=validated.type,
+        grade=validated.grade,
+        text=validated.text,
+        options=list(validated.options) if validated.options else None,
+        answer=validated.answer,
+        explanation=validated.explanation or "",
+        marks=validated.marks,
+        difficulty=validated.difficulty,
+        topic=validated.topic or "",
+        tags=[],
+        content_hash=unique_hash,
+        created_by=user_id,
+        verification_status="unverified",
+        verification_note="Written by hand; the answer key has not been checked.",
+    )
+    session.add(row)
+    await session.flush()
+    await session.refresh(
+        row, attribute_names=["subject", "chapter", "figure", "answer_figure"]
+    )
+    return row
+
+
+async def copy_question(
+    session: AsyncSession, question_id: uuid.UUID, *, user_id: uuid.UUID
+) -> Question:
+    """Make an editable copy of any question, owned by `user_id`.
+
+    Only the creator may edit a stored question (the pool is shared and other
+    people's papers may use it). Someone who wants a different wording or key
+    for a question they did not generate edits their own copy instead, and the
+    original is left exactly as it was.
+    """
+    src = await get_question(session, question_id)
+    new_id = uuid.uuid4()
+    # A distinct fingerprint, so the copy is not treated as a duplicate of the original.
+    unique_hash = hashlib.sha256(
+        f"{src.content_hash}|copy:{new_id}".encode("utf-8")
+    ).hexdigest()
+    row = Question(
+        id=new_id,
+        subject_id=src.subject_id,
+        chapter_id=src.chapter_id,
+        type=src.type,
+        grade=src.grade,
+        text=src.text,
+        options=list(src.options) if src.options else None,
+        answer=src.answer,
+        explanation=src.explanation,
+        marks=src.marks,
+        difficulty=src.difficulty,
+        topic=src.topic,
+        tags=list(src.tags or []),
+        figure_id=src.figure_id,
+        answer_figure_id=src.answer_figure_id,
+        verification_status=src.verification_status,
+        verification_note=src.verification_note,
+        content_hash=unique_hash,
+        created_by=user_id,
+    )
+    session.add(row)
+    await session.flush()
+    await session.refresh(
+        row, attribute_names=["subject", "chapter", "figure", "answer_figure"]
+    )
+    return row
+
+
 async def update_question(
     session: AsyncSession,
     question_id: uuid.UUID,
@@ -269,7 +389,7 @@ async def update_question(
         "grade": row.grade,
         "text": applied.get("text", row.text),
         "options": applied.get("options", row.options),
-        "answer": row.answer,  # read-only: see QuestionPatch
+        "answer": applied.get("answer", row.answer),
         "explanation": applied.get("explanation", row.explanation),
         "marks": applied.get("marks", row.marks),
         "difficulty": applied.get("difficulty", row.difficulty),
@@ -286,8 +406,23 @@ async def update_question(
     if problems:
         raise BadRequestError("; ".join(problems))
 
+    # An edited question or key has not been checked by "Verify answers", so it
+    # must not keep a "verified" (or "flagged") result that was earned by the
+    # old wording.
+    content_changed = (
+        validated.text != row.text
+        or validated.answer != row.answer
+        or (list(validated.options) if validated.options else None) != row.options
+    )
+
+    text_changed = validated.text != row.text
+
     row.text = validated.text
     row.options = list(validated.options) if validated.options else None
+    row.answer = validated.answer
+    if content_changed:
+        row.verification_status = "unverified"
+        row.verification_note = "Edited by hand; the answer key has not been checked."
     row.explanation = validated.explanation or ""
     row.marks = validated.marks
     row.difficulty = validated.difficulty
@@ -300,9 +435,13 @@ async def update_question(
             await figure_service.resolve_attachable(session, new_id)
         setattr(row, key, new_id)
 
-    row.content_hash = content_hash(
-        row.subject.name, row.chapter_id, row.text, row.figure_id
-    )
+    # Only re-fingerprint when the wording or figure changed, so an own copy
+    # whose answer alone was edited keeps its distinct hash and is never mistaken
+    # for the original by the duplicate guard.
+    if text_changed or figure_keys:
+        row.content_hash = content_hash(
+            row.subject.name, row.chapter_id, row.text, row.figure_id
+        )
 
     await session.flush()
     if figure_keys:

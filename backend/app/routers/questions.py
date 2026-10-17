@@ -7,6 +7,8 @@ Generation and question-bank endpoints.
   GET    /questions           api-contract.md Section 2
   GET    /questions/{id}
   PATCH  /questions/{id}
+  POST   /questions/{id}/copy   an editable copy of someone else's question
+  POST   /questions             add a question you wrote yourself
   DELETE /questions/{id}
 """
 from __future__ import annotations
@@ -21,6 +23,7 @@ from generation_engine.schemas import Difficulty, QuestionType, Subject
 
 from ..db import get_session
 from ..deps import get_current_user, require_generator
+from ..errors import ForbiddenError
 from ..models import User
 from ..schemas import (
     CombinationOut,
@@ -28,6 +31,7 @@ from ..schemas import (
     GenerateIn,
     GenerateOut,
     Page,
+    QuestionIn,
     QuestionOut,
     QuestionPatch,
     VerifyIn,
@@ -194,6 +198,50 @@ async def patch_question(
         payload.model_dump(exclude_unset=True),
         user_id=user.id,
     )
+    return QuestionOut.from_model(row)
+
+
+@router.post(
+    "/questions",
+    response_model=QuestionOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a question you wrote yourself",
+    description=(
+        "Stores a hand-written question (and its answer and explanation) after the "
+        "same checks a generated one gets. It is `unverified` until someone runs "
+        "**Verify answers** on it. Teachers and administrators only."
+    ),
+    responses={400: {"model": ErrorOut}, 403: {"model": ErrorOut}},
+)
+async def create_question(
+    payload: QuestionIn,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> QuestionOut:
+    if user.role == "Student":
+        raise ForbiddenError("Writing your own questions is only available to teacher accounts.")
+    row = await question_service.create_manual_question(session, payload, user_id=user.id)
+    return QuestionOut.from_model(row)
+
+
+@router.post(
+    "/questions/{question_id}/copy",
+    response_model=QuestionOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Make your own editable copy of a question",
+    description=(
+        "Only the person who generated a question can edit it. For any other "
+        "question this makes a copy owned by the caller, which they can then "
+        "edit with `PATCH /questions/{id}`. The original is not changed."
+    ),
+    responses={404: {"model": ErrorOut}},
+)
+async def copy_question(
+    question_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> QuestionOut:
+    row = await question_service.copy_question(session, question_id, user_id=user.id)
     return QuestionOut.from_model(row)
 
 

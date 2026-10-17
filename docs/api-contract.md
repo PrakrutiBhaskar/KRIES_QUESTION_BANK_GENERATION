@@ -109,15 +109,27 @@ Filter/search stored questions.
 Fetch a single question by ID.
 
 ### `PATCH /questions/{id}`
-Edit a question (teacher curation): `text`, `options`, `explanation`, `marks`, `difficulty`,
-`topic` and `tags`. **The `answer` cannot be edited**: any request that includes the field
-gets `400` and nothing is changed. The answer key is verified when the question is generated
-(see *Answer verification*), so a hand-edited key would carry a verified badge for an answer
-nobody checked. To get a different answer, generate the question again. Also attaches or
-detaches diagrams:
+Edit a question (teacher curation): `text`, `options`, `answer`, `explanation`, `marks`,
+`difficulty`, `topic` and `tags`. Editing the `text`, `options` or `answer` resets
+`verification_status` to `unverified` (with a note), because a hand-edited key has not been
+checked; run **Verify answers** again to check it. An MCQ `answer` must be one of the
+options. Also attaches or detaches diagrams:
 `figure_id` (printed with the question) and `answer_figure_id` (answer key only) take the
 id of any figure in the library, or `null` to detach. Omit a field to leave it unchanged.
 Errors: `403` for someone else's question, `404` for an unknown figure.
+
+### `POST /questions`
+Add a question you wrote yourself (`201`, returns the question). Body: `subject`, `chapter`,
+`type`, `grade`, `text`, `options` (MCQ), `answer`, `explanation`, `marks`, `difficulty`,
+optional `topic`. It gets the same checks as a generated question (shape for its type, marks
+allowed for the type, answer length for the marks) and is stored `unverified`, owned by the
+caller. `400` for a question that fails a check, `403` for a student account.
+
+### `POST /questions/{id}/copy`
+Make an editable copy of any question, owned by the caller (`201`, returns the new question).
+Only a question's creator may `PATCH` it, so anyone else edits their own copy; the original
+is unchanged. The copy can then replace the original in a paper with `PATCH /papers/{id}`
+(a question item may carry `section`, used only when the question is newly added).
 
 ### `DELETE /questions/{id}`
 Discard a question.

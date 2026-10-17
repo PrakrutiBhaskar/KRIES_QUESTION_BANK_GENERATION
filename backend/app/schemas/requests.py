@@ -12,7 +12,6 @@ import uuid
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from pydantic_core import PydanticCustomError
 
 from generation_engine.schemas import (
     VALID_GRADES,
@@ -82,6 +81,31 @@ class VerifyIn(BaseModel):
     question_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
 
 
+class QuestionIn(BaseModel):
+    """POST /questions — a question written by hand (not generated)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    subject: Subject
+    chapter: str
+    type: QuestionType
+    grade: int
+    text: str
+    options: list[str] | None = None
+    answer: str
+    explanation: str = ""
+    marks: int
+    difficulty: Difficulty
+    topic: str = ""
+
+    @field_validator("chapter")
+    @classmethod
+    def chapter_not_blank(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("must not be blank")
+        return v.strip()
+
+
 class QuestionPatch(BaseModel):
     """
     PATCH /questions/{id} — teacher curation.
@@ -91,17 +115,17 @@ class QuestionPatch(BaseModel):
     subjects would invalidate the marks/format rules it was generated and
     validated under. Re-generate instead.
 
-    `answer` is NOT editable either: the answer key is checked by "Verify
-    answers" (POST /questions/verify, see "Answer verification" in
-    docs/api-contract.md), and a hand-edited key would carry a "verified"
-    badge for an answer nobody checked. To get a different answer, generate
-    the question again.
+    `answer` is editable. Because a hand-edited key has not been checked, any
+    edit to the text, options or answer resets the question's verification
+    to "unverified" (see services/questions.update_question); "Verify
+    answers" can then be run on it again.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     text: str | None = None
     options: list[str] | None = None
+    answer: str | None = None
     explanation: str | None = None
     marks: int | None = None
     difficulty: Difficulty | None = None
@@ -110,19 +134,6 @@ class QuestionPatch(BaseModel):
     # Attach a figure from the library, or send null to detach it.
     figure_id: uuid.UUID | None = None
     answer_figure_id: uuid.UUID | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def answer_is_read_only(cls, data):
-        # Said plainly, rather than the generic "extra field not permitted".
-        if isinstance(data, dict) and "answer" in data:
-            raise PydanticCustomError(
-                "answer_read_only",
-                "answer cannot be edited: the answer key is checked by the "
-                "verification step, so a hand-edited key would be unchecked. "
-                "Generate the question again for a different answer.",
-            )
-        return data
 
     @field_validator("text")
     @classmethod
@@ -199,6 +210,10 @@ class PaperItemPatch(BaseModel):
     question_id: uuid.UUID
     order_index: int = Field(ge=0)
     marks_override: int | None = None
+    # Used only when this question is newly added to the paper (for example an
+    # edited copy replacing the original); questions already in the paper keep
+    # the section they have.
+    section: str | None = None
 
     @field_validator("marks_override")
     @classmethod

@@ -51,3 +51,22 @@ async def test_practice_serves_stored_questions_to_a_student(client, student):
     assert (await client.post("/generate", json={**GENERATE, "count": 2})).status_code == 200
     r = await student.post("/practice/sessions", json=PRACTICE)
     assert r.status_code == 201, r.text
+
+
+async def test_a_student_cannot_add_their_own_question_to_the_shared_pool(student):
+    r = await student.post(
+        "/questions",
+        json={
+            "subject": "Science",
+            "chapter": "Photosynthesis",
+            "type": "MCQ",
+            "grade": 8,
+            "text": "Which gas do plants take in for photosynthesis?",
+            "options": ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"],
+            "answer": "Carbon dioxide",
+            "explanation": "Plants use carbon dioxide to make glucose.",
+            "marks": 1,
+            "difficulty": "easy",
+        },
+    )
+    assert r.status_code == 403

@@ -133,30 +133,49 @@ async def test_edit_rejects_a_marks_format_violation(client):
     assert (await client.get(f"/questions/{created['id']}")).json()["marks"] == 3
 
 
-async def test_the_answer_cannot_be_edited(client):
+async def test_the_answer_can_be_edited_and_is_marked_unverified(client):
+    created = (await generate_questions(client, type="Long", marks=5, count=1))[0]
+    new_answer = created["answer"] + " Revised by the teacher."
+
+    response = await client.patch(
+        f"/questions/{created['id']}", json={"answer": new_answer}
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == new_answer
+    # A hand-edited key has not been checked, so it must not look verified.
+    assert body["verification_status"] == "unverified"
+
+    stored = (await client.get(f"/questions/{created['id']}")).json()
+    assert stored["answer"] == new_answer
+
+
+async def test_editing_the_text_resets_verification(client):
     created = (await generate_questions(client, count=1))[0]
 
     response = await client.patch(
-        f"/questions/{created['id']}", json={"answer": "A different answer."}
+        f"/questions/{created['id']}", json={"text": created["text"] + " (reworded)"}
     )
+    assert response.status_code == 200
+    assert response.json()["verification_status"] == "unverified"
+
+
+async def test_a_blank_answer_is_rejected(client):
+    created = (await generate_questions(client, count=1))[0]
+
+    response = await client.patch(f"/questions/{created['id']}", json={"answer": "   "})
     assert response.status_code == 400
-    assert set(response.json()) == {"error", "detail"}
-    assert "answer cannot be edited" in response.json()["detail"]
-    # Nothing was changed.
     assert (await client.get(f"/questions/{created['id']}")).json()["answer"] == created["answer"]
 
 
-async def test_the_answer_cannot_be_edited_even_alongside_other_changes(client):
-    created = (await generate_questions(client, count=1))[0]
+async def test_an_mcq_answer_must_be_one_of_the_options(client):
+    created = (await generate_questions(client, type="MCQ", marks=1, count=1))[0]
 
     response = await client.patch(
-        f"/questions/{created['id']}",
-        json={"topic": "revised", "answer": "A different answer."},
+        f"/questions/{created['id']}", json={"answer": "not one of the options"}
     )
     assert response.status_code == 400
-    stored = (await client.get(f"/questions/{created['id']}")).json()
-    assert stored["answer"] == created["answer"]
-    assert stored["topic"] == created["topic"]  # the whole edit is refused
+    assert (await client.get(f"/questions/{created['id']}")).json()["answer"] == created["answer"]
 
 
 @pytest.mark.parametrize("value", ["", None, "   "])
@@ -242,3 +261,62 @@ async def test_delete_twice_returns_404(client):
 async def test_delete_unknown_question_returns_404(client):
     response = await client.delete(f"/questions/{uuid.uuid4()}")
     assert response.status_code == 404
+
+
+# --- hand-written questions --------------------------------------------------
+
+MANUAL_MCQ = {
+    "subject": "Science",
+    "chapter": "Photosynthesis",
+    "type": "MCQ",
+    "grade": 8,
+    "text": "Which gas do plants take in for photosynthesis?",
+    "options": ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"],
+    "answer": "Carbon dioxide",
+    "explanation": "Plants use carbon dioxide to make glucose.",
+    "marks": 1,
+    "difficulty": "easy",
+}
+
+
+async def test_a_teacher_can_add_their_own_question(client):
+    response = await client.post("/questions", json=MANUAL_MCQ)
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["answer"] == "Carbon dioxide"
+    assert body["verification_status"] == "unverified"
+
+    stored = await client.get(f"/questions/{body['id']}")
+    assert stored.status_code == 200
+    # The author owns it, so they can edit it afterwards.
+    assert (await client.patch(f"/questions/{body['id']}", json={"topic": "gases"})).status_code == 200
+
+
+async def test_the_same_wording_twice_makes_two_separate_questions(client):
+    first = (await client.post("/questions", json=MANUAL_MCQ)).json()
+    second = (await client.post("/questions", json=MANUAL_MCQ)).json()
+    assert first["id"] != second["id"]
+
+
+async def test_a_manual_mcq_answer_must_be_one_of_the_options(client):
+    response = await client.post("/questions", json={**MANUAL_MCQ, "answer": "Helium"})
+    assert response.status_code == 400
+    assert set(response.json()) == {"error", "detail"}
+
+
+async def test_a_manual_question_must_use_marks_allowed_for_its_type(client):
+    response = await client.post("/questions", json={**MANUAL_MCQ, "marks": 3})
+    assert response.status_code == 400
+
+
+async def test_a_manual_fill_question_needs_exactly_one_blank(client):
+    fill = {
+        **MANUAL_MCQ,
+        "type": "Fill",
+        "options": None,
+        "text": "Plants make food by a process called photosynthesis.",
+        "answer": "photosynthesis",
+    }
+    assert (await client.post("/questions", json=fill)).status_code == 400
+    fill["text"] = "Plants make food by a process called _____."
+    assert (await client.post("/questions", json=fill)).status_code == 201

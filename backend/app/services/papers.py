@@ -141,7 +141,11 @@ async def update_paper(
         for position, item in enumerate(ordered):
             row = existing.pop(item.question_id, None)
             if row is None:
-                row = PaperQuestion(paper_id=paper.id, question_id=item.question_id)
+                row = PaperQuestion(
+                    paper_id=paper.id,
+                    question_id=item.question_id,
+                    section=item.section,
+                )
                 session.add(row)
                 paper.items.append(row)
             row.order_index = position  # renumbered dense

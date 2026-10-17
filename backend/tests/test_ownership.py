@@ -275,3 +275,40 @@ async def test_download_token_signed_with_another_key_is_rejected(client, anon_c
         algorithm=settings.jwt_algorithm,
     )
     assert (await anon_client.get(f"/export/files/{filename}", params={"token": forged})).status_code == 401
+
+
+async def test_someone_else_can_edit_their_own_copy_of_a_question(client, bob_client):
+    [q] = await generate_questions(client, count=1)
+
+    r = await bob_client.post(f"/questions/{q['id']}/copy")
+    assert r.status_code == 201, r.text
+    copy = r.json()
+    assert copy["id"] != q["id"]
+    assert copy["text"] == q["text"]
+
+    # Bob owns the copy, so he can change its text and answer.
+    edited = await bob_client.patch(
+        f"/questions/{copy['id']}", json={"topic": "bobs-topic", "explanation": "Bob's note."}
+    )
+    assert edited.status_code == 200
+    assert edited.json()["topic"] == "bobs-topic"
+
+    # The original is untouched.
+    assert (await client.get(f"/questions/{q['id']}")).json()["topic"] == q["topic"]
+
+
+async def test_a_copied_question_can_replace_the_original_in_a_paper(client, bob_client):
+    [q] = await generate_questions(client, count=1)
+    copy = (await bob_client.post(f"/questions/{q['id']}/copy")).json()
+
+    paper = (
+        await bob_client.post(
+            "/papers", json={"title": "Bob", "subject": "Science", "question_ids": [q["id"]]}
+        )
+    ).json()
+    r = await bob_client.patch(
+        f"/papers/{paper['id']}",
+        json={"questions": [{"question_id": copy["id"], "order_index": 0}]},
+    )
+    assert r.status_code == 200
+    assert [i["question"]["id"] for i in r.json()["questions"]] == [copy["id"]]

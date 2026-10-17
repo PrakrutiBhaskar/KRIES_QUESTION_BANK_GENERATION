@@ -492,7 +492,8 @@ export async function verifyAnswers(ids: string[]): Promise<VerifyResult> {
 // ------------------------------------------------------------
 export interface QuestionEdit {
   text?: string;
-  // No `answer`: the answer key is read-only (it is checked by "Verify answers").
+  // Editing the text, options or answer marks the question "unverified" on the server.
+  answer?: string;
   explanation?: string;
   options?: string[];
   marks?: number;
@@ -504,11 +505,15 @@ export interface QuestionEdit {
   answer_figure_id?: string | null;
 }
 
+/** Saves should answer in well under this; past it the dialog shows an error instead of spinning forever. */
+const SAVE_TIMEOUT_MS = 30_000;
+
 export async function updateQuestion(id: string, changes: QuestionEdit): Promise<Question> {
-  const q = await request<QuestionWire>(`/questions/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(changes),
-  });
+  const q = await request<QuestionWire>(
+    `/questions/${id}`,
+    { method: 'PATCH', body: JSON.stringify(changes) },
+    SAVE_TIMEOUT_MS,
+  );
   return toQuestion(q, 0);
 }
 
@@ -598,6 +603,64 @@ export async function discardQuestion(id: string): Promise<void> {
   await request<void>(`/questions/${id}`, { method: 'DELETE' });
 }
 
+/** A question written by hand. */
+export interface NewQuestion {
+  subject: Subject;
+  chapter: string;
+  type: QuestionType;
+  grade: number;
+  text: string;
+  options?: string[];
+  answer: string;
+  explanation: string;
+  marks: number;
+  difficulty: QuestionDifficulty;
+}
+
+/** Store a question the teacher wrote; it comes back unverified and owned by them. */
+export async function createQuestion(input: NewQuestion): Promise<Question> {
+  const q = await request<QuestionWire>(
+    '/questions',
+    { method: 'POST', body: JSON.stringify(input) },
+    SAVE_TIMEOUT_MS,
+  );
+  return toQuestion(q, 0);
+}
+
+/** Your own editable copy of a question you did not generate; the original is unchanged. */
+export async function copyQuestion(id: string): Promise<Question> {
+  const q = await request<QuestionWire>(`/questions/${id}/copy`, { method: 'POST' }, SAVE_TIMEOUT_MS);
+  return toQuestion(q, 0);
+}
+
+/** Filters for browsing the stored question pool (GET /questions). */
+export interface PoolFilter {
+  subject: Subject;
+  grade?: number;
+  chapter?: string;
+  type?: QuestionType;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+/** One page of stored questions, so existing ones can be added to a bank without generating new ones. */
+export async function fetchPoolQuestions(
+  f: PoolFilter,
+): Promise<{ questions: Question[]; total: number }> {
+  const q = new URLSearchParams({
+    subject: f.subject,
+    page: String(f.page ?? 1),
+    page_size: String(f.pageSize ?? 10),
+  });
+  if (f.grade) q.set('grade', String(f.grade));
+  if (f.chapter) q.set('chapter', f.chapter);
+  if (f.type) q.set('type', f.type);
+  if (f.search?.trim()) q.set('search', f.search.trim());
+  const page = await request<{ results: QuestionWire[]; total: number }>(`/questions?${q}`);
+  return { questions: page.results.map((row, i) => toQuestion(row, i)), total: page.total };
+}
+
 // ------------------------------------------------------------
 // Papers (= question banks in the UI)
 // ------------------------------------------------------------
@@ -626,7 +689,9 @@ export async function createBank(
 /** Replace the bank's whole question list (order = array order). */
 export async function setBankQuestions(id: string, questions: Question[]): Promise<QuestionBank> {
   return toBank(
-    await request<PaperWire>(`/papers/${id}`, {
+    await request<PaperWire>(
+      `/papers/${id}`,
+      {
       method: 'PATCH',
       body: JSON.stringify({
         questions: questions.map((q, i) => ({
@@ -634,9 +699,14 @@ export async function setBankQuestions(id: string, questions: Question[]): Promi
           order_index: i,
           // Only send an override when it differs from the question's own marks.
           marks_override: q.baseMarks !== undefined && q.marks !== q.baseMarks ? q.marks : null,
+          // Only sent when there is one: used for a question newly added to a sectioned paper
+          // (an edited copy, or one placed by its marks). Unsectioned banks send nothing extra.
+          ...(q.section ? { section: q.section } : {}),
         })),
       }),
-    }),
+      },
+      SAVE_TIMEOUT_MS,
+    ),
   );
 }
 
@@ -918,6 +988,39 @@ export function planBatches(
       ALL_QUESTION_TYPES.indexOf(a.type) - ALL_QUESTION_TYPES.indexOf(b.type) ||
       diffOrder.indexOf(a.difficulty) - diffOrder.indexOf(b.difficulty),
   );
+}
+
+/**
+ * Add questions to a paper where they belong instead of at the end. Papers are laid out
+ * section by section in marks order, so each new question goes right after the last question
+ * worth the same marks (preferring one of the same type) and joins that question's section.
+ * With no question of those marks: a sectioned paper puts it at the end (there is no section
+ * for it), and an unsectioned bank keeps its marks order.
+ */
+export function insertByMarks<T extends { marks: number; type: string; section?: string }>(
+  existing: T[],
+  incoming: T[],
+): T[] {
+  const out = [...existing];
+  for (const q of incoming) {
+    let at: number;
+    let section = q.section;
+    const sameMarks = out.flatMap((e, i) => (e.marks === q.marks ? [i] : []));
+    if (sameMarks.length > 0) {
+      const sameType = sameMarks.filter((i) => out[i].type === q.type);
+      const pool = sameType.length > 0 ? sameType : sameMarks;
+      const anchor = pool[pool.length - 1];
+      at = anchor + 1;
+      section = out[anchor].section;
+    } else if (out.some((e) => e.section)) {
+      at = out.length;
+    } else {
+      const higher = out.findIndex((e) => e.marks > q.marks);
+      at = higher === -1 ? out.length : higher;
+    }
+    out.splice(at, 0, { ...q, section });
+  }
+  return out;
 }
 
 /** Stable sort of questions into marks sections (1, 2, 3, 5), keeping their order within a section. */
