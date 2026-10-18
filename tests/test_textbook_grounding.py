@@ -110,7 +110,7 @@ def q(text, answer):
 def test_grounding_passes_on_textbook_terms_and_fails_off_book():
     on = q("Name the crops sown in the rainy season from June to September.", "Kharif crops such as paddy and maize")
     off = q("Explain how neural networks learn using gradient descent algorithms.",
-            "They adjust weights through backpropagation to minimise loss functions.")
+            "1. They adjust weights through backpropagation to minimise loss functions. 2. This is the second valid point. 3. This is the third valid point. 4. This is the fourth valid point. 5. This is the fifth valid point.")
     assert check_grounding(on, [CH1], 0.3) == []
     assert check_grounding(off, [CH1], 0.3)
     assert check_grounding(off, [CH1], 0) == []  # disabled
@@ -128,11 +128,11 @@ class Stub:
 @pytest.mark.asyncio
 async def test_engine_writes_from_passages_tags_source_and_drops_ungrounded(corpus):
     good = {"text": "Which crops are sown in the rainy season from June to September?",
-            "answer": "Kharif crops such as paddy and maize are sown then.", "passage": 1}
+            "answer": "1. Kharif crops such as paddy and maize are sown then. 2. This is the second valid point. 3. This is the third valid point. 4. This is the fourth valid point. 5. This is the fifth valid point.", "passage": 1}
     off = {"text": "Explain how neural networks learn using gradient descent algorithms?",
-           "answer": "They adjust weights through backpropagation to minimise loss functions.", "passage": 2}
+           "answer": "1. They adjust weights through backpropagation to minimise loss functions. 2. This is the second valid point. 3. This is the third valid point. 4. This is the fourth valid point. 5. This is the fifth valid point.", "passage": 2}
     good2 = {"text": "Which crops are sown in winter between October and March?",
-             "answer": "Rabi crops such as wheat and gram are sown in winter.", "passage": 2}
+             "answer": "1. Rabi crops such as wheat and gram are sown in winter. 2. This is the second valid point. 3. This is the third valid point. 4. This is the fourth valid point. 5. This is the fifth valid point.", "passage": 2}
     engine = GenerationEngine(groq_client=Stub([good, off, good2]), textbooks=corpus)
     qs, report = await engine.generate(mk_req(count=2))
     assert len(qs) == 2

@@ -68,7 +68,7 @@ async def test_figure_request_is_not_refused_by_require_textbook():
         [
             {
                 "text": "In the figure shown, what is the function of the part labelled A?",
-                "answer": "It controls the activities of the cell. It holds the genetic material.",
+                "answer": "1. It controls the activities of the cell. 2. It holds the genetic material. 3. It directs protein synthesis. 4. It controls cell division. 5. It is enclosed by a nuclear membrane.",
                 "explanation": "",
                 "topic": "Cell",
                 "tags": [],

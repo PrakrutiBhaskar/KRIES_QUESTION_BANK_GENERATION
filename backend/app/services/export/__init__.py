@@ -1,5 +1,5 @@
 """
-Export service — compiles a paper into a downloadable PDF.
+Export service — compiles a paper into a downloadable PDF or Word (.docx) file.
 
 api-contract.md returns `{"download_url": "..."}` rather than the PDF bytes,
 so the file is written to EXPORT_DIR and served back through
@@ -20,7 +20,7 @@ import uuid
 from pathlib import Path
 
 from ...config import settings
-from ...errors import NotFoundError
+from ...errors import NotFoundError, ServiceUnavailableError
 from .html import render_paper_html
 from .renderer import active_renderer, render_pdf
 
@@ -29,7 +29,12 @@ logger = logging.getLogger("backend.export")
 _SLUG = re.compile(r"[^a-z0-9]+")
 # Filenames are server-generated, but this guards the download route against
 # a traversal attempt (`../../etc/passwd`) reaching the filesystem.
-_SAFE_FILENAME = re.compile(r"^[A-Za-z0-9._-]+\.pdf$")
+_SAFE_FILENAME = re.compile(r"^[A-Za-z0-9._-]+\.(pdf|docx)$")
+
+MEDIA_TYPES = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
 
 
 def _slugify(text: str, *, limit: int = 60) -> str:
@@ -58,18 +63,47 @@ def resolve_download(filename: str) -> Path:
     return path
 
 
-def export_paper(paper, *, include_answer_key: bool = True) -> tuple[Path, int]:
-    """Render `paper` to a PDF on disk. Returns (path, size_bytes).
+def render_docx(paper, *, include_answer_key: bool = True) -> bytes:
+    """Render a paper as a Word file.
+
+    python-docx is imported here, not at module level, so a machine that has not
+    installed it can still start the API and export PDFs; only Word export is
+    refused, with a message saying what to install.
+    """
+    try:
+        from .docx_renderer import render_docx as _render
+    except ImportError as exc:
+        raise ServiceUnavailableError(
+            "Word export needs the python-docx package. Install it with "
+            "`pip install python-docx` and restart the backend.",
+            error="docx_unavailable",
+        ) from exc
+    return _render(paper, include_answer_key=include_answer_key)
+
+
+def media_type_for(filename: str) -> str:
+    return MEDIA_TYPES.get(filename.rsplit(".", 1)[-1].lower(), "application/octet-stream")
+
+
+def export_paper(
+    paper, *, include_answer_key: bool = True, fmt: str = "pdf"
+) -> tuple[Path, int]:
+    """Render `paper` to a PDF or Word file on disk. Returns (path, size_bytes).
 
     `include_answer_key=False` produces the student copy: questions only.
     """
-    pdf_bytes = render_pdf(paper, include_answer_key=include_answer_key)
+    fmt = fmt.lower()
+    if fmt == "docx":
+        file_bytes = render_docx(paper, include_answer_key=include_answer_key)
+    else:
+        fmt = "pdf"
+        file_bytes = render_pdf(paper, include_answer_key=include_answer_key)
 
     # The uuid suffix keeps re-exports of the same paper from overwriting a
     # URL the client may still be downloading.
-    filename = f"{_slugify(paper.title)}-{uuid.uuid4().hex[:8]}.pdf"
+    filename = f"{_slugify(paper.title)}-{uuid.uuid4().hex[:8]}.{fmt}"
     path = export_dir() / filename
-    path.write_bytes(pdf_bytes)
+    path.write_bytes(file_bytes)
 
     logger.info(
         "Exported paper %s (%d questions, answer key %s) via %s -> %s (%d bytes)",
@@ -78,15 +112,17 @@ def export_paper(paper, *, include_answer_key: bool = True) -> tuple[Path, int]:
         "included" if include_answer_key else "omitted",
         active_renderer(),
         filename,
-        len(pdf_bytes),
+        len(file_bytes),
     )
-    return path, len(pdf_bytes)
+    return path, len(file_bytes)
 
 
 __all__ = [
     "active_renderer",
     "export_dir",
     "export_paper",
+    "media_type_for",
+    "render_docx",
     "public_url",
     "render_paper_html",
     "render_pdf",

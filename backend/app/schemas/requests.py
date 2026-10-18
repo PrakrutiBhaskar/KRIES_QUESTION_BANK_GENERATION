@@ -156,6 +156,8 @@ class ExportIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     include_answer_key: bool = True
+    # "pdf" (default, the historical behaviour) or "docx" for an editable Word file.
+    format: Literal["pdf", "docx"] = "pdf"
 
 
 class FigurePatch(BaseModel):

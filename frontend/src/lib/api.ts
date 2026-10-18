@@ -881,9 +881,13 @@ export interface ExportResult {
   sizeBytes: number;
 }
 
+export type ExportFormat = 'pdf' | 'docx';
+
 export interface ExportOptions {
   /** Append the Answer Key pages. Defaults to true, matching the server. */
   includeAnswerKey?: boolean;
+  /** File type to produce. Defaults to 'pdf'. */
+  format?: ExportFormat;
 }
 
 export async function exportBank(id: string, opts: ExportOptions = {}): Promise<ExportResult> {
@@ -891,7 +895,10 @@ export async function exportBank(id: string, opts: ExportOptions = {}): Promise<
     `/export/${id}`,
     {
       method: 'POST',
-      body: JSON.stringify({ include_answer_key: opts.includeAnswerKey ?? true }),
+      body: JSON.stringify({
+        include_answer_key: opts.includeAnswerKey ?? true,
+        format: opts.format ?? 'pdf',
+      }),
     },
   );
   return { downloadUrl: r.download_url, filename: r.filename, sizeBytes: r.size_bytes };

@@ -233,30 +233,19 @@ class FakeGroqClient:
                 "tags": ["stub"],
             }
 
+        def _points(n: int) -> str:
+            # An answer key offers more points than marks (any N of M).
+            return "\n".join(
+                f"{i}. Valid point {i} about {nonce}: the underlying principle "
+                f"applies here, which explains step {i} of the process."
+                for i in range(1, n + 1)
+            )
+
         answer = {
             1: f"Newton {nonce}",
-            2: (
-                f"The result is {nonce}. This follows because the underlying "
-                f"principle applies directly to the given case."
-            ),
-            3: (
-                f"1. The process begins with input {nonce} being absorbed.\n"
-                f"2. The reaction converts it into a usable product.\n"
-                f"3. The product supports growth throughout the organism."
-            ),
-            5: (
-                f"1. Introduction: the process {nonce} is central to this "
-                f"chapter and its causes are set out step by step below.\n"
-                f"2. The initial step prepares the required inputs and sets up "
-                f"the conditions needed for the reaction to proceed.\n"
-                f"3. The main step transforms those inputs into the "
-                f"intermediate products described in the textbook, so that "
-                f"total input = total output at every stage.\n"
-                f"4. Effects: the final product is distributed and used by the "
-                f"wider system, which explains its practical importance.\n"
-                f"5. Hence the overall result is that this process sustains "
-                f"the system as a whole."
-            ),
+            2: _points(5),
+            3: _points(6),
+            5: _points(8),
         }[marks]
         return {
             "text": stem,
@@ -294,11 +283,13 @@ def _extract_type_and_marks(prompt: str) -> tuple[str, int]:
         return "Match", int(re.search(r"exactly (\d+) pairs", prompt).group(1))
     if "one-mark questions for" in prompt:
         return "Short", 1
-    if "Each answer must be 1-2 lines long" in prompt:
+    if "short-answer questions for" in prompt and "2-mark answer key" in prompt:
         return "Short", 2
-    if "EXACTLY 3 distinct points" in prompt:
+    if "3-mark extended answer" in prompt:
+        return "Long", 3
+    if "3-mark answer is evaluated" in prompt:
         return "Short", 3
-    if "at least 4 distinct points or steps" in prompt:
+    if "5-mark question" in prompt and "5-mark answer key" in prompt:
         return "Long", 5
     raise AssertionError(f"FakeGroqClient could not classify prompt: {prompt[:200]}")
 

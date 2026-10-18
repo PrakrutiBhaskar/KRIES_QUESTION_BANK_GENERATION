@@ -24,16 +24,16 @@ def test_mcq_prompt_mentions_4_options():
     assert "justification" in user
 
 
-def test_short_2_mark_prompt_mentions_one_two_lines():
+def test_short_2_mark_prompt_offers_five_points():
     req = make_request(type=QuestionType.SHORT, marks=2)
     _, user = build_prompt(req)
-    assert "1-2 lines" in user
+    assert "EXACTLY 5 distinct" in user
 
 
-def test_short_3_mark_prompt_mentions_exactly_three():
+def test_short_3_mark_prompt_offers_six_points():
     req = make_request(type=QuestionType.SHORT, marks=3)
     _, user = build_prompt(req)
-    assert "EXACTLY 3" in user
+    assert "EXACTLY 6 distinct" in user
 
 
 def test_long_5_mark_math_prompt_includes_subject_note():

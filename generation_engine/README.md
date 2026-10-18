@@ -55,10 +55,10 @@ Nothing is ever persisted by this module, so "no partial data stored" holds as l
 |---|---|---|
 | MCQ | 1 | 4 options, one correct, 1-line justification |
 | Short | 1 | single word/phrase, no explanation |
-| Short | 2 | 1–2 lines, one supporting point |
-| Short | 3 | exactly 3 distinct points/steps |
-| Long | 3 | exactly 3 distinct points/steps |
-| Long | 5 | ≥3 structured points, 40+ words, exam-response depth |
+| Short | 2 | 5 points (any 2), one short line each |
+| Short | 3 | 6 distinct points/steps (any 3) |
+| Long | 3 | 6 distinct points/steps (any 3) |
+| Long | 5 | 8 structured points (any 5), 60+ words, exam-response depth |
 | Fill | 1 | a question with one or more `___` blanks; the answer is the word or phrase for the blank |
 | Match | 3 or 5 | exactly as many pairs as marks; Column A in `text`, Column B in `options`, key like `1-C, 2-A, 3-B`; items distinct and short, no explanation |
 

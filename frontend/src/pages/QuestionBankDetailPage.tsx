@@ -50,7 +50,7 @@ import {
   createQuestion,
   ApiError,
 } from '../lib/api';
-import type { QuestionEdit } from '../lib/api';
+import type { ExportFormat, QuestionEdit } from '../lib/api';
 
 // ============================================================
 // Question Row
@@ -338,11 +338,11 @@ function answerShapeHint(type: QuestionType, marks: number): string | null {
     case 1:
       return '1 mark: one word or one short line (up to 15 words), without an explanation.';
     case 2:
-      return '2 marks: one or two points, between 3 and 60 words.';
+      return '2 marks: list more points than marks, ideally 5 short points (any 2 earn full marks). Number them 1. 2. 3.';
     case 3:
-      return '3 marks: exactly 3 distinct points or steps. Put each on its own line, or number them 1. 2. 3.';
+      return '3 marks: list more points than marks, ideally 6 distinct points or steps (any 3 earn full marks). Number them 1. 2. 3.';
     case 5:
-      return '5 marks: at least 3 points or steps and at least 40 words. Put each point on its own line or number them.';
+      return '5 marks: list more points than marks, ideally 8 points or steps (any 5 earn full marks) and at least 60 words. Number them.';
     default:
       return null;
   }
@@ -1186,13 +1186,14 @@ export default function QuestionBankDetailPage() {
     setSearchParams(next ? { edit: '1' } : {}, { replace: true });
   };
 
-  const handleExport = async (includeAnswerKey: boolean) => {
+  const handleExport = async (includeAnswerKey: boolean, format: ExportFormat) => {
     setExporting(true);
     try {
-      const res = await exportBank(bank.id, { includeAnswerKey });
+      const res = await exportBank(bank.id, { includeAnswerKey, format });
       window.open(res.downloadUrl, '_blank', 'noopener');
       setExportOpen(false);
-      showToast(includeAnswerKey ? 'PDF exported with answer key.' : 'PDF exported without answer key.', 'success');
+      const label = format === 'docx' ? 'Word file' : 'PDF';
+      showToast(`${label} exported ${includeAnswerKey ? 'with' : 'without'} answer key.`, 'success');
     } catch (err) {
       showToast(errorMessage(err), 'error');
     } finally {
@@ -1246,7 +1247,7 @@ export default function QuestionBankDetailPage() {
               className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-60 transition-colors"
             >
               {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Export PDF
+              Export
             </button>
           </div>
         </div>
@@ -1425,7 +1426,7 @@ export default function QuestionBankDetailPage() {
         open={exportOpen}
         name={bank.name}
         exporting={exporting}
-        onConfirm={(includeAnswerKey) => void handleExport(includeAnswerKey)}
+        onConfirm={(includeAnswerKey, format) => void handleExport(includeAnswerKey, format)}
         onCancel={() => setExportOpen(false)}
       />
     </div>

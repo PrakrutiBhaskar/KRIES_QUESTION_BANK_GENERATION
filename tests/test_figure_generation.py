@@ -63,7 +63,7 @@ def make_request(**overrides) -> GenerationRequest:
 def raw_item(**overrides) -> dict:
     item = {
         "text": "In the figure shown, what is the function of the part labelled A?",
-        "answer": "It controls the activities of the cell. It holds the genetic material.",
+        "answer": "1. It controls the activities of the cell. 2. It holds the genetic material. 3. It directs protein synthesis. 4. It controls cell division. 5. It is enclosed by a nuclear membrane.",
         "explanation": "",
         "topic": "Cell structure",
         "tags": ["cell"],
@@ -116,7 +116,7 @@ def test_prompt_without_figures_is_unchanged():
 def test_figure_prompt_still_matches_the_marks_template():
     # The stubbed Groq clients classify prompts by phrases in the template body.
     _, user = build_prompt(make_request(type=QuestionType.SHORT, marks=3))
-    assert "EXACTLY 3 distinct points" in user
+    assert "EXACTLY 6 distinct" in user
 
 
 # --- reference -> figure_id ----------------------------------------------
@@ -236,7 +236,7 @@ async def test_engine_returns_questions_with_the_right_figure_ids():
             raw_item(),
             raw_item(
                 text="In the figure shown, which stage is labelled 2?",
-                answer="Condensation. Water vapour cools and turns into droplets.",
+                answer="1. Condensation. 2. Water vapour cools. 3. It turns into droplets. 4. Clouds are formed. 5. Heat is released to the air.",
                 figure_ref="F2",
             ),
         ]
@@ -252,7 +252,7 @@ async def test_engine_drops_questions_that_contradict_the_metadata_and_retries()
     good = raw_item()
     good2 = raw_item(
         text="In the figure shown, which stage is labelled 3?",
-        answer="Precipitation. Water falls as rain, hail or snow.",
+        answer="1. Precipitation. 2. Water falls as rain. 3. It may fall as hail. 4. It may fall as snow. 5. It returns water to the land.",
         figure_ref="F2",
     )
     client = ScriptedGroq([bad, good2], [good])

@@ -211,3 +211,14 @@ def match_layout(text: str, options) -> tuple[str, list[tuple[str, str]]] | None
         b = f"({chr(97 + i)}) {opts[i]}" if i < len(opts) else ""
         rows.append((a, b))
     return stem or "Match the following:", rows
+
+
+def choice_note(n_points: int, marks: int) -> str:
+    """'Any 2 of the following 5 points' when the key lists more points than marks.
+
+    Empty when the key has no spare points (a 1-mark answer, or a key whose
+    points do not exceed the marks), so those print exactly as before.
+    """
+    if marks <= 1 or n_points <= marks:
+        return ""
+    return f"[{marks} marks \u2013 any {marks} of the following {n_points} points]"

@@ -53,7 +53,7 @@ Answer depth/format must match the marks allotted, mirroring how a real Karnatak
 |---|---|
 | 1 | Single word/phrase, no explanation |
 | 2 | 1–2 lines with one supporting point |
-| 3 | Exactly 3 distinct points or steps |
+| 3 | 6 distinct points or steps (any 3 earn full marks; marks + 3 points for every answer above 1 mark) |
 | 5 | Detailed, multi-point/step answer, structured like a full exam response |
 
 This mapping is subject-specific: Math's 5-mark answers need step-by-step derivations; Social Science's need distinct labeled sections (e.g. causes/effects); Science should reference diagrams/examples where relevant. MCQs always get a correct option + 1-line justification, regardless of marks.

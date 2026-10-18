@@ -33,7 +33,7 @@ router = APIRouter(prefix="/export", tags=["export"])
 @router.post(
     "/{paper_id}",
     response_model=ExportOut,
-    summary="Compile a paper into a downloadable PDF",
+    summary="Compile a paper into a downloadable PDF or Word (.docx) file",
     responses={404: {"model": ErrorOut}, 503: {"model": ErrorOut}},
 )
 async def export_paper(
@@ -45,8 +45,9 @@ async def export_paper(
     paper = await paper_service.get_paper(session, paper_id, user.id)
     # No body at all means the historical behaviour: questions + answer key.
     include_answer_key = body.include_answer_key if body is not None else True
+    fmt = body.format if body is not None else "pdf"
     path, size = export_service.export_paper(
-        paper, include_answer_key=include_answer_key
+        paper, include_answer_key=include_answer_key, fmt=fmt
     )
     return ExportOut(
         download_url=export_service.public_url(
@@ -60,7 +61,7 @@ async def export_paper(
 @router.get(
     "/files/{filename}",
     response_class=FileResponse,
-    summary="Download a previously exported PDF",
+    summary="Download a previously exported PDF or Word file",
     responses={401: {"model": ErrorOut}, 404: {"model": ErrorOut}},
 )
 async def download_export(
@@ -72,11 +73,13 @@ async def download_export(
             error="invalid_download_token",
         )
     path = export_service.resolve_download(filename)
+    # `inline` lets the web target preview a PDF in a browser tab; the Android
+    # target ignores it and saves the file. Browsers cannot preview Word files,
+    # so those are always sent as an attachment.
+    disposition = "inline" if path.suffix.lower() == ".pdf" else "attachment"
     return FileResponse(
         path,
-        media_type="application/pdf",
+        media_type=export_service.media_type_for(path.name),
         filename=path.name,
-        # `inline` lets the web target preview in a browser tab; the Android
-        # target ignores it and saves the file.
-        headers={"Content-Disposition": f'inline; filename="{path.name}"'},
+        headers={"Content-Disposition": f'{disposition}; filename="{path.name}"'},
     )

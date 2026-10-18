@@ -83,15 +83,24 @@ _THREE_MARK_BANK = [
     ("Explain the process of photosynthesis.",
      "1. Chlorophyll in the leaves absorbs sunlight. "
      "2. Carbon dioxide and water are converted into glucose. "
-     "3. Oxygen is released as a by-product."),
+     "3. Oxygen is released as a by-product. "
+     "4. The glucose formed is stored as starch. "
+     "5. The process occurs mainly in the green parts of the plant. "
+     "6. It requires the presence of light throughout."),
     ("Describe how water reaches the leaves of a tall tree.",
      "1. Roots absorb water from the soil by osmosis. "
      "2. Xylem vessels carry the water upward as a continuous column. "
-     "3. Transpiration from the leaves pulls the column up."),
+     "3. Transpiration from the leaves pulls the column up. "
+     "4. Root pressure helps push water upward in small plants. "
+     "5. Cohesion keeps the water molecules together in the column. "
+     "6. Adhesion helps the water cling to the xylem walls."),
     ("State three conditions required for photosynthesis.",
      "1. Sunlight is needed as the energy source. "
      "2. Carbon dioxide must be available through the stomata. "
-     "3. Water must be supplied by the roots."),
+     "3. Water must be supplied by the roots. "
+     "4. Chlorophyll must be present in the cells. "
+     "5. A suitable temperature must be maintained. "
+     "6. The leaves must be exposed to the light."),
 ]
 
 

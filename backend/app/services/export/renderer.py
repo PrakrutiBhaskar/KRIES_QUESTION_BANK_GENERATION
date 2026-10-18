@@ -27,7 +27,7 @@ from pathlib import Path
 from ...config import settings
 from ...errors import ServiceUnavailableError
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import MATCH_COLUMN_HEADINGS, format_answer, match_key_label, match_layout, split_label
+from .answer_format import MATCH_COLUMN_HEADINGS, choice_note, format_answer, match_key_label, match_layout, split_label
 from .fpdf_renderer import fpdf_available, render_fpdf
 from .html import item_section, ordered_items, render_paper_html, section_totals
 
@@ -319,6 +319,9 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
                 )
                 if len(fa.points) > 1:
                     head = f"{n}. {_esc(fa.lead)}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
+                    note = choice_note(len(fa.points), item.effective_marks)
+                    if note:
+                        head = f"{head} <i>{_esc(note)}</i>" if fa.lead else f"{n}. {_esc(note)}"
                     block.append(Paragraph(head, styles["q"]))
                     for i, point in enumerate(fa.points, start=1):
                         block.append(Paragraph(f"{i}.&nbsp;&nbsp;{_esc(point)}", styles["pt"]))

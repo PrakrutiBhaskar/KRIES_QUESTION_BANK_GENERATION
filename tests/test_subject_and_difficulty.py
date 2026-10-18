@@ -81,7 +81,10 @@ def test_math_5_mark_requires_working():
         Subject.MATH,
         "1. The answer is found by looking at the graph carefully. "
         "2. It matches the expected value shown in the textbook diagram. "
-        "3. The final value is twelve, which is the correct response overall.",
+        "3. The final value is twelve, which is the correct response overall. "
+        "4. This agrees with the other quantities given in the question. "
+        "5. The reading is consistent with the diagram of the problem. "
+        "6. No further calculation is needed to reach the answer here.",
     )
     assert any("Math" in p for p in check_marks_format(bad))
 
@@ -92,7 +95,10 @@ def test_math_5_mark_requires_working():
         "2. Simplify both sides step by step, collecting like terms until "
         "the variable x remains alone on the left hand side. "
         "3. Divide through by the coefficient of x to isolate it. "
-        "4. Therefore x = 12, hence the required value is twelve.",
+        "4. Therefore x = 12, hence the required value is twelve. "
+        "5. Substitute x = 12 back into the equation to check the result. "
+        "6. Hence both sides are equal, which verifies the solution. "
+        "7. State the final answer with its correct unit.",
     )
     assert check_marks_format(good) == []
 
@@ -104,7 +110,9 @@ def test_social_science_5_mark_sections_count_as_points():
         "pay. The nobility held unfair privileges and paid almost nothing. "
         "Effects: The monarchy collapsed entirely within a few years. A new "
         "republic was declared as a direct result of the uprising, and the "
-        "old feudal order was abolished across the country.",
+        "old feudal order was abolished across the country. Trade and "
+        "industry grew freely once the old restrictions were removed. The "
+        "new government also redistributed land among the peasants.",
     )
     assert check_marks_format(q) == []
 

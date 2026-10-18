@@ -13,7 +13,7 @@ import base64
 from html import escape
 
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import MATCH_COLUMN_HEADINGS, format_answer, match_key_label, match_layout, split_label
+from .answer_format import MATCH_COLUMN_HEADINGS, choice_note, format_answer, match_key_label, match_layout, split_label
 
 
 def item_section(item) -> str | None:
@@ -84,6 +84,7 @@ table.match th { background: #f0f0f0; }
 .key ol.pts { margin: 2px 0 4px 18px; padding-left: 14px; }
 .key ol.pts li { margin: 2px 0; }
 .key .ref { color: #444; font-size: 10pt; font-style: italic; margin: 2px 0; }
+.key .choice { color: #2b3a67; font-size: 9.5pt; font-weight: 600; }
 .key .split { display: inline-block; margin-top: 3px; padding: 2px 8px; font-size: 9.5pt;
               font-weight: 600; background: #eef0f6; border-radius: 4px; }
 .footer-note { margin-top: 18px; font-size: 9pt; color: #777; text-align: center; }
@@ -208,6 +209,9 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
                 if len(fa.points) > 1:
                     lead = fa.lead or f"[{item.effective_marks} marks]"
                     parts.append(f" <span class='lead'>{escape(lead)}</span>")
+                    note = choice_note(len(fa.points), item.effective_marks)
+                    if note:
+                        parts.append(f" <em class='choice'>{escape(note)}</em>")
                 if len(fa.points) > 1:
                     parts.append("</div><ol class='pts'>")
                     parts.extend(f"<li>{escape(p)}</li>" for p in fa.points)

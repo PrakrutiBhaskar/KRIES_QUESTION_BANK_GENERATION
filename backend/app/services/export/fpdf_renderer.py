@@ -17,7 +17,7 @@ from io import BytesIO
 from pathlib import Path
 
 from ..figures import answer_key_figure, fit_size_mm, loaded_figure, read_figure_bytes
-from .answer_format import MATCH_COLUMN_HEADINGS, format_answer, match_key_label, match_layout, split_label
+from .answer_format import MATCH_COLUMN_HEADINGS, choice_note, format_answer, match_key_label, match_layout, split_label
 from .html import item_section, ordered_items, section_totals
 
 FONT_DIR = Path(__file__).resolve().parents[3] / "assets" / "fonts"
@@ -218,6 +218,9 @@ def render_fpdf(paper, include_answer_key: bool = True) -> bytes:
                 )
                 if len(fa.points) > 1:
                     head = f"{n}. {fa.lead}" if fa.lead else f"{n}. [{item.effective_marks} marks]"
+                    note = choice_note(len(fa.points), item.effective_marks)
+                    if note:
+                        head = f"{head}  {note}" if fa.lead else f"{n}. {note}"
                     write(head, w=epw, style="B" if fa.lead else "")
                     for i, point in enumerate(fa.points, start=1):
                         pdf.set_x(_LEFT + 6)

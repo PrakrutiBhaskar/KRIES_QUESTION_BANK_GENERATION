@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CircleHelp, Download, Loader2, ShieldCheck, TriangleAlert } from 'lucide-react';
 import type { Difficulty, Question, QuestionType } from '../types';
+import type { ExportFormat } from '../lib/api';
 
 // ============================================================
 // Difficulty badge
@@ -192,7 +193,7 @@ export function ConfirmModal({
 }
 
 // ============================================================
-// Export dialog — asks whether the PDF should carry the answer key
+// Export dialog — asks for the file type (PDF or Word) and whether to carry the answer key
 // ============================================================
 interface ExportModalProps {
   open: boolean;
@@ -200,7 +201,7 @@ interface ExportModalProps {
   name?: string;
   /** True while the export request is in flight. */
   exporting?: boolean;
-  onConfirm: (includeAnswerKey: boolean) => void;
+  onConfirm: (includeAnswerKey: boolean, format: ExportFormat) => void;
   onCancel: () => void;
 }
 
@@ -214,6 +215,7 @@ export function ExportModal(props: ExportModalProps) {
 function ExportModalBody({ name, exporting = false, onConfirm, onCancel }: ExportModalProps) {
   // On by default: it is what the export has always produced.
   const [includeAnswerKey, setIncludeAnswerKey] = useState(true);
+  const [format, setFormat] = useState<ExportFormat>('pdf');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -227,10 +229,37 @@ function ExportModalBody({ name, exporting = false, onConfirm, onCancel }: Expor
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={exporting ? undefined : onCancel} />
       <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm">
-        <h3 id="export-modal-title" className="text-base font-semibold text-slate-900">Export PDF</h3>
+        <h3 id="export-modal-title" className="text-base font-semibold text-slate-900">Export question paper</h3>
         {name && <p className="text-sm text-slate-500 mt-0.5 truncate" title={name}>{name}</p>}
 
-        <div className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 p-3.5">
+        <div className="mt-5" role="radiogroup" aria-label="File format">
+          <p className="text-sm font-medium text-slate-900 mb-2">Format</p>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              ['pdf', 'PDF', 'Ready to print or share'],
+              ['docx', 'Word', 'Editable .docx file'],
+            ] as const).map(([value, label, hint]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={format === value}
+                disabled={exporting}
+                onClick={() => setFormat(value)}
+                className={`text-left rounded-xl border p-3 transition-colors disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                  format === value
+                    ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
+                    : 'border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                <span className="block text-sm font-semibold text-slate-900">{label}</span>
+                <span className="block text-xs text-slate-500 mt-0.5">{hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-slate-200 p-3.5">
           <div className="flex-1 min-w-0">
             <p id="export-key-label" className="text-sm font-medium text-slate-900">Include answer key</p>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -267,12 +296,12 @@ function ExportModalBody({ name, exporting = false, onConfirm, onCancel }: Expor
             Cancel
           </button>
           <button
-            onClick={() => onConfirm(includeAnswerKey)}
+            onClick={() => onConfirm(includeAnswerKey, format)}
             disabled={exporting}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-60 transition-colors"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Export
+            Export {format === 'docx' ? 'Word' : 'PDF'}
           </button>
         </div>
       </div>

@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .schemas import VALID_MARKS_BY_TYPE, GenerationRequest, QuestionType, figure_ref_map
-from .subject_formats import get_prompt_note
+from .subject_formats import answer_points_for, get_prompt_note
 
 # ---------------------------------------------------------------------------
 # JSON output contract shared by every prompt
@@ -238,26 +238,37 @@ def _prompt_short_1_mark(request: GenerationRequest) -> str:
 Each answer must be a single word, a short phrase, or one direct factual line — the kind of answer a 1-mark question is awarded full marks for (e.g. "What is the SI unit of force?" -> "Newton"). Do NOT explain, justify, or add working. Leave "explanation" as an empty string."""
 
 
+def _points_note(marks: int, count: int) -> str:
+    """Shared instruction: list more points than the marks allotted ("any N of M")."""
+    total = answer_points_for(marks)
+    return (
+        f"\n\nThis is a {marks}-mark answer key that offers a CHOICE of points: "
+        f"list EXACTLY {total} distinct, independently correct points, so a "
+        f"student can score full marks by writing ANY {marks} of them. Each point "
+        "must stand on its own (no point may depend on another, and no two "
+        "may repeat the same idea). Number them \"1. \", \"2. \", ... on their own "
+        'lines inside the object\'s "answer" string. This numbering has nothing '
+        "to do with how many objects are in the outer array (that count is "
+        f"always {count}, one object per question)."
+    )
+
+
 def _prompt_short_2_marks(request: GenerationRequest) -> str:
-    return f"""Generate {request.count} short-answer questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. Each answer must be 1-2 lines long and include exactly one supporting reason or point, matching how a 2-mark answer is evaluated on a Karnataka State Board exam. Do not pad the answer beyond what a 2-mark response would contain."""
+    return f"""Generate {request.count} short-answer questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. The question should be answerable with several short points (for example "Write any two ..." or "Give two reasons ..."), matching how a 2-mark answer is evaluated on a Karnataka State Board exam. Each point is one short line.""" + _points_note(2, request.count)
 
 
 def _prompt_short_3_marks(request: GenerationRequest) -> str:
-    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. Each answer must contain EXACTLY 3 distinct points or steps, matching how a 3-mark answer is evaluated on a Karnataka State Board exam.
-
-This numbering is INSIDE each object's "answer" field only — it has nothing to do with how many objects are in the outer array (that count is always {request.count}, one object per question). Within each "answer" string, number the three points "1. ", "2. ", "3. ", each on its own line. Do not merge two points into one, and do not add a fourth."""
+    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. Each question should be answerable with several distinct points or steps, matching how a 3-mark answer is evaluated on a Karnataka State Board exam. Each point is one concise sentence.""" + _points_note(3, request.count)
 
 
 def _prompt_long_5_marks(request: GenerationRequest) -> str:
-    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. Each answer must be a detailed, structured response worth full marks on a Karnataka State Board 5-mark question: at least 4 distinct points or steps, and a reference to a diagram or worked example where relevant.
+    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. Each answer must be a detailed, structured response worth full marks on a Karnataka State Board 5-mark question, and may refer to a diagram or worked example where relevant. Each point is developed in one or two full sentences.
 
-Structure the answer explicitly inside the "answer" string — numbered steps each on their own line ("1. ... 2. ... 3. ..."), or labeled sections ("Causes: ... Effects: ...") — rather than leaving the structure implicit in a single paragraph."""
+You may use labeled sections (e.g. "Causes:" / "Effects:") as long as every point inside them is still numbered.""" + _points_note(5, request.count)
 
 
 def _prompt_long_3_marks(request: GenerationRequest) -> str:
-    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. These are long-answer (explain / describe / discuss) questions worth 3 marks: each answer must be a structured response with EXACTLY 3 distinct points or steps, each developed in a full sentence, matching how a 3-mark extended answer is evaluated on a Karnataka State Board exam.
-
-Number the three points "1. ", "2. ", "3. " inside each object's "answer" string, each on its own line. This numbering has nothing to do with how many objects are in the outer array (that count is always {request.count}, one object per question). Do not merge two points into one, and do not add a fourth."""
+    return f"""Generate {request.count} questions for {request.subject.value}, chapter "{request.chapter}", difficulty {request.difficulty.value}. These are long-answer (explain / describe / discuss) questions worth 3 marks, matching how a 3-mark extended answer is evaluated on a Karnataka State Board exam. Each point is developed in a full sentence.""" + _points_note(3, request.count)
 
 
 def _prompt_fill(request: GenerationRequest) -> str:

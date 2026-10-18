@@ -22,6 +22,18 @@ from typing import Optional
 from .schemas import Subject
 
 
+# Answer keys for questions worth more than 1 mark list MORE points than the
+# marks allotted, so the marker (or the student) can pick "any N of M": a
+# 2-mark question gets 5 points, a 3-mark one 6, a 5-mark one 8. One mark is
+# one point, so 1-mark answers are unaffected.
+EXTRA_ANSWER_POINTS = 3
+
+
+def answer_points_for(marks: int) -> int:
+    """How many points an answer key should list for a question worth `marks`."""
+    return marks if marks <= 1 else marks + EXTRA_ANSWER_POINTS
+
+
 @dataclass(frozen=True)
 class MarksRule:
     """
@@ -69,12 +81,12 @@ class SubjectFormat:
 DEFAULT_MARKS_RULES: dict[int, MarksRule] = {
     # Single word/phrase or one-line fact, no explanation.
     1: MarksRule(max_points=1, max_words=15, forbid_explanation=True),
-    # 1-2 lines with one supporting reason/point.
-    2: MarksRule(min_points=1, max_points=2, min_words=3, max_words=60),
-    # Exactly 3 distinct points or steps.
-    3: MarksRule(min_points=3, max_points=3),
-    # Detailed multi-point/step answer, exam-response style.
-    5: MarksRule(min_points=3, min_words=40),
+    # More than 2 short points (target 5): the student writes any 2.
+    2: MarksRule(min_points=3, max_points=6, min_words=8, max_words=160),
+    # More than 3 points (target 6): the student writes any 3.
+    3: MarksRule(min_points=4, max_points=7, max_words=240),
+    # More than 5 points (target 8), exam-response style: the student writes any 5.
+    5: MarksRule(min_points=6, min_words=60),
 }
 
 
@@ -85,16 +97,16 @@ DEFAULT_MARKS_RULES: dict[int, MarksRule] = {
 SUBJECT_FORMATS: dict[Subject, SubjectFormat] = {
     Subject.MATH: SubjectFormat(
         prompt_note=(
-            "Show only as much working as the mark value implies. Follow the "
-            "exact point/step count given in the instructions for this "
-            "question's mark value below — do not add extra steps beyond "
-            "what's requested, and for 5-mark answers show the FULL "
-            "step-by-step derivation, numbering each step."
+            "Follow the exact point/step count given in the instructions for "
+            "this question's mark value below. For answers worth more than 1 "
+            "mark, list the extra alternative points asked for as separate "
+            "numbered items; for 5-mark answers each numbered item should be "
+            "one step of the derivation or a separate valid point."
         ),
         marks_rules={
             5: MarksRule(
-                min_points=3,
-                min_words=40,
+                min_points=6,
+                min_words=60,
                 required_pattern=r"step|derive|substitut|therefore|hence|=",
                 required_pattern_message=(
                     "Math 5-mark answers should show step-by-step derivation "
@@ -112,8 +124,8 @@ SUBJECT_FORMATS: dict[Subject, SubjectFormat] = {
         ),
         marks_rules={
             5: MarksRule(
-                min_points=3,
-                min_words=40,
+                min_points=6,
+                min_words=60,
                 required_pattern=r"cause|effect|reason|consequence|impact|result",
                 required_pattern_message=(
                     "Social Science 5-mark answers should reference "
@@ -159,8 +171,8 @@ SUBJECT_FORMATS: dict[Subject, SubjectFormat] = {
             # cleanly onto the English-tuned bounds, so length limits are
             # loosened and point structure carries the check instead.
             1: MarksRule(max_points=1, max_words=20, forbid_explanation=True),
-            2: MarksRule(min_points=1, max_points=2, min_words=2, max_words=80),
-            5: MarksRule(min_points=3, min_words=25),
+            2: MarksRule(min_points=3, max_points=6, min_words=3, max_words=240),
+            5: MarksRule(min_points=6, min_words=30),
         },
     ),
 }

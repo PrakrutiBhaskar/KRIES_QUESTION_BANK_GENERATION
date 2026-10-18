@@ -586,3 +586,16 @@ async def test_a_role_change_by_the_database_takes_effect_on_the_next_request(ad
         await session.execute(update(User).where(User.email == "alice@school.test").values(role="Teacher"))
         await session.commit()
     assert (await client.post("/figures", files={"file": ("f.png", make_png(), "image/png")})).status_code == 403
+
+
+async def test_word_export_embeds_question_and_answer_figures(client, admin_client, db_session):
+    from io import BytesIO
+
+    from docx import Document
+
+    from app.services.export.docx_renderer import render_docx
+
+    paper = await _paper_with_figures(client, admin_client, db_session, n=1)
+    doc = Document(BytesIO(render_docx(paper)))
+    pictures = [r for r in doc.part.rels.values() if "image" in r.reltype]
+    assert len(pictures) == 2  # the question's figure and the answer key's figure

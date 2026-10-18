@@ -104,26 +104,52 @@ def test_1_mark_rejects_explanation():
     assert any("explanation" in p for p in check_marks_format(q))
 
 
-def test_2_mark_rejects_three_points():
-    q = make_short(2, "Point one. Point two. Point three.")
+def test_2_mark_rejects_only_two_points():
+    # A 2-mark key must offer MORE than 2 points (any 2 of 5), not exactly 2.
+    q = make_short(2, "1. Point one is stated here. 2. Point two is stated here.")
     problems = check_marks_format(q)
     assert any("2-mark" in p for p in problems)
 
 
-def test_2_mark_accepts_one_or_two_lines():
+def test_2_mark_rejects_a_single_line():
     q = make_short(2, "Ice floats because it is less dense than liquid water, due to hydrogen bonding.")
+    assert any("2-mark" in p for p in check_marks_format(q))
+
+
+def test_2_mark_accepts_five_points():
+    q = make_short(
+        2,
+        "1. Ice is less dense than water. 2. Hydrogen bonds hold ice in an open lattice. "
+        "3. Ice has a lower mass per unit volume. 4. Water expands on freezing. "
+        "5. The trapped space makes ice lighter.",
+    )
     assert check_marks_format(q) == []
 
 
-def test_3_mark_requires_exactly_three_points():
-    q = make_short(3, "1. First point. 2. Second point.")
+def test_2_mark_rejects_far_too_many_points():
+    q = make_short(2, " ".join(f"{i}. Point number {i} is here." for i in range(1, 10)))
+    assert any("at most" in p for p in check_marks_format(q))
+
+
+def test_3_mark_requires_more_than_three_points():
+    q = make_short(3, "1. First point. 2. Second point. 3. Third point.")
     problems = check_marks_format(q)
     assert any("3-mark" in p for p in problems)
 
 
-def test_3_mark_passes_with_three_points():
-    q = make_short(3, "1. First point. 2. Second point. 3. Third point.")
+def test_3_mark_passes_with_six_points():
+    q = make_short(
+        3,
+        "1. First point. 2. Second point. 3. Third point. "
+        "4. Fourth point. 5. Fifth point. 6. Sixth point.",
+    )
     assert check_marks_format(q) == []
+
+
+def test_answer_points_for_offers_extra_points():
+    from generation_engine.subject_formats import answer_points_for
+
+    assert [answer_points_for(m) for m in (1, 2, 3, 5)] == [1, 5, 6, 8]
 
 
 def test_5_mark_requires_multiple_points_and_length():

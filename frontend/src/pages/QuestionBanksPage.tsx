@@ -19,6 +19,7 @@ import { DifficultyBadge, SubjectDot, EmptyState, ConfirmModal, ExportModal } fr
 import { BankGridSkeleton, BankListSkeleton } from '../components/Skeleton';
 import { formatDate } from '../lib/utils';
 import { errorMessage, exportBank } from '../lib/api';
+import type { ExportFormat } from '../lib/api';
 
 const SUBJECTS: Array<Subject | 'All'> = ['All', 'Math', 'Science', 'Social Science', 'English', 'Kannada'];
 const DIFFICULTIES: Array<Difficulty | 'All'> = ['All', 'easy', 'medium', 'hard', 'mixed'];
@@ -74,14 +75,14 @@ export default function QuestionBanksPage() {
     }
   };
 
-  const handleExport = async (id: string, name: string, includeAnswerKey: boolean) => {
+  const handleExport = async (id: string, name: string, includeAnswerKey: boolean, format: ExportFormat) => {
     setExportingId(id);
     try {
-      const res = await exportBank(id, { includeAnswerKey });
+      const res = await exportBank(id, { includeAnswerKey, format });
       window.open(res.downloadUrl, '_blank', 'noopener');
       setExportTarget(null);
       showToast(
-        `"${name}" exported as PDF${includeAnswerKey ? ' with answer key' : ' without answer key'}.`,
+        `"${name}" exported as ${format === 'docx' ? 'Word' : 'PDF'}${includeAnswerKey ? ' with answer key' : ' without answer key'}.`,
         'success',
       );
     } catch (err) {
@@ -289,8 +290,8 @@ export default function QuestionBanksPage() {
                   onClick={() => setExportTarget({ id: bank.id, name: bank.name })}
                   disabled={exportingId === bank.id}
                   className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded-lg transition-colors"
-                  aria-label="Export PDF"
-                  title="Export PDF"
+                  aria-label="Export"
+                  title="Export"
                 >
                   {exportingId === bank.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 </button>
@@ -369,8 +370,8 @@ export default function QuestionBanksPage() {
         open={exportTarget !== null}
         name={exportTarget?.name}
         exporting={exportTarget !== null && exportingId === exportTarget.id}
-        onConfirm={(includeAnswerKey) =>
-          exportTarget && void handleExport(exportTarget.id, exportTarget.name, includeAnswerKey)
+        onConfirm={(includeAnswerKey, format) =>
+          exportTarget && void handleExport(exportTarget.id, exportTarget.name, includeAnswerKey, format)
         }
         onCancel={() => setExportTarget(null)}
       />

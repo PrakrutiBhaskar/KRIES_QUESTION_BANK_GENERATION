@@ -98,9 +98,13 @@ real Karnataka State Board exam is evaluated:
 | Marks | Expected answer format |
 |---|---|
 | 1 | Single word/phrase, no explanation |
-| 2 | 1–2 lines with one supporting point |
-| 3 | Exactly 3 distinct points or steps |
-| 5 | Detailed, multi-point/step answer, structured like a full exam response |
+| 2 | 5 short points (any 2 earn full marks) |
+| 3 | 6 distinct points or steps (any 3 earn full marks) |
+| 5 | 8 detailed points/steps (any 5 earn full marks), structured like a full exam response |
+
+Papers export as **PDF or Word (.docx)**: send `{"format": "docx"}` (default `"pdf"`) to `POST /export/{paper_id}`; the export dialog has a PDF / Word choice. The Word file mirrors the PDF layout, including Kannada text, figures and the answer key.
+
+Answers worth more than 1 mark deliberately list **more points than marks** (marks + 3). The printed answer key reads "[2 marks – any 2 of the following 5 points]". The target comes from `answer_points_for()` in `generation_engine/subject_formats.py`; change `EXTRA_ANSWER_POINTS` there to adjust it.
 
 Supported (type, marks) combinations, enforced by the engine and exposed at
 `GET /generation/combinations`:
@@ -109,7 +113,7 @@ Supported (type, marks) combinations, enforced by the engine and exposed at
 |---|---|---|
 | MCQ | 1 | 4 options, one correct |
 | Short | 1, 2, 3 | formats as in the table above |
-| Long | 3, 5 | 3 marks: exactly 3 points; 5 marks: at least 3 points, 40+ words |
+| Long | 3, 5 | 3 marks: 6 points (any 3); 5 marks: 8 points (any 5), 60+ words |
 | Fill | 1 | one or more blanks written as `___` |
 | Match | 3, 5 | marks = number of pairs; Column A items and Column B items must each be distinct |
 
