@@ -22,6 +22,7 @@ class Subject(str, Enum):
     SOCIAL_SCIENCE = "Social Science"
     ENGLISH = "English"
     KANNADA = "Kannada"
+    HINDI = "Hindi"
 
 
 class QuestionType(str, Enum):

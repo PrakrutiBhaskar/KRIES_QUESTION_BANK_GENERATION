@@ -130,6 +130,7 @@ export function generateMockQuestions(formData: GenerateFormData): Question[] {
     'Social Science': ['History', 'Geography', 'Civics', 'Economics'],
     English: ['Comprehension', 'Grammar', 'Literature', 'Writing Skills'],
     Kannada: ['ವ್ಯಾಕರಣ', 'ಗದ್ಯ', 'ಪದ್ಯ', 'ಪ್ರಬಂಧ'],
+    Hindi: ['व्याकरण', 'गद्य', 'पद्य', 'पत्र-लेखन'],
   };
 
   const topics = subjectTopics[formData.subject] || ['General'];

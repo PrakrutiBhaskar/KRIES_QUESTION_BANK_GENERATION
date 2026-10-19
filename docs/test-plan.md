@@ -8,7 +8,7 @@
 | Generate short answer, 3 marks | Answer contains exactly 3 distinct points/steps |
 | Generate long answer, 5 marks | Answer contains multiple structured points/sections |
 | Generate batch of N questions | Returns exactly N questions, no duplicates within batch |
-| Generate for each subject (Math, Science, Social Science, English, Kannada) | Output respects subject-specific answer structure (see prompt-library.md) |
+| Generate for each subject (Math, Science, Social Science, English, Kannada, Hindi) | Output respects subject-specific answer structure (see prompt-library.md) |
 | Malformed/invalid subject or chapter | Returns `400` error, no partial data stored |
 | Groq API failure/timeout | Returns `502` error, no partial data stored |
 | Generated output fails schema validation | Returns `422`, question is not persisted |

@@ -49,7 +49,7 @@ _STYLE = """
 @page { size: A4; margin: 18mm 16mm 20mm 16mm;
         @bottom-center { content: "Page " counter(page) " of " counter(pages);
                          font-size: 9pt; color: #666; } }
-body { font-family: "Noto Sans", "Noto Sans Kannada", "DejaVu Sans", sans-serif;
+body { font-family: "Noto Sans", "Noto Sans Kannada", "Noto Sans Devanagari", "DejaVu Sans", sans-serif;
        font-size: 11pt; line-height: 1.45; color: #111; }
 .header { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px;
           margin-bottom: 14px; }

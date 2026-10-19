@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from pathlib import Path
 from typing import Iterable, Mapping, Optional
 
@@ -54,11 +55,14 @@ from .schemas import Subject
 
 def _normalize_chapter(name: str) -> str:
     name = name.replace("\u200c", "").replace("\u200d", "")  # ZWNJ/ZWJ: typed inconsistently
+    # Nukta letters can be typed precomposed or as base + nukta (e.g. U+095E vs U+092B U+093C).
+    name = unicodedata.normalize("NFC", name)
     name = name.strip().lower()
     name = re.sub(r"^(chapter|ch\.?|adhyaya)\s*\d+\s*[:.\-]?\s*", "", name)
-    # \w drops Kannada vowel signs and virama (they're combining marks), which
-    # would collapse distinct titles; keep the whole Kannada block.
-    name = re.sub(r"[^\w\s\u0C80-\u0CFF]", "", name)
+    # \w drops Kannada/Devanagari vowel signs and virama (they're combining
+    # marks), which would collapse distinct titles; keep the whole Devanagari
+    # (U+0900-097F) and Kannada (U+0C80-0CFF) blocks.
+    name = re.sub(r"[^\w\s\u0900-\u097F\u0C80-\u0CFF]", "", name)
     return re.sub(r"\s+", " ", name).strip()
 
 

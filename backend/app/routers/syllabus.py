@@ -4,7 +4,7 @@ Syllabus / reference data (api-contract.md Section 6).
   GET /subjects
   GET /subjects/{subject}/chapters
 
-`GET /subjects` always returns all five subjects from the shared contract,
+`GET /subjects` always returns all six subjects from the shared contract,
 whether or not any questions exist for them yet — the frontend's subject
 picker shouldn't start empty on a fresh install. Chapters, by contrast, are
 only real once they're either seeded from a syllabus file or created by a

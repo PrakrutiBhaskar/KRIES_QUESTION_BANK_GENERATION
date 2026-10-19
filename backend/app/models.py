@@ -70,7 +70,7 @@ class Subject(Base):
     __tablename__ = "subjects"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    # Constrained to the five subjects in the shared contract. Stored as text
+    # Constrained to the six subjects in the shared contract. Stored as text
     # (not an enum) because db-schema.md says text, and because adding a
     # subject post-MVP shouldn't need a migration on an enum type.
     name: Mapped[str] = mapped_column(Text, nullable=False, unique=True)

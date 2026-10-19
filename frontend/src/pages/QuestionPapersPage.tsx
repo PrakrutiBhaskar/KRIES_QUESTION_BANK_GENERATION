@@ -24,7 +24,7 @@ import type {
   Subject,
 } from '../types';
 
-const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
+const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada', 'Hindi'];
 const GRADES: Grade[] = [7, 8, 9];
 const TYPE_LABEL: Record<QuestionType, string> = {
   MCQ: 'MCQ',

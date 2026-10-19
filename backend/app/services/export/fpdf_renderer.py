@@ -1,15 +1,17 @@
 """
 Paper -> PDF via fpdf2 (pure pip, no system libraries).
 
-This is the backend that makes Kannada work on machines where WeasyPrint's
-native libraries (pango/cairo) aren't installed — notably Windows. fpdf2 runs
-text through HarfBuzz (``uharfbuzz``), which does the glyph reordering and
-conjunct (ottakshara) substitution Kannada needs. ReportLab cannot do that.
+This is the backend that makes Kannada and Hindi work on machines where
+WeasyPrint's native libraries (pango/cairo) aren't installed — notably Windows.
+fpdf2 runs text through HarfBuzz (``uharfbuzz``), which does the glyph
+reordering and conjunct (ottakshara / Devanagari ligature) substitution those
+scripts need. ReportLab cannot do that.
 
-Fonts are bundled in ``backend/assets/fonts`` (Noto Sans + Noto Sans Kannada,
-SIL Open Font License), so nothing has to be installed system-wide. Latin text
-uses Noto Sans; any Kannada glyph falls back to Noto Sans Kannada per character,
-so mixed English/Kannada lines render correctly.
+Fonts are bundled in ``backend/assets/fonts`` (Noto Sans + Noto Sans Kannada +
+Noto Sans Devanagari, SIL Open Font License), so nothing has to be installed
+system-wide. Latin text uses Noto Sans; any Kannada or Devanagari glyph falls
+back to its own Noto font per character, so mixed English/Kannada/Hindi lines
+render correctly.
 """
 from __future__ import annotations
 
@@ -37,7 +39,12 @@ def fpdf_available() -> bool:
         return False
     return all(
         (FONT_DIR / name).exists()
-        for name in ("NotoSans-Regular.ttf", "NotoSans-Bold.ttf", "NotoSansKannada-Regular.ttf")
+        for name in (
+            "NotoSans-Regular.ttf",
+            "NotoSans-Bold.ttf",
+            "NotoSansKannada-Regular.ttf",
+            "NotoSansDevanagari-Regular.ttf",
+        )
     )
 
 
@@ -82,7 +89,10 @@ def render_fpdf(paper, include_answer_key: bool = True) -> bytes:
     pdf.add_font("NotoKn", "", str(FONT_DIR / "NotoSansKannada-Regular.ttf"))
     kn_bold = FONT_DIR / "NotoSansKannada-Bold.ttf"
     pdf.add_font("NotoKn", "B", str(kn_bold if kn_bold.exists() else FONT_DIR / "NotoSansKannada-Regular.ttf"))
-    pdf.set_fallback_fonts(["NotoKn"], exact_match=False)
+    pdf.add_font("NotoDeva", "", str(FONT_DIR / "NotoSansDevanagari-Regular.ttf"))
+    deva_bold = FONT_DIR / "NotoSansDevanagari-Bold.ttf"
+    pdf.add_font("NotoDeva", "B", str(deva_bold if deva_bold.exists() else FONT_DIR / "NotoSansDevanagari-Regular.ttf"))
+    pdf.set_fallback_fonts(["NotoKn", "NotoDeva"], exact_match=False)
     pdf.set_text_shaping(True)
 
     pdf.add_page()

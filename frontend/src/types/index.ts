@@ -4,7 +4,7 @@
 // (docs/api-contract.md) plus a few UI-only view models.
 // ============================================================
 
-export type Subject = 'Math' | 'Science' | 'Social Science' | 'English' | 'Kannada';
+export type Subject = 'Math' | 'Science' | 'Social Science' | 'English' | 'Kannada' | 'Hindi';
 export type Grade = 7 | 8 | 9;
 export type QuestionType = 'MCQ' | 'Short' | 'Long' | 'Fill' | 'Match';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'mixed';

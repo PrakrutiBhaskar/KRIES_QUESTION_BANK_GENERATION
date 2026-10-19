@@ -22,7 +22,7 @@ import { formatDate } from '../lib/utils';
 import { errorMessage, exportBank } from '../lib/api';
 import type { ExportFormat } from '../lib/api';
 
-const SUBJECTS: Array<Subject | 'All'> = ['All', 'Math', 'Science', 'Social Science', 'English', 'Kannada'];
+const SUBJECTS: Array<Subject | 'All'> = ['All', 'Math', 'Science', 'Social Science', 'English', 'Kannada', 'Hindi'];
 const DIFFICULTIES: Array<Difficulty | 'All'> = ['All', 'easy', 'medium', 'hard', 'mixed'];
 
 export default function QuestionBanksPage() {

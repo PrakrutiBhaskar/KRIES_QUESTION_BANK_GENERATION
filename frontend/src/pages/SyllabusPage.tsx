@@ -13,7 +13,7 @@ import { useApp } from '../hooks/useApp';
 import { ConfirmModal, EmptyState } from '../components/ui';
 import { parseChapters } from '../lib/syllabus';
 
-const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
+const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada', 'Hindi'];
 const GRADES = [7, 8, 9];
 
 const INPUT =

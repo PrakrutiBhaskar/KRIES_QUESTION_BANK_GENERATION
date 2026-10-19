@@ -1,6 +1,6 @@
 import type { AnalyticsData, Question } from '../types';
 
-const SUBJECT_ORDER = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
+const SUBJECT_ORDER = ['Math', 'Science', 'Social Science', 'English', 'Kannada', 'Hindi'];
 
 function countBy<T>(items: T[], key: (item: T) => string): Map<string, number> {
   const m = new Map<string, number>();

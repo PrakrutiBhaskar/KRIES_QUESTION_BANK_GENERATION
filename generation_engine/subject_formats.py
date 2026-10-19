@@ -175,6 +175,26 @@ SUBJECT_FORMATS: dict[Subject, SubjectFormat] = {
             5: MarksRule(min_points=6, min_words=30),
         },
     ),
+    Subject.HINDI: SubjectFormat(
+        prompt_note=(
+            "Write the question text, options and answer in Hindi, in Devanagari "
+            "script (not transliterated into English letters). Use the standard "
+            "danda (\u0964) to end sentences. Questions must be self-contained: if "
+            "the question is passage-, poem- or grammar-based, include the short "
+            "passage, lines or sentence needed to answer it directly in the "
+            "question text rather than assuming an external text the student "
+            "cannot see. Keep the language simple and suited to a Class 7 "
+            "third-language learner."
+        ),
+        marks_rules={
+            # Hindi is a Class 7 third language: answers are short sentences, so
+            # the minimum lengths are loosened. Devanagari is space-delimited, so
+            # the word counts still mean something (unlike Kannada).
+            1: MarksRule(max_points=1, max_words=20, forbid_explanation=True),
+            2: MarksRule(min_points=3, max_points=6, min_words=3, max_words=200),
+            5: MarksRule(min_points=6, min_words=30),
+        },
+    ),
 }
 
 

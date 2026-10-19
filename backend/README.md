@@ -98,7 +98,7 @@ password reset, the download link, and `/health`.
 | `POST` | `/practice/sessions` | Start a session (answers withheld) |
 | `GET` | `/practice/sessions/{id}` | Resume a session |
 | `GET` | `/practice/sessions/{id}/reveal/{question_id}` | Reveal one answer |
-| `GET` | `/subjects` | All five subjects |
+| `GET` | `/subjects` | All six subjects |
 | `GET` | `/subjects/{subject}/chapters` | Chapters + question counts |
 
 Beyond the original contract: `GET /papers`, `GET /practice/sessions/{id}`,
@@ -247,7 +247,7 @@ section on `paper_questions.section` (migration `0004`). A blueprint paper holds
 Three backends, selected by `PDF_RENDERER` (`auto` | `weasyprint` | `reportlab` | `fpdf`):
 
 - **WeasyPrint** — preferred. Renders the HTML in `services/export/html.py` and shapes complex scripts
-  correctly via Pango/HarfBuzz, which matters because **Kannada** is one of the five subjects. Needs system
+  correctly via Pango/HarfBuzz, which matters because **Kannada** and **Hindi** are two of the six subjects. Needs system
   libraries:
   ```bash
   apt-get install libpango-1.0-0 libpangoft2-1.0-0 libcairo2 \
@@ -378,7 +378,7 @@ cache or used in practice sessions. Settings: `ENABLE_ANSWER_RULE_CHECKS`, `ENAB
 
 ## Syllabus data
 
-`data/syllabus.json` ships a hand-transcribed, grade-scoped chapter list for the five subjects (296 chapter names;
+`data/syllabus.json` ships a hand-transcribed, grade-scoped chapter list for the six subjects (351 chapter names;
 see `data/README.md` for how each subject was sourced and what still needs confirming),
 loaded through `SYLLABUS_JSON_PATH` and seeded into the database at startup so the chapter picker isn't empty.
 With a syllabus loaded, unknown chapters, and chapters outside the requested grade, are rejected with a 400. Leave `SYLLABUS_JSON_PATH=` empty to run without

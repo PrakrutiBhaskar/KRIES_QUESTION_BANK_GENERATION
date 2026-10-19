@@ -16,7 +16,7 @@ import { FigureImage } from '../components/FigureImage';
 import { ConfirmModal, EmptyState } from '../components/ui';
 import { FigureGridSkeleton } from '../components/Skeleton';
 
-const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
+const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada', 'Hindi'];
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // matches the backend's MAX_FIGURE_BYTES default
 const ACCEPT = 'image/png,image/jpeg,image/gif,image/webp';
 

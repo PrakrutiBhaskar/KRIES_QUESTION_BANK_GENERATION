@@ -9,7 +9,7 @@ Fill in actual wireframe sketches/Figma links per screen as they're designed. Th
 - (Post-MVP: skip this once auth/login exists)
 
 ### 2. Subject & chapter selector
-- List of subjects (Math, Science, Social Science, English, Kannada)
+- List of subjects (Math, Science, Social Science, English, Kannada, Hindi)
 - Chapter list per subject (from parsed syllabus data)
 - Topic is not a separate selection step — it's shown as a tag on each generated question (e.g. in the question bank browser filters), not part of the selection hierarchy
 

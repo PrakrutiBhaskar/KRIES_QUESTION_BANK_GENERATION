@@ -6,8 +6,9 @@ sections, questions with marks on the right, options / match table, figures,
 then the Answer Key on a fresh page) so the two formats read the same, but the
 result stays fully editable in Word.
 
-Kannada: runs carry both the Latin and the complex-script font names, so Word
-shapes Kannada text correctly (it uses the complex-script font slot for it).
+Kannada and Hindi: runs carry both the Latin and the complex-script font names, so
+Word shapes Kannada/Devanagari text correctly (it uses the complex-script font slot
+for it; the slot is set to Noto Sans Devanagari for runs containing Devanagari).
 """
 from __future__ import annotations
 
@@ -38,6 +39,7 @@ logger = logging.getLogger("backend.export")
 _OPTION_LABELS = "abcdefgh"
 _BODY_FONT = "Noto Sans"
 _KANNADA_FONT = "Noto Sans Kannada"
+_DEVANAGARI_FONT = "Noto Sans Devanagari"
 _GREY = RGBColor(0x44, 0x44, 0x44)
 _BLUE = RGBColor(0x2B, 0x3A, 0x67)
 
@@ -74,7 +76,9 @@ def _set_fonts(run, *, size: float | None = None, bold=None, italic=None, color=
         rpr.append(rfonts)
     rfonts.set(qn("w:ascii"), _BODY_FONT)
     rfonts.set(qn("w:hAnsi"), _BODY_FONT)
-    rfonts.set(qn("w:cs"), _KANNADA_FONT)
+    # Word has one complex-script font slot per run: pick it by the run's script.
+    has_devanagari = any("\u0900" <= ch <= "\u097f" for ch in (run.text or ""))
+    rfonts.set(qn("w:cs"), _DEVANAGARI_FONT if has_devanagari else _KANNADA_FONT)
     rfonts.set(qn("w:eastAsia"), _BODY_FONT)
     if size is not None:
         run.font.size = Pt(size)

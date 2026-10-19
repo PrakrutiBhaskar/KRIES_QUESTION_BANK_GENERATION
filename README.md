@@ -26,14 +26,14 @@ into a self-check practice session with answers withheld until revealed.
 | Area | Decision |
 |---|---|
 | Board / Grades | Karnataka State Board, grades 7–9 |
-| Subjects | Math, Science, Social Science, English(1st language), Kannada(1st language) |
+| Subjects | Math, Science, Social Science, English(1st language), Kannada(1st language), Hindi(3rd language, Classes 7-9) |
 | Question types | MCQ, Short answer, Long answer, Fill in the blank, Match the following |
 | LLM API for generation | Groq |
 | Frontend | **React + TypeScript + Vite + Tailwind web app** (built)|
 | Backend | Python, FastAPI |
 | Database | PostgreSQL |
 | Auth | Sign-up / sign-in with JWT bearer tokens; roles Teacher, Student and Admin; password reset by emailed single-use link; papers and practice sessions are private to their owner; per-user and per-IP rate limits (see `docs/api-contract.md` and `backend/README.md`) |
-| Syllabus data source | Parsed from textbook PDFs. The ingestion CLIs are built; the shipped `syllabus.json` (296 chapter names across the five subjects, scoped per grade) was transcribed by hand from textbook contents pages, not produced by the CLI |
+| Syllabus data source | Parsed from textbook PDFs. The ingestion CLIs are built; the shipped `syllabus.json` (351 chapter names across the six subjects, scoped per grade) was transcribed by hand from textbook contents pages, not produced by the CLI |
 | Diagrams | A shared figure library, managed by administrators only. Questions can carry a diagram in the paper and a possibly different one in the answer key |
 | Hosting | AWS |
 
@@ -68,7 +68,7 @@ Groq API
 ```json
 {
   "id": "uuid",
-  "subject": "Math | Science | Social Science | English | Kannada",
+  "subject": "Math | Science | Social Science | English | Kannada | Hindi",
   "chapter": "string",
   "type": "MCQ | Short | Long | Fill | Match",
   "grade": 8,
@@ -179,7 +179,7 @@ python scripts/smoke_generate.py --all-subjects --json
 ```
 
 **Syllabus data:** `backend/data/syllabus.json` ships with a hand-transcribed, per-grade
-chapter list (296 chapter names, 5 subjects) so the chapter picker isn't empty on a fresh
+chapter list (351 chapter names, 6 subjects) so the chapter picker isn't empty on a fresh
 install — see `backend/data/README.md` for how each subject was sourced and what still needs
 checking. To ingest chapter lists from textbook PDFs instead:
 ```bash
@@ -352,7 +352,7 @@ How it works (`backend/app/services/blueprint.py`):
 - ✅ Backend — every endpoint in `docs/api-contract.md`, plus papers list, blueprint papers and
   background jobs, auth, password reset, profile/preferences, figure library and answer verification
   (677 pass, 1 skipped when WeasyPrint isn't installed)
-- ✅ PDF export — WeasyPrint, ReportLab and fpdf renderers; Kannada papers export correctly via
+- ✅ PDF export — WeasyPrint, ReportLab and fpdf renderers; Kannada and Hindi papers export correctly via
   WeasyPrint or fpdf (fonts bundled in `backend/assets/fonts`); the answer key is optional
 - ✅ Migrations `0001`–`0009`, plus `ensure_schema` for SQLite databases created by an older version
 - ✅ CI — both Python suites, in fresh environments, with no secrets configured
@@ -369,7 +369,7 @@ How it works (`backend/app/services/blueprint.py`):
   `scripts/ingest_syllabus.py`, `scripts/ingest_textbooks.py`
 - **Backend:** FastAPI, SQLAlchemy (async; `asyncpg` for PostgreSQL, `aiosqlite` for local dev), Alembic,
   PyJWT, scrypt password hashing, Pillow (figure uploads)
-- **PDF export:** WeasyPrint (preferred), fpdf2 + HarfBuzz (pure pip, Kannada-capable), or ReportLab
+- **PDF export:** WeasyPrint (preferred), fpdf2 + HarfBuzz (pure pip, Kannada/Devanagari-capable), or ReportLab
   (no system dependencies, Latin scripts only)
 - **Frontend:** React 19, TypeScript, Vite 8, Tailwind CSS 4, React Router 7, lucide-react
 - **Testing:** pytest, in-memory SQLite + stubbed Groq client (no network/DB required); a separate live

@@ -13,7 +13,7 @@ An AI-powered question bank generator for the **Karnataka State Board, grades 7â
 | Area | Decision |
 |---|---|
 | Board / Grades | Karnataka State Board, grades 7â€“9 |
-| Subjects | Math, Science, Social Science, English, Kannada |
+| Subjects | Math, Science, Social Science, English, Kannada, Hindi |
 | Question types | MCQ, Short answer, Long answer |
 | Generation method | Groq (LLM API) |
 | Platforms | Web + Android, shared codebase via React Native |

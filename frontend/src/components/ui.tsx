@@ -109,6 +109,7 @@ const SUBJECT_COLORS: Record<string, string> = {
   'Social Science': 'bg-amber-500',
   English: 'bg-violet-500',
   Kannada: 'bg-rose-500',
+  Hindi: 'bg-orange-500',
 };
 
 export function SubjectDot({ subject }: { subject: string }) {

@@ -38,7 +38,7 @@ logger = logging.getLogger("backend.syllabus")
 _syllabus_index: SyllabusIndex | None = None
 _corpus: TextbookCorpus | None = None
 # subject name -> grade -> normalised chapter names. Optional "grades" block in
-# the syllabus JSON; subjects without one (English, Kannada) aren't grade-filtered.
+# the syllabus JSON; subjects without one aren't grade-filtered.
 _grade_chapters: dict[str, dict[int, set[str]]] = {}
 # The syllabus as loaded from textbooks + syllabus.json, before any chapters
 # seeded from the app are merged in (see reload_seeded).

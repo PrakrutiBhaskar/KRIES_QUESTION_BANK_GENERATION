@@ -5,8 +5,9 @@ Two backends, selected by the `PDF_RENDERER` setting:
 
   * **weasyprint** (preferred) — renders the HTML in html.py. It shapes
     complex scripts correctly via Pango/HarfBuzz, which matters because
-    Kannada is one of the five subjects: Kannada text needs glyph
-    reordering and ligature substitution that simpler PDF writers don't do.
+    Kannada and Hindi are two of the six subjects: Kannada and Devanagari text
+    need glyph reordering and ligature substitution that simpler PDF writers
+    don't do.
     Needs system libraries (pango, cairo, gdk-pixbuf), so it isn't always
     installed.
 
@@ -117,6 +118,11 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
     fonts = _register_fonts()
     body_font, bold_font = fonts["body"], fonts["bold"]
 
+    if _needs_devanagari(paper):
+        raise ServiceUnavailableError(
+            "ReportLab cannot shape Devanagari (Hindi) text. Use the fpdf2 renderer "
+            "(pip install fpdf2 uharfbuzz) or WeasyPrint."
+        )
     if _needs_kannada(paper) and not fonts["kannada"]:
         raise ServiceUnavailableError(
             "Kannada papers need either WeasyPrint (recommended) or a Kannada "
@@ -373,15 +379,15 @@ def render_pdf(paper, *, include_answer_key: bool = True) -> bytes:
 
 
 _FPDF_HELP = (
-    "Kannada PDF export needs either WeasyPrint or the pure-pip fpdf2 renderer. "
+    "Kannada and Hindi PDF export needs either WeasyPrint or the pure-pip fpdf2 renderer. "
     "Run: pip install fpdf2 uharfbuzz  (the fonts are bundled in backend/assets/fonts), "
     "then restart the backend."
 )
 
 
 def _render_reportlab_or_fpdf(paper, include_answer_key: bool = True) -> bytes:
-    """ReportLab can't shape Kannada, so Kannada papers go to fpdf2 instead."""
-    if _needs_kannada(paper):
+    """ReportLab can't shape Kannada or Hindi, so those papers go to fpdf2 instead."""
+    if _needs_kannada(paper) or _needs_devanagari(paper):
         if not fpdf_available():
             raise ServiceUnavailableError(_FPDF_HELP)
         return render_fpdf(paper, include_answer_key=include_answer_key)
@@ -404,6 +410,17 @@ def _needs_kannada(paper) -> bool:
 def _has_kannada(text: str) -> bool:
     # Kannada block: U+0C80-U+0CFF
     return any("\u0c80" <= ch <= "\u0cff" for ch in text)
+
+
+def _needs_devanagari(paper) -> bool:
+    if paper.subject.name == "Hindi":
+        return True
+    return any(_has_devanagari(item.question.text) for item in paper.items)
+
+
+def _has_devanagari(text: str) -> bool:
+    # Devanagari block: U+0900-U+097F
+    return any("\u0900" <= ch <= "\u097f" for ch in text)
 
 
 def _instruction_lines(items) -> list[str]:

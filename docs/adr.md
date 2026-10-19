@@ -36,7 +36,7 @@ Short records of key technical decisions and why they were made. Useful for onbo
 
 ## ADR 7: Syllabus data via PDF parsing
 **Decision:** Source chapter/topic structure by parsing official textbook PDFs rather than manual entry.
-**Reasoning:** Scales across 5 subjects × 3 grades without manual data entry for every chapter.
+**Reasoning:** Scales across 6 subjects × 3 grades without manual data entry for every chapter.
 **Trade-offs:** Parsing quality varies by PDF structure; some manual cleanup likely needed. [fill in specific tooling once chosen]
 
 ## ADR 8: Soft-delete questions instead of hard delete

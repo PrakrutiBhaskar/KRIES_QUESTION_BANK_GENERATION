@@ -54,7 +54,7 @@ import {
 } from '../components/ui';
 import { FigureImage } from '../components/FigureImage';
 
-const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada'];
+const SUBJECTS: Subject[] = ['Math', 'Science', 'Social Science', 'English', 'Kannada', 'Hindi'];
 const GRADES: Grade[] = [7, 8, 9];
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'mixed'];
 // Fallback used only if GET /generation/combinations can't be reached.

@@ -43,7 +43,7 @@ from pathlib import Path
 import httpx
 
 SYLLABUS = Path(__file__).resolve().parents[1] / "data" / "syllabus.json"
-SUBJECTS = ["Math", "Science", "Social Science", "English", "Kannada"]
+SUBJECTS = ["Math", "Science", "Social Science", "English", "Kannada", "Hindi"]
 MAX_PER_REQUEST = 25
 
 # Preferred exam-style mix (type, marks) -> weight. Combos the server does not

@@ -343,7 +343,7 @@ def check_board_scope(question: Question) -> list[str]:
 # 2c. Textbook-grounding check
 # ---------------------------------------------------------------------------
 
-_WORD = re.compile(r"[\w\u0C80-\u0CFF]+", re.UNICODE)
+_WORD = re.compile(r"[\w\u0900-\u097F\u0C80-\u0CFF]+", re.UNICODE)
 _STOPWORDS = frozenset(
     "about above after again also among because been before being between both "
     "could does each from have here into just like made make many more most much "
@@ -355,10 +355,13 @@ _STOPWORDS = frozenset(
 
 
 def _stem(tok: str) -> str:
-    return tok[:4] if _KANNADA_CHAR.search(tok) else tok[:5]
+    return tok[:4] if _INDIC_CHAR.search(tok) else tok[:5]
 
 
 _KANNADA_CHAR = re.compile(r"[\u0C80-\u0CFF]")
+# Kannada + Devanagari: matras and viramas count as characters, so a short
+# prefix covers a whole word stem.
+_INDIC_CHAR = re.compile(r"[\u0900-\u097F\u0C80-\u0CFF]")
 
 
 def _content_stems(text: str) -> set[str]:
@@ -522,10 +525,11 @@ def _check_fill_format(question: Question) -> list[str]:
             f"fill-in-the-blank answer is too long ({len(answer.split())} words); "
             "a blank holds a word or a short phrase"
         )
-    # Word-boundary matching is unreliable for Kannada script (combining
-    # vowel signs are not word characters), so the leak check skips it.
+    # Word-boundary matching is unreliable for Kannada and Hindi (Devanagari)
+    # script (combining vowel signs are not word characters), so the leak
+    # check skips them.
     if (
-        question.subject != Subject.KANNADA
+        question.subject not in (Subject.KANNADA, Subject.HINDI)
         and len(answer) >= 4
         and len(answer.split()) <= 4
         and re.search(rf"\b{re.escape(answer)}\b", around, re.IGNORECASE)

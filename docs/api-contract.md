@@ -392,7 +392,7 @@ endpoint returns an answer, and only for a question in that session.
 | `GET` | `/practice/sessions/{id}` | So a student can resume rather than restart |
 | `GET` | `/generation/combinations` | Lets the generation-request screen build its type/marks selectors from the same rule `POST /generate` actually enforces (`generation_engine.prompts.supported_combinations()`), instead of a hardcoded copy that can drift out of sync. Returns e.g. `[{"type": "MCQ", "marks": [1]}, {"type": "Short", "marks": [1, 2, 3]}, {"type": "Long", "marks": [5]}]`. |
 
-**`GET /subjects`** always returns all five subjects, even before any
+**`GET /subjects`** always returns all six subjects, even before any
 questions exist, so the picker is never empty. `GET /subjects/{subject}/chapters`
 can legitimately return `[]` until chapters are seeded or generated.
 

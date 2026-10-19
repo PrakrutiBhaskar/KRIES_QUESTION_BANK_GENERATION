@@ -46,6 +46,7 @@ DEFAULT_CHAPTERS = {
     Subject.SOCIAL_SCIENCE: "The Indian Constitution",
     Subject.ENGLISH: "Tenses and Sentence Structure",
     Subject.KANNADA: "Vyakarana",
+    Subject.HINDI: "दिल्ली",
 }
 
 GREEN, RED, YELLOW, DIM, RESET = (

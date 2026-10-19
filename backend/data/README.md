@@ -9,8 +9,8 @@
 
 # `syllabus.json`
 
-Hand-transcribed chapter list for grades 7–9 (Karnataka State Board), scoped **per grade** for all five
-subjects: 296 chapter names, 303 grade-chapter entries (a name shared by two grades counts once in the first
+Hand-transcribed chapter list for grades 7–9 (Karnataka State Board), scoped **per grade** for all six
+subjects: 351 chapter names, 361 grade-chapter entries (a name shared by two grades counts once in the first
 number and twice in the second).
 
 | Subject | Grade 7 | Grade 8 | Grade 9 |
@@ -20,6 +20,7 @@ number and twice in the second).
 | Social Science | 27 | 30 | 33 |
 | English | 19 | 22 | 24 |
 | Kannada | 21 | 22 | 22 |
+| Hindi | 19 | 18 | 21 |
 
 It exists so the frontend's subject/chapter picker has something to show on a fresh install: without it,
 `GET /subjects/{subject}/chapters` returns `[]` until someone generates a question for a chapter first.
@@ -49,6 +50,13 @@ The same notes are recorded in the file's `_meta.verification` block.
   supplementary ones from a grade if your question papers never draw from them. Grades assigned by upload order
   and lesson level; transcribed from photos, so spot-check spellings. Matching ignores ZWNJ/ZWJ but not other
   differences. Not included: the *Tili Kannada* (2nd language) and *Nudi Kannada* (3rd language) textbooks.
+- **Hindi** — Grades 7 (19 entries), 8 (18) and 9 (21): the *Setubandh* bridge lesson, then the numbered lessons in textbook
+  order, transcribed from photos of the KTBS contents pages of both volumes. Grade 7 also has the two *Ginti* counting lessons
+  (50–70, 71–100) and *Purak Vachan*. Grade 9 numbering is interleaved across its two volumes (1–9, then 10–17), and each volume
+  ends with its own *Parishisht-1* (Patra Lekhan, Purak Vachan, Charitra-Bal): those three are listed once each and the
+  *Parishisht-1* divider is not treated as a lesson. The photos carried no class label, so grades come from your upload
+  messages — confirm. Matching keeps Devanagari vowel signs and virama and treats precomposed and decomposed nukta letters
+  as the same, so titles that differ only by a matra stay distinct.
 
 Karnataka has had old and revised editions of several books; confirm which one your schools use.
 
@@ -58,7 +66,7 @@ The engine treats this file as the allow-list. A request is rejected (HTTP 400) 
 requested **grade's** list for that subject, and the prompt tells the model to stay inside that chapter of the
 KTBS textbook.
 
-- `grades` -> enforced per grade. All five subjects now have it. A subject without a `grades` entry can't be
+- `grades` -> enforced per grade. All six subjects now have it (Hindi for Grades 7, 8 and 9). A subject without a `grades` entry can't be
   grade-checked: any listed chapter is accepted for any grade.
 - `topics` (optional, `{chapter: [sub-topics]}`) -> injected into the prompt to bound each chapter's scope. No
   subject uses it at the moment.

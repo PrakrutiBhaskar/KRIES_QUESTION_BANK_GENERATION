@@ -36,6 +36,7 @@ from .syllabus_ingest import _NON_CHAPTER_TITLES
 from .textbook import CORPUS_VERSION, INTRO_SECTION
 
 _KANNADA = re.compile(r"[\u0C80-\u0CFF]")
+_DEVANAGARI = re.compile(r"[\u0900-\u097F]")
 _PAGE_NUM_LINE = re.compile(r"^\s*(?:page\s*)?[-–]?\s*\d{1,4}\s*[-–]?\s*$", re.IGNORECASE)
 _SECTION_HEADING = re.compile(r"^\s*(\d{1,2}\.\d{1,2}(?:\.\d{1,2})?)[.)]?\s+(\S.{2,90}?)\s*$")
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?।])\s+")
@@ -310,13 +311,17 @@ def build_corpus_dict(
 
     sample = "".join(cleaned[:30])
     letters = re.findall(r"[^\W\d_]", sample)
-    if (subject == Subject.KANNADA or medium.lower() == "kannada") and letters:
-        ratio = len(_KANNADA.findall(sample)) / len(letters)
-        if ratio < 0.3:
-            warnings.append(
-                "expected Kannada script but the text layer is mostly non-Kannada "
-                f"({ratio:.0%}); the PDF likely uses a legacy font and extracts as garbage"
-            )
+    for label, pattern, wanted in (
+        ("Kannada", _KANNADA, subject == Subject.KANNADA or medium.lower() == "kannada"),
+        ("Hindi", _DEVANAGARI, subject == Subject.HINDI or medium.lower() == "hindi"),
+    ):
+        if wanted and letters:
+            ratio = len(pattern.findall(sample)) / len(letters)
+            if ratio < 0.3:
+                warnings.append(
+                    f"expected {label} script but the text layer is mostly non-{label} "
+                    f"({ratio:.0%}); the PDF likely uses a legacy font and extracts as garbage"
+                )
 
     prefix_base = f"{_slug(subject)}-{grade}{('p' + part) if part else ''}"
     chapter_dicts: list[dict] = []

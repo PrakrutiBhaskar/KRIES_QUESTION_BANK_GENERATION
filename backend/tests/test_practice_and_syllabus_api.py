@@ -154,15 +154,15 @@ async def test_invalid_session_request_returns_400(client):
 # --- syllabus reference data -----------------------------------------------
 
 
-async def test_subjects_lists_all_five(client):
+async def test_subjects_lists_all_six(client):
     response = await client.get("/subjects")
     assert response.status_code == 200
 
     names = [s["name"] for s in response.json()]
     assert names == sorted(
-        ["Math", "Science", "Social Science", "English", "Kannada"], key=names.index
+        ["Math", "Science", "Social Science", "English", "Kannada", "Hindi"], key=names.index
     )
-    assert set(names) == {"Math", "Science", "Social Science", "English", "Kannada"}
+    assert set(names) == {"Math", "Science", "Social Science", "English", "Kannada", "Hindi"}
     assert all(s["grade_range"] == "7-9" for s in response.json())
 
 
