@@ -22,14 +22,15 @@ from generation_engine.prompts import supported_combinations
 from generation_engine.schemas import Difficulty, QuestionType, Subject
 
 from ..db import get_session
-from ..deps import get_current_user, require_generator
-from ..errors import ForbiddenError
+from ..deps import get_current_user, require_editor, require_generator
 from ..models import User
+from ..schemas.common import auto_split_of, parts_of
 from ..schemas import (
     CombinationOut,
     ErrorOut,
     GenerateIn,
     GenerateOut,
+    MarksSplitOut,
     Page,
     QuestionIn,
     QuestionOut,
@@ -176,13 +177,42 @@ async def get_question(
     return QuestionOut.from_model(row)
 
 
+@router.get(
+    "/questions/{question_id}/marks-split",
+    response_model=MarksSplitOut,
+    summary="The marks split an answer key prints, for the editor to start from",
+    description=(
+        "Returns the teacher's own split (null when there is none) and the "
+        "automatic one the key would print instead. Teachers and administrators only."
+    ),
+    responses={403: {"model": ErrorOut}, 404: {"model": ErrorOut}},
+)
+async def get_marks_split(
+    question_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(require_editor),
+) -> MarksSplitOut:
+    row = await question_service.get_question(session, question_id)
+    auto = auto_split_of(row)
+    return MarksSplitOut(
+        marks=row.marks,
+        marks_split=parts_of(row.marks_split),
+        auto_marks_split=auto,
+        editable=row.type.value in ("Short", "Long") and row.marks > 1,
+    )
+
+
 @router.patch(
     "/questions/{question_id}",
     response_model=QuestionOut,
     summary="Edit a question you generated",
+    description=(
+        "Wording, options, answer, explanation, difficulty and the marks split of "
+        "the answer key. Teachers and administrators only."
+    ),
     responses={
         400: {"model": ErrorOut},
-        403: {"model": ErrorOut, "description": "Someone else generated this question"},
+        403: {"model": ErrorOut, "description": "Not a teacher/administrator, or someone else generated this question"},
         404: {"model": ErrorOut},
     },
 )
@@ -190,7 +220,7 @@ async def patch_question(
     question_id: uuid.UUID,
     payload: QuestionPatch,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_editor),
 ) -> QuestionOut:
     row = await question_service.update_question(
         session,
@@ -216,10 +246,8 @@ async def patch_question(
 async def create_question(
     payload: QuestionIn,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_editor),
 ) -> QuestionOut:
-    if user.role == "Student":
-        raise ForbiddenError("Writing your own questions is only available to teacher accounts.")
     row = await question_service.create_manual_question(session, payload, user_id=user.id)
     return QuestionOut.from_model(row)
 
@@ -239,7 +267,7 @@ async def create_question(
 async def copy_question(
     question_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_editor),
 ) -> QuestionOut:
     row = await question_service.copy_question(session, question_id, user_id=user.id)
     return QuestionOut.from_model(row)
@@ -259,7 +287,7 @@ async def copy_question(
 async def delete_question(
     question_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_editor),
 ) -> Response:
     await question_service.delete_question(session, question_id, user_id=user.id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -341,6 +341,7 @@ async def copy_question(
         tags=list(src.tags or []),
         figure_id=src.figure_id,
         answer_figure_id=src.answer_figure_id,
+        marks_split=[dict(part) for part in src.marks_split] if src.marks_split else None,
         verification_status=src.verification_status,
         verification_note=src.verification_note,
         content_hash=unique_hash,
@@ -373,12 +374,14 @@ async def update_question(
     # figure_id / answer_figure_id are the one place where an explicit null
     # means something ("detach"), so they are read from `changes` directly.
     figure_keys = [k for k in ("figure_id", "answer_figure_id") if k in changes]
+    # marks_split is the same: null means "back to the automatic split".
+    split_sent = "marks_split" in changes
     applied = {
         k: v
         for k, v in changes.items()
-        if v is not None and k not in ("figure_id", "answer_figure_id")
+        if v is not None and k not in ("figure_id", "answer_figure_id", "marks_split")
     }
-    if not applied and not figure_keys:
+    if not applied and not figure_keys and not split_sent:
         return row
 
     candidate = {
@@ -429,6 +432,14 @@ async def update_question(
     row.topic = validated.topic or ""
     row.tags = list(validated.tags or [])
 
+    if split_sent:
+        row.marks_split = _checked_marks_split(
+            changes["marks_split"], validated.marks, validated.type.value
+        )
+    elif row.marks_split and sum(p["marks"] for p in row.marks_split) != validated.marks:
+        # The marks changed, so the old split no longer adds up: fall back to automatic.
+        row.marks_split = None
+
     for key in figure_keys:
         new_id = changes[key]
         if new_id is not None:
@@ -447,6 +458,28 @@ async def update_question(
     if figure_keys:
         await session.refresh(row, attribute_names=["figure", "answer_figure"])
     return row
+
+
+def _checked_marks_split(raw, marks: int, qtype: str) -> list[dict] | None:
+    """Validate a teacher's marks split; None clears it (automatic split)."""
+    if raw is None:
+        return None
+    if qtype not in ("Short", "Long") or marks <= 1:
+        raise BadRequestError(
+            "A marks split only applies to short and long answer questions worth more than 1 mark."
+        )
+    parts = [{"name": str(p["name"]), "marks": int(p["marks"])} for p in raw]
+    if not parts:
+        raise BadRequestError("The marks split needs at least one part.")
+    names = [p["name"].casefold() for p in parts]
+    if len(set(names)) != len(names):
+        raise BadRequestError("Each part of the marks split needs a different name.")
+    total = sum(p["marks"] for p in parts)
+    if total != marks:
+        raise BadRequestError(
+            f"The marks split adds up to {total}, but this question is worth {marks} marks."
+        )
+    return parts
 
 
 async def delete_question(

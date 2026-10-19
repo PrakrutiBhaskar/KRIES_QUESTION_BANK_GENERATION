@@ -12,7 +12,9 @@ import QuestionBanksPage from './pages/QuestionBanksPage';
 import QuestionBankDetailPage from './pages/QuestionBankDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import FigureLibraryPage from './pages/FigureLibraryPage';
+import SyllabusPage from './pages/SyllabusPage';
 import RequireAdmin from './components/RequireAdmin';
+import RequireEditor from './components/RequireEditor';
 
 export default function App() {
   return (
@@ -33,6 +35,10 @@ export default function App() {
             <Route path="/question-banks" element={<QuestionBanksPage />} />
             <Route path="/question-banks/:id" element={<QuestionBankDetailPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/syllabus"
+              element={<RequireEditor><SyllabusPage /></RequireEditor>}
+            />
             <Route
               path="/figure-library"
               element={<RequireAdmin><FigureLibraryPage /></RequireAdmin>}

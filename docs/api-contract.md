@@ -116,14 +116,28 @@ checked; run **Verify answers** again to check it. An MCQ `answer` must be one o
 options. Also attaches or detaches diagrams:
 `figure_id` (printed with the question) and `answer_figure_id` (answer key only) take the
 id of any figure in the library, or `null` to detach. Omit a field to leave it unchanged.
-Errors: `403` for someone else's question, `404` for an unknown figure.
+Also sets the answer key's **marks split**: `marks_split` is a list of `{"name", "marks"}`
+(at most 6 parts, distinct names, each part at least 1 mark) that must add up to the question's
+marks, e.g. `[{"name": "Diagram", "marks": 2}, {"name": "Explanation", "marks": 3}]`. It applies
+to short and long answers worth more than 1 mark. `null` goes back to the automatic split.
+Changing a question's `marks` drops a split that no longer adds up. A question with its own
+split returns it as `marks_split` (the key is absent otherwise); every export prints it
+instead of the automatic one, as long as it still adds up to the marks the paper gives the
+question. Changing the split does not reset `verification_status`.
+Teachers and administrators only (`403 editor_required` for a student).
+Errors: `403` for a student or for someone else's question, `404` for an unknown figure.
+
+### `GET /questions/{id}/marks-split`
+For the marks-split editor: `{marks, marks_split, auto_marks_split, editable}`. `marks_split` is
+the teacher's own split (or `null`), `auto_marks_split` is what the key prints automatically,
+`editable` is `false` for MCQ, fill-in, match and 1-mark questions. Teachers and administrators only.
 
 ### `POST /questions`
 Add a question you wrote yourself (`201`, returns the question). Body: `subject`, `chapter`,
 `type`, `grade`, `text`, `options` (MCQ), `answer`, `explanation`, `marks`, `difficulty`,
 optional `topic`. It gets the same checks as a generated question (shape for its type, marks
 allowed for the type, answer length for the marks) and is stored `unverified`, owned by the
-caller. `400` for a question that fails a check, `403` for a student account.
+caller. `400` for a question that fails a check, `403 editor_required` for a student account.
 
 ### `POST /questions/{id}/copy`
 Make an editable copy of any question, owned by the caller (`201`, returns the new question).
@@ -132,7 +146,7 @@ is unchanged. The copy can then replace the original in a paper with `PATCH /pap
 (a question item may carry `section`, used only when the question is newly added).
 
 ### `DELETE /questions/{id}`
-Discard a question.
+Discard a question. Teachers and administrators only.
 
 ### `POST /questions/verify`
 Check the answer keys of stored questions (the **Verify answers** button on the
@@ -175,7 +189,8 @@ Create a new paper from selected question IDs.
 Fetch a paper.
 
 ### `PATCH /papers/{id}`
-Reorder questions / update marks / update title.
+Reorder questions / update marks / update title. Teachers and administrators only
+(`403 editor_required` for a student, who can still build, read and export their own papers).
 
 ---
 
@@ -250,6 +265,24 @@ In the exported PDF the question's `figure` is printed under the question text a
 
 ### `GET /subjects`
 List subjects.
+
+### `GET /syllabus/seeded`
+Chapters added from the Syllabus page, optionally filtered by `subject` and `grade` (7-9). Each
+has `{id, subject, grade, name, topics, created_by, can_remove}`; `can_remove` is true for the
+teacher who added it and for administrators. Teachers and administrators only (`403 editor_required`).
+
+### `POST /syllabus/seed`
+Body: `{"subject", "grade": 7-9, "chapters": [{"name", "topics": []}]}` (1-100 chapters; topics
+optional). Adds the chapters to the live syllabus for that grade, so they can be generated from
+at once (the index is rebuilt and handed to the engine; no restart). Chapters the grade already
+has, and repeats within the request, are skipped. Textbook and `syllabus.json` chapters are never
+changed. Returns `201 {added: [...], skipped: [names], warning}`; `warning` is set only when no
+syllabus was loaded before, because generation then accepts just the seeded chapters. Persisted in
+`seeded_chapters` (migration 0011) and merged back in at startup. Teachers and administrators only.
+
+### `DELETE /syllabus/seeded/{id}`
+Remove a seeded chapter: `204`. Only its creator or an administrator (`403`); `404` if it is
+gone. Questions already generated for it are kept; the chapter is simply no longer offered.
 
 ### `GET /subjects/{subject}/chapters`
 List chapters for a subject.
@@ -381,7 +414,9 @@ one the response is `401 not_authenticated`, and an expired or invalid token is
 | **Papers** (`/papers`, `POST /export/{id}`) | Owner only. The owner is the signed-in user, taken from the token; sending `user_id` in a request body is a `400`. Someone else's paper is a `404`, identical to a paper that doesn't exist. `GET /papers` lists only your own. |
 | **Practice sessions** (`/practice/...`) | Owner only, same `404` rule. |
 | **Questions** (`GET /questions`, `GET /questions/{id}`) | Shared pool: any signed-in user can read and reuse stored questions (this is what the generation cache is for). |
-| `PATCH /questions/{id}` | Only the user who generated the question; anyone else gets `403 forbidden`. |
+| `POST /syllabus/seed`, `GET /syllabus/seeded`, `DELETE /syllabus/seeded/{id}` | Teachers and administrators only (`403 editor_required`); removal further limited to the creator or an administrator. |
+| **Every edit** (`PATCH`/`DELETE`/`POST .../copy` on questions, `POST /questions`, `GET /questions/{id}/marks-split`, `PATCH /papers/{id}`) | Teachers and administrators only. A student gets `403 editor_required`. Students can still generate, build papers, export and practise. |
+| `PATCH /questions/{id}` | Only the user who generated the question (and only a teacher or administrator); anyone else gets `403 forbidden`. |
 | `DELETE /questions/{id}` | Only the creator removes it from the pool. For anyone else it returns `204` and changes nothing, so a teacher can drop a cached question from their own draft without affecting others. |
 | **PDF download** (`GET /export/files/{filename}?token=...`) | A browser tab can't send an Authorization header, so `POST /export/{id}` returns a `download_url` carrying a signed token valid for 10 minutes for that one file. No, invalid or expired token: `401 invalid_download_token`. |
 

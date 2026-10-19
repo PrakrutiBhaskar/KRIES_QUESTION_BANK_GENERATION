@@ -6,6 +6,7 @@ const PAGE_TITLES: Record<string, { title: string; description: string }> = {
   '/generate': { title: 'Generate', description: 'Create new question banks using AI' },
   '/question-papers': { title: 'Question Papers', description: 'Build a board-style paper from a blueprint' },
   '/question-banks': { title: 'Question Banks', description: 'Browse and manage your question banks' },
+  '/syllabus': { title: 'Syllabus', description: 'Seed a new syllabus: add chapters for a subject and grade' },
   '/figure-library': { title: 'Figure Library', description: 'Diagrams teachers can build questions and answer keys from' },
   '/settings': { title: 'Settings', description: 'Configure your preferences' },
 };

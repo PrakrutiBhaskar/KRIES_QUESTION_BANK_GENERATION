@@ -33,6 +33,12 @@ export interface LibraryFigure extends Figure {
   labels: string[];
 }
 
+/** One line of an answer key's marks split, e.g. Diagram - 2. */
+export interface MarksSplitPart {
+  name: string;
+  marks: number;
+}
+
 export interface Question {
   id: string;
   questionNumber: number;   // 1-based position within the list being shown
@@ -55,6 +61,8 @@ export interface Question {
   verificationNote?: string;
   figure?: Figure;          // printed with the question in the paper
   answerFigure?: Figure;    // printed only in the answer key
+  /** The teacher's own marks split for the answer key; absent = the automatic split. */
+  marksSplit?: MarksSplitPart[];
 }
 
 /** verified: confirmed · unverified: could not be checked · flagged: the key looked wrong */

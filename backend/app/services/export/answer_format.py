@@ -156,16 +156,40 @@ def marks_split(
     return out
 
 
+def usable_custom_split(custom, marks: int, qtype: str) -> list[tuple[str, int]]:
+    """A teacher's stored split as ``[(name, marks), ...]``, or ``[]`` if it cannot be used.
+
+    It is used only when it still adds up to the marks the question carries in
+    this paper (a paper can override a question's marks after the split was
+    written) and the question is one that prints a split at all.
+    """
+    if not custom or marks <= 1 or qtype in ("MCQ", "Match", "Fill"):
+        return []
+    try:
+        parts = [(str(p["name"]).strip(), int(p["marks"])) for p in custom]
+    except (KeyError, TypeError, ValueError):
+        return []
+    if not parts or any(not name or m < 1 for name, m in parts):
+        return []
+    return parts if sum(m for _, m in parts) == marks else []
+
+
 def format_answer(
-    answer: str, marks: int, qtype: str, has_figure: bool = False
+    answer: str,
+    marks: int,
+    qtype: str,
+    has_figure: bool = False,
+    custom_split=None,
 ) -> FormattedAnswer:
+    """``custom_split`` is the question's stored ``marks_split`` (list of {name, marks}).
+
+    When it is present and adds up to ``marks`` it replaces the automatic split.
+    """
     lead, points, reference = split_points(answer)
-    return FormattedAnswer(
-        lead=lead,
-        points=points,
-        reference=reference,
-        split=marks_split(points, reference, marks, qtype, has_figure),
+    split = usable_custom_split(custom_split, marks, qtype) or marks_split(
+        points, reference, marks, qtype, has_figure
     )
+    return FormattedAnswer(lead=lead, points=points, reference=reference, split=split)
 
 
 def split_label(split: list[tuple[str, int]]) -> str:

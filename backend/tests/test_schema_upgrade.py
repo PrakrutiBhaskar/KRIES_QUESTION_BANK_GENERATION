@@ -134,7 +134,7 @@ def test_alembic_migrations_run_to_head_and_back(tmp_path):
     assert {"caption", "filename"} <= fig_cols
     assert alembic("upgrade", "head").returncode == 0
 
-    # Step back over the three newest migrations (figures 0006, answer
+    # Step back over the newest migrations (figures 0006, answer
     # verification 0007, figure metadata 0008), then on down to 0002.
     one = alembic("downgrade", "0005")
     assert one.returncode == 0, one.stderr

@@ -315,7 +315,7 @@ def _render_reportlab(paper, include_answer_key: bool = True) -> bytes:
             else:
                 fa = format_answer(
                     q.answer, item.effective_marks, q.type.value,
-                    has_figure=answer_fig is not None,
+                    has_figure=answer_fig is not None, custom_split=getattr(q, "marks_split", None)
                 )
                 if len(fa.points) > 1:
                     head = f"{n}. {_esc(fa.lead)}" if fa.lead else f"{n}. [{item.effective_marks} marks]"

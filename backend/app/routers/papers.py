@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..deps import get_current_user
+from ..deps import get_current_user, require_editor
 from ..models import User
 from ..schemas import BlueprintIn, BlueprintJobOut, BlueprintPlanOut, ErrorOut, PaperIn, PaperOut, PaperPatch
 from ..services import blueprint as blueprint_service
@@ -153,13 +153,14 @@ async def get_paper(
     "/{paper_id}",
     response_model=PaperOut,
     summary="Reorder questions, override marks, or rename",
-    responses={400: {"model": ErrorOut}, 404: {"model": ErrorOut}},
+    description="Teachers and administrators only.",
+    responses={400: {"model": ErrorOut}, 403: {"model": ErrorOut}, 404: {"model": ErrorOut}},
 )
 async def patch_paper(
     paper_id: uuid.UUID,
     payload: PaperPatch,
     session: AsyncSession = Depends(get_session),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_editor),
 ) -> PaperOut:
     paper = await paper_service.update_paper(session, paper_id, payload, user.id)
     return PaperOut.from_model(paper)

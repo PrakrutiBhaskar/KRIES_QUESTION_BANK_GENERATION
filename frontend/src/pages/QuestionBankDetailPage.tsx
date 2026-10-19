@@ -17,7 +17,7 @@ import {
   Search,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
-import type { ChapterInfo, Marks, MarksByType, Question, QuestionBank, QuestionDifficulty, QuestionType } from '../types';
+import type { ChapterInfo, Marks, MarksByType, MarksSplitPart, Question, QuestionBank, QuestionDifficulty, QuestionType } from '../types';
 import {
   DifficultyBadge,
   TypeBadge,
@@ -34,6 +34,7 @@ import {
 import { BankDetailSkeleton } from '../components/Skeleton';
 import { FigureImage } from '../components/FigureImage';
 import { formatDate } from '../lib/utils';
+import { canEditContent } from '../lib/roles';
 import {
   errorMessage,
   exportBank,
@@ -48,6 +49,7 @@ import {
   updateQuestion,
   copyQuestion,
   createQuestion,
+  fetchMarksSplit,
   ApiError,
 } from '../lib/api';
 import type { ExportFormat, QuestionEdit } from '../lib/api';
@@ -132,6 +134,11 @@ function QuestionRow({ question, editing, onEdit, onDelete }: QuestionRowProps) 
               <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
                 <p className="text-xs font-semibold text-emerald-700 mb-1">Answer</p>
                 <p className="text-xs text-emerald-800 whitespace-pre-wrap">{question.answer}</p>
+                {question.marksSplit && (
+                  <p className="mt-2 text-xs font-semibold text-indigo-700">
+                    Marks split: {question.marksSplit.map((p) => `${p.name} - ${p.marks}`).join(', ')}
+                  </p>
+                )}
                 {/* Diagram printed in the answer key: the answer figure, else the question's own */}
                 {(question.answerFigure ?? question.figure) && (
                   <FigureImage figure={(question.answerFigure ?? question.figure)!} className="mt-2" />
@@ -373,6 +380,33 @@ function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Marks split of the answer key. Short and long answers worth more than 1 mark only.
+  // The split is stored against the question's own marks, which a paper may override.
+  const splitMarks = question.baseMarks ?? question.marks;
+  const canSplit = (question.type === 'Short' || question.type === 'Long') && splitMarks > 1;
+  const [splitMode, setSplitMode] = useState<'auto' | 'custom'>(question.marksSplit ? 'custom' : 'auto');
+  const [parts, setParts] = useState<{ name: string; marks: string }[]>(
+    (question.marksSplit ?? []).map((p) => ({ name: p.name, marks: String(p.marks) })),
+  );
+  const [autoSplit, setAutoSplit] = useState<MarksSplitPart[] | null>(null);
+  useEffect(() => {
+    if (!canSplit) return;
+    let cancelled = false;
+    fetchMarksSplit(question.id)
+      .then((info) => { if (!cancelled) setAutoSplit(info.autoMarksSplit); })
+      .catch(() => { /* the editor still works; it just starts from a blank split */ });
+    return () => { cancelled = true; };
+  }, [canSplit, question.id]);
+
+  const startCustomSplit = () => {
+    const start: MarksSplitPart[] =
+      question.marksSplit ?? autoSplit ?? [{ name: 'Explanation', marks: splitMarks }];
+    setParts(start.map((p) => ({ name: p.name, marks: String(p.marks) })));
+    setSplitMode('custom');
+  };
+  const partMarks = parts.map((p) => Number.parseInt(p.marks, 10));
+  const splitTotal = partMarks.reduce((sum, m) => sum + (Number.isFinite(m) ? m : 0), 0);
+
   const finalAnswer = isMcq ? (options[correct] ?? '') : answer;
 
   const handleSave = async () => {
@@ -382,13 +416,30 @@ function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps
       : isMcq && correct < 0 ? 'Choose which option is the correct answer.'
       : !finalAnswer.trim() ? 'The answer cannot be empty.'
       : null;
-    if (problem) {
-      setError(problem);
+    const splitProblem =
+      canSplit && splitMode === 'custom'
+        ? parts.length === 0 ? 'Add at least one part to the marks split, or switch back to the automatic split.'
+        : parts.some((p) => !p.name.trim()) ? 'Every part of the marks split needs a name.'
+        : partMarks.some((m) => !Number.isInteger(m) || m < 1) ? 'Each part of the marks split needs at least 1 mark.'
+        : new Set(parts.map((p) => p.name.trim().toLowerCase())).size !== parts.length ? 'Each part of the marks split needs a different name.'
+        : splitTotal !== splitMarks ? `The marks split adds up to ${splitTotal}, but this question is worth ${splitMarks} marks.`
+        : null
+        : null;
+    if (problem || splitProblem) {
+      setError(problem ?? splitProblem);
       return;
     }
 
     // Send only what changed.
     const changes: QuestionEdit = {};
+    if (canSplit) {
+      if (splitMode === 'custom') {
+        const next = parts.map((p) => ({ name: p.name.trim().replace(/\s+/g, ' '), marks: Number.parseInt(p.marks, 10) }));
+        if (JSON.stringify(next) !== JSON.stringify(question.marksSplit ?? null)) changes.marks_split = next;
+      } else if (question.marksSplit) {
+        changes.marks_split = null; // back to the automatic split
+      }
+    }
     if (text.trim() !== question.text) changes.text = text.trim();
     if (hasOptions && JSON.stringify(options.map((o) => o.trim())) !== JSON.stringify(question.options)) {
       changes.options = options.map((o) => o.trim());
@@ -520,6 +571,99 @@ function EditQuestionModal({ question, onSave, onClose }: EditQuestionModalProps
               </select>
             </div>
           </div>
+
+          {canSplit && (
+            <div className="rounded-xl border border-slate-200 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-slate-700">Marks split ({splitMarks} marks)</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    How the marks are shared in the answer key, e.g. Diagram - 2, Explanation - 3.
+                  </p>
+                </div>
+                {splitMode === 'custom' ? (
+                  <button
+                    type="button"
+                    onClick={() => setSplitMode('auto')}
+                    className="shrink-0 text-xs font-medium text-slate-600 hover:text-slate-900"
+                  >
+                    Use automatic split
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startCustomSplit}
+                    className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+                  >
+                    Edit split
+                  </button>
+                )}
+              </div>
+
+              {splitMode === 'auto' ? (
+                <p className="text-xs text-slate-600">
+                  Automatic{autoSplit ? `: ${autoSplit.map((p) => `${p.name} - ${p.marks}`).join(', ')}` : ''}. It is worked out from the answer when the paper is exported.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {parts.map((part, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        value={part.name}
+                        onChange={(e) => setParts((prev) => prev.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                        placeholder="Part (e.g. Diagram)"
+                        maxLength={40}
+                        aria-label={`Marks split part ${i + 1} name`}
+                        className={fieldClass}
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        max={splitMarks}
+                        value={part.marks}
+                        onChange={(e) => setParts((prev) => prev.map((x, j) => (j === i ? { ...x, marks: e.target.value } : x)))}
+                        aria-label={`Marks split part ${i + 1} marks`}
+                        className={`${fieldClass} w-20 shrink-0`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setParts((prev) => prev.filter((_, j) => j !== i))}
+                        aria-label="Remove this part"
+                        title="Remove this part"
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setParts((prev) => [...prev, { name: '', marks: '1' }])}
+                      disabled={parts.length >= 6}
+                      className="flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add part
+                    </button>
+                    <span
+                      className={`text-xs font-medium ${splitTotal === splitMarks ? 'text-emerald-700' : 'text-red-600'}`}
+                      aria-live="polite"
+                    >
+                      {splitTotal} / {splitMarks} marks
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {question.baseMarks !== undefined && question.marks !== question.baseMarks && (
+                <p className="text-xs text-amber-700">
+                  This paper counts the question as {question.marks} marks, so a split worth {splitMarks} is not
+                  printed here until the marks match.
+                </p>
+              )}
+            </div>
+          )}
 
         </div>
 
@@ -1046,7 +1190,9 @@ function PoolPickerModal({ bank, onAdd, onClose }: PoolPickerModalProps) {
 export default function QuestionBankDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { upsertBank, showToast, user } = useApp();
-  const canWrite = user?.role !== 'Student';
+  // Editing (questions, answer keys, marks splits, the paper's question list) is for teachers and administrators.
+  const canEdit = canEditContent(user?.role);
+  const canWrite = canEdit;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -1061,7 +1207,7 @@ export default function QuestionBankDetailPage() {
   const [writingQuestion, setWritingQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   // Edit mode (add / remove questions). The bank list links here with ?edit=1.
-  const [editing, setEditing] = useState(searchParams.get('edit') === '1');
+  const [editing, setEditing] = useState(canEdit && searchParams.get('edit') === '1');
   const [exporting, setExporting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -1181,6 +1327,7 @@ export default function QuestionBankDetailPage() {
   };
 
   const toggleEditing = () => {
+    if (!canEdit) return;
     const next = !editing;
     setEditing(next);
     setSearchParams(next ? { edit: '1' } : {}, { replace: true });
@@ -1230,17 +1377,19 @@ export default function QuestionBankDetailPage() {
             <p className="text-sm text-slate-500 mt-1">{bank.subject} — {bank.chapter}</p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={toggleEditing}
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                editing
-                  ? 'text-white bg-indigo-600 hover:bg-indigo-700'
-                  : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100'
-              }`}
-            >
-              {editing ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
-              {editing ? 'Done' : 'Edit'}
-            </button>
+            {canEdit && (
+              <button
+                onClick={toggleEditing}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  editing
+                    ? 'text-white bg-indigo-600 hover:bg-indigo-700'
+                    : 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100'
+                }`}
+              >
+                {editing ? <Check className="w-4 h-4" /> : <Pencil className="w-4 h-4" />}
+                {editing ? 'Done' : 'Edit'}
+              </button>
+            )}
             <button
               onClick={() => setExportOpen(true)}
               disabled={exporting || bank.questions.length === 0}
@@ -1313,7 +1462,7 @@ export default function QuestionBankDetailPage() {
           <EmptyState
             icon={<BookOpen className="w-7 h-7" />}
             title="No questions yet"
-            description={editing ? 'Write a question, add stored ones, or generate a new one.' : 'Click Edit to add questions to this bank.'}
+            description={editing ? 'Write a question, add stored ones, or generate a new one.' : canEdit ? 'Click Edit to add questions to this bank.' : 'This bank has no questions.'}
             action={
               editing ? (
                 <div className="flex flex-wrap justify-center gap-2">
@@ -1341,7 +1490,7 @@ export default function QuestionBankDetailPage() {
                     Generate Question
                   </button>
                 </div>
-              ) : (
+              ) : canEdit ? (
                 <button
                   onClick={toggleEditing}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
@@ -1349,7 +1498,7 @@ export default function QuestionBankDetailPage() {
                   <Pencil className="w-4 h-4" />
                   Edit
                 </button>
-              )
+              ) : undefined
             }
           />
         ) : (
@@ -1396,7 +1545,7 @@ export default function QuestionBankDetailPage() {
         />
       )}
 
-      {editingQuestion && (
+      {editingQuestion && canEdit && (
         <EditQuestionModal
           question={editingQuestion}
           onSave={handleSaveQuestion}

@@ -278,7 +278,7 @@ def render_docx(paper, *, include_answer_key: bool = True) -> bytes:
                 _para(doc, f"{n}. {match_key_label(q.answer)}", size=11, bold=True, space_after=3)
             else:
                 fa = format_answer(
-                    q.answer, item.effective_marks, q.type.value, has_figure=a_fig is not None
+                    q.answer, item.effective_marks, q.type.value, has_figure=a_fig is not None, custom_split=getattr(q, "marks_split", None)
                 )
                 if len(fa.points) > 1:
                     note = choice_note(len(fa.points), item.effective_marks)

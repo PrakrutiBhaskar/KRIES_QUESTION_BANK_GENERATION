@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime
 from typing import Generic, Literal, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.exc import NoInspectionAvailable
 
@@ -22,6 +22,25 @@ from generation_engine.schemas import Difficulty, QuestionType, Subject
 from ..config import settings
 
 T = TypeVar("T")
+
+
+class MarksSplitPart(BaseModel):
+    """One line of a marks split: a component of the answer and the marks it earns."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    marks: int = Field(ge=1, le=5)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, v: str) -> str:
+        v = " ".join((v or "").split())
+        if not v:
+            raise ValueError("each part of the marks split needs a name")
+        if len(v) > 40:
+            raise ValueError("a marks split name can be at most 40 characters")
+        return v
 
 
 class FigureOut(BaseModel):
@@ -90,7 +109,7 @@ class FigureDetailOut(FigureOut):
         )
 
 
-_FIGURE_KEYS = ("figure", "answer_figure")
+_FIGURE_KEYS = ("figure", "answer_figure", "marks_split")
 
 
 def _drop_empty_figures(data: dict) -> dict:
@@ -123,6 +142,38 @@ def _figure_of(row, name: str) -> "FigureOut | None":
     return FigureOut.from_model(figure) if figure is not None else None
 
 
+def parts_of(raw) -> "list[MarksSplitPart] | None":
+    if not raw:
+        return None
+    return [MarksSplitPart(name=p["name"], marks=p["marks"]) for p in raw]
+
+
+def auto_split_of(row) -> "list[MarksSplitPart] | None":
+    """The split the answer key prints when nobody has edited it (None when there is none)."""
+    # Imported here: the export package pulls in the PDF renderers, which the
+    # schemas must not depend on at import time.
+    from ..services.export.answer_format import format_answer
+
+    type_value = getattr(row.type, "value", row.type)
+    if type_value not in ("Short", "Long") or row.marks <= 1:
+        return None
+    has_figure = _figure_of(row, "answer_figure") is not None
+    fa = format_answer(row.answer, row.marks, type_value, has_figure=has_figure)
+    return [MarksSplitPart(name=n, marks=m) for n, m in fa.split] or None
+
+
+class MarksSplitOut(BaseModel):
+    """What the answer key prints for a question's marks, and what a teacher set."""
+
+    marks: int
+    # The teacher's own split, or null when the key uses the automatic one.
+    marks_split: list[MarksSplitPart] | None = None
+    # The automatic split (null for questions that print none: MCQ, Fill, Match, 1 mark).
+    auto_marks_split: list[MarksSplitPart] | None = None
+    # Whether this question's type and marks can carry a split at all.
+    editable: bool
+
+
 class QuestionOut(BaseModel):
     """The shared Question object, as returned by every endpoint."""
 
@@ -149,6 +200,9 @@ class QuestionOut(BaseModel):
     # only in the answer key.
     figure: FigureOut | None = None
     answer_figure: FigureOut | None = None
+    # The teacher's own marks split for the answer key; absent when the split is
+    # automatic (what it would print then: GET /questions/{id}/marks-split).
+    marks_split: list[MarksSplitPart] | None = None
 
     @model_serializer(mode="wrap")
     def _serialize(self, handler):
@@ -174,6 +228,7 @@ class QuestionOut(BaseModel):
             verification_note=row.verification_note,
             figure=_figure_of(row, "figure"),
             answer_figure=_figure_of(row, "answer_figure"),
+            marks_split=parts_of(getattr(row, "marks_split", None)),
         )
 
 

@@ -67,3 +67,22 @@ async def require_generator(user: User = Depends(get_current_user)) -> User:
             error="generation_disabled_for_students",
         )
     return user
+
+
+EDITOR_ROLES = ("Admin", "Teacher")
+
+
+async def require_editor(user: User = Depends(get_current_user)) -> User:
+    """Gate for every action that changes existing content.
+
+    Editing a question (wording, answer, marks split), removing questions from
+    the pool, and reordering / re-marking / renaming a paper are for teachers
+    and administrators. Students can still generate and export their own papers
+    and practise; they just cannot edit what is in them.
+    """
+    if user.role not in EDITOR_ROLES:
+        raise ForbiddenError(
+            "Only teachers and administrators can edit questions and papers.",
+            error="editor_required",
+        )
+    return user

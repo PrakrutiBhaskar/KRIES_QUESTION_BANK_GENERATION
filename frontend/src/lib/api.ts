@@ -13,6 +13,7 @@ import type {
   Grade,
   Marks,
   MarksByType,
+  MarksSplitPart,
   Question,
   QuestionBank,
   QuestionDifficulty,
@@ -167,6 +168,8 @@ interface QuestionWire {
   /** Present only when a figure is attached. */
   figure?: FigureWire | null;
   answer_figure?: FigureWire | null;
+  /** Present only when a teacher has set their own marks split. */
+  marks_split?: MarksSplitPart[] | null;
 }
 
 interface PaperWire {
@@ -211,6 +214,7 @@ function toQuestion(q: QuestionWire, index: number): Question {
     verificationNote: q.verification_note ?? undefined,
     figure: toFigure(q.figure),
     answerFigure: toFigure(q.answer_figure),
+    marksSplit: q.marks_split?.length ? q.marks_split : undefined,
   };
 }
 
@@ -392,6 +396,70 @@ export async function fetchChapters(subject: Subject, grade?: number): Promise<C
   }));
 }
 
+// ---- Syllabus seeding (teachers and administrators) ----
+
+/** A chapter added from the Syllabus page (not from a textbook or the bundled syllabus). */
+export interface SeededChapter {
+  id: string;
+  subject: Subject;
+  grade: number;
+  name: string;
+  topics: string[];
+  /** True when the signed-in user may remove it: whoever added it, or an administrator. */
+  canRemove: boolean;
+}
+
+interface SeededChapterWire {
+  id: string;
+  subject: Subject;
+  grade: number;
+  name: string;
+  topics?: string[];
+  can_remove?: boolean;
+}
+
+const toSeeded = (r: SeededChapterWire): SeededChapter => ({
+  id: r.id,
+  subject: r.subject,
+  grade: r.grade,
+  name: r.name,
+  topics: r.topics ?? [],
+  canRemove: !!r.can_remove,
+});
+
+export async function fetchSeededChapters(subject?: Subject, grade?: number): Promise<SeededChapter[]> {
+  const q = new URLSearchParams();
+  if (subject) q.set('subject', subject);
+  if (grade) q.set('grade', String(grade));
+  const rows = await request<SeededChapterWire[]>(`/syllabus/seeded${q.size ? `?${q}` : ''}`, {}, 15000);
+  return rows.map(toSeeded);
+}
+
+export interface SeedResult {
+  added: SeededChapter[];
+  /** Names left out because that grade's syllabus already has them. */
+  skipped: string[];
+  warning: string | null;
+}
+
+/** Add chapters (with optional sub-topics) to a subject's syllabus for one grade; usable at once. */
+export async function seedSyllabus(
+  subject: Subject,
+  grade: number,
+  chapters: { name: string; topics: string[] }[],
+): Promise<SeedResult> {
+  const r = await request<{ added: SeededChapterWire[]; skipped: string[]; warning?: string | null }>(
+    '/syllabus/seed',
+    { method: 'POST', body: JSON.stringify({ subject, grade, chapters }) },
+    30000,
+  );
+  return { added: r.added.map(toSeeded), skipped: r.skipped, warning: r.warning ?? null };
+}
+
+export async function removeSeededChapter(id: string): Promise<void> {
+  await request<void>(`/syllabus/seeded/${id}`, { method: 'DELETE' });
+}
+
 /** Which marks values each question type supports (enforced by POST /generate). */
 export async function fetchCombinations(): Promise<MarksByType> {
   const rows = await request<{ type: QuestionType; marks: number[] }[]>('/generation/combinations');
@@ -503,6 +571,33 @@ export interface QuestionEdit {
   /** Attach a figure from the library, or null to detach. Sent as-is (snake_case). */
   figure_id?: string | null;
   answer_figure_id?: string | null;
+  /** The answer key's marks split (must add up to the question's marks), or null to go back to automatic. */
+  marks_split?: MarksSplitPart[] | null;
+}
+
+/** What the answer key prints for a question's marks, and what a teacher has set. */
+export interface MarksSplitInfo {
+  marks: number;
+  marksSplit: MarksSplitPart[] | null;
+  autoMarksSplit: MarksSplitPart[] | null;
+  /** False for MCQ, fill-in, match and 1-mark questions: they print no split. */
+  editable: boolean;
+}
+
+/** Teachers and administrators only. */
+export async function fetchMarksSplit(id: string): Promise<MarksSplitInfo> {
+  const r = await request<{
+    marks: number;
+    marks_split?: MarksSplitPart[] | null;
+    auto_marks_split?: MarksSplitPart[] | null;
+    editable: boolean;
+  }>(`/questions/${id}/marks-split`);
+  return {
+    marks: r.marks,
+    marksSplit: r.marks_split ?? null,
+    autoMarksSplit: r.auto_marks_split ?? null,
+    editable: r.editable,
+  };
 }
 
 /** Saves should answer in well under this; past it the dialog shows an error instead of spinning forever. */

@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
+import { canEditContent } from '../lib/roles';
 import type { Subject, Difficulty } from '../types';
 import { DifficultyBadge, SubjectDot, EmptyState, ConfirmModal, ExportModal } from '../components/ui';
 import { BankGridSkeleton, BankListSkeleton } from '../components/Skeleton';
@@ -25,7 +26,8 @@ const SUBJECTS: Array<Subject | 'All'> = ['All', 'Math', 'Science', 'Social Scie
 const DIFFICULTIES: Array<Difficulty | 'All'> = ['All', 'easy', 'medium', 'hard', 'mixed'];
 
 export default function QuestionBanksPage() {
-  const { questionBanks, banksLoading, banksError, refreshBanks, deleteQuestionBank, showToast } = useApp();
+  const { questionBanks, banksLoading, banksError, refreshBanks, deleteQuestionBank, showToast, user } = useApp();
+  const canEdit = canEditContent(user?.role);
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
@@ -278,14 +280,16 @@ export default function QuestionBanksPage() {
                   <Eye className="w-3.5 h-3.5" />
                   View
                 </button>
-                <button
-                  onClick={() => navigate(`/question-banks/${bank.id}?edit=1`)}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                  aria-label="Edit"
-                  title="Edit"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => navigate(`/question-banks/${bank.id}?edit=1`)}
+                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    aria-label="Edit"
+                    title="Edit"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 <button
                   onClick={() => setExportTarget({ id: bank.id, name: bank.name })}
                   disabled={exportingId === bank.id}
@@ -343,7 +347,9 @@ export default function QuestionBanksPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => navigate(`/question-banks/${bank.id}`)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded transition-colors" title="View"><Eye className="w-4 h-4" /></button>
-                        <button onClick={() => navigate(`/question-banks/${bank.id}?edit=1`)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
+                        {canEdit && (
+                          <button onClick={() => navigate(`/question-banks/${bank.id}?edit=1`)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Edit"><Pencil className="w-4 h-4" /></button>
+                        )}
                         <button onClick={() => setExportTarget({ id: bank.id, name: bank.name })} disabled={exportingId === bank.id} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 rounded transition-colors" title="Export"><Download className="w-4 h-4" /></button>
                         <button onClick={() => setDeleteId(bank.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>

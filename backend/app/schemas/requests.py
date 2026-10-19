@@ -13,6 +13,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .common import MarksSplitPart
+
 from generation_engine.schemas import (
     VALID_GRADES,
     VALID_MARKS_BY_TYPE,
@@ -134,6 +136,9 @@ class QuestionPatch(BaseModel):
     # Attach a figure from the library, or send null to detach it.
     figure_id: uuid.UUID | None = None
     answer_figure_id: uuid.UUID | None = None
+    # How the marks are split across the answer key, e.g. Diagram 2 + Explanation 3.
+    # Must add up to the question's marks. Send null to go back to the automatic split.
+    marks_split: list[MarksSplitPart] | None = Field(default=None, max_length=6)
 
     @field_validator("text")
     @classmethod
@@ -392,3 +397,44 @@ class BlueprintIn(BaseModel):
     @property
     def total_marks(self) -> int:
         return sum(s.total_marks for s in self.sections)
+
+
+class SeedChapterIn(BaseModel):
+    """One chapter to add to the syllabus, with optional sub-topics."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    topics: list[str] = Field(default_factory=list, max_length=40)
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, v: str) -> str:
+        v = " ".join((v or "").split())
+        if not v:
+            raise ValueError("a chapter needs a name")
+        if len(v) > 200:
+            raise ValueError("a chapter name can be at most 200 characters")
+        return v
+
+    @field_validator("topics")
+    @classmethod
+    def clean_topics(cls, v: list[str]) -> list[str]:
+        out: list[str] = []
+        for t in v:
+            t = " ".join((t or "").split())
+            if t and t.casefold() not in {x.casefold() for x in out}:
+                if len(t) > 200:
+                    raise ValueError("a topic can be at most 200 characters")
+                out.append(t)
+        return out
+
+
+class SeedSyllabusIn(BaseModel):
+    """POST /syllabus/seed: add chapters to one subject's syllabus for one grade."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    subject: Subject
+    grade: int = Field(ge=7, le=9)
+    chapters: list[SeedChapterIn] = Field(min_length=1, max_length=100)

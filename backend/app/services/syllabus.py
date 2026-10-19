@@ -14,9 +14,11 @@ list before anything has been generated.
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import re
+import uuid
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import noload
@@ -24,12 +26,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from generation_engine.schemas import Subject as SubjectEnum
-from generation_engine.syllabus import SyllabusIndex
+from generation_engine.syllabus import SyllabusIndex, _normalize_chapter
 from generation_engine.textbook import TextbookCorpus
 
 from ..config import settings
-from ..errors import NotFoundError
-from ..models import Chapter, Question, Subject
+from ..errors import ConflictError, ForbiddenError, NotFoundError
+from ..models import Chapter, Question, SeededChapter, Subject, User
 
 logger = logging.getLogger("backend.syllabus")
 
@@ -38,6 +40,9 @@ _corpus: TextbookCorpus | None = None
 # subject name -> grade -> normalised chapter names. Optional "grades" block in
 # the syllabus JSON; subjects without one (English, Kannada) aren't grade-filtered.
 _grade_chapters: dict[str, dict[int, set[str]]] = {}
+# The syllabus as loaded from textbooks + syllabus.json, before any chapters
+# seeded from the app are merged in (see reload_seeded).
+_base_dict: dict = {}
 
 
 def _norm(name: str) -> str:
@@ -84,7 +89,7 @@ def load_syllabus_index() -> SyllabusIndex | None:
        Otherwise the bundled syllabus.json fills in (subject, grade) pairs with
        no textbook yet, and textbooks override it where present.
     """
-    global _syllabus_index, _grade_chapters, _corpus
+    global _syllabus_index, _grade_chapters, _corpus, _base_dict
     _corpus = TextbookCorpus.from_dir(settings.textbooks_dir)
     if _corpus.is_empty():
         logger.warning(
@@ -109,9 +114,20 @@ def load_syllabus_index() -> SyllabusIndex | None:
         except (OSError, ValueError) as exc:
             logger.warning("Could not read syllabus from %s: %s", path, exc)
     merged = _corpus.to_syllabus_dict(base)
+    _base_dict = copy.deepcopy(merged)
 
     if not merged:
         logger.info("No syllabus data — chapter names accepted as given.")
+        _grade_chapters = {}
+        _syllabus_index = None
+        return None
+    return _install(merged)
+
+
+def _install(merged: dict) -> SyllabusIndex | None:
+    """Build the index from a syllabus dict and make it the live one."""
+    global _syllabus_index, _grade_chapters
+    if not merged:
         _grade_chapters = {}
         _syllabus_index = None
         return None
@@ -123,6 +139,131 @@ def load_syllabus_index() -> SyllabusIndex | None:
         logger.warning("Could not build syllabus index: %s", exc)
         _syllabus_index = None
     return _syllabus_index
+
+
+def merge_seeded(base: dict, rows: list[SeededChapter]) -> dict:
+    """The base syllabus with chapters seeded from the app added to their grade."""
+    out = copy.deepcopy(base)
+    for row in rows:
+        entry = out.setdefault(row.subject, {})
+        grades = entry.setdefault("grades", {})
+        topics = entry.setdefault("topics", {})
+        flat = entry.setdefault("chapters", [])
+        in_grade = grades.setdefault(str(row.grade), [])
+        key = _normalize_chapter(row.name)
+        if key not in {_normalize_chapter(c) for c in in_grade}:
+            in_grade.append(row.name)
+        if key not in {_normalize_chapter(c) for c in flat}:
+            flat.append(row.name)
+        if row.topics and not any(_normalize_chapter(c) == key for c in topics):
+            topics[row.name] = list(row.topics)
+        if not entry["topics"]:
+            del entry["topics"]
+    return out
+
+
+async def reload_seeded(session: AsyncSession) -> SyllabusIndex | None:
+    """
+    Rebuild the live syllabus = textbooks / syllabus.json + chapters seeded from
+    the app, hand it to the generation engine, and create the chapter rows.
+    Called at startup and after every change on the Syllabus page, so a new
+    syllabus applies without a restart.
+    """
+    rows = list(
+        (await session.scalars(select(SeededChapter).order_by(SeededChapter.created_at, SeededChapter.name))).all()
+    )
+    index = _install(merge_seeded(_base_dict, rows))
+    # The engine holds its own reference to the index.
+    from . import generation as generation_service
+
+    generation_service.use_syllabus(index)
+    if index is not None:
+        await seed_from_index(session, index)
+    return index
+
+
+def seeded_out(row: SeededChapter, user: User | None):
+    from ..schemas import SeededChapterOut
+
+    return SeededChapterOut(
+        id=row.id,
+        subject=SubjectEnum(row.subject),
+        grade=row.grade,
+        name=row.name,
+        topics=list(row.topics or []),
+        created_by=row.created_by,
+        can_remove=bool(user and (user.role == "Admin" or row.created_by == user.id)),
+    )
+
+
+async def list_seeded(
+    session: AsyncSession, subject: SubjectEnum | None = None, grade: int | None = None
+) -> list[SeededChapter]:
+    stmt = select(SeededChapter).order_by(
+        SeededChapter.subject, SeededChapter.grade, SeededChapter.created_at, SeededChapter.name
+    )
+    if subject is not None:
+        stmt = stmt.where(SeededChapter.subject == subject.value)
+    if grade is not None:
+        stmt = stmt.where(SeededChapter.grade == grade)
+    return list((await session.scalars(stmt)).all())
+
+
+async def seed_chapters(
+    session: AsyncSession, user: User, subject: SubjectEnum, grade: int, chapters
+) -> tuple[list[SeededChapter], list[str], str | None]:
+    """
+    Add chapters to one subject's syllabus for one grade. Returns (added, skipped
+    names, warning). A chapter the grade's syllabus already has is skipped, not
+    duplicated; repeats inside the request are skipped too.
+    """
+    index = get_syllabus_index()
+    had_syllabus = bool(_base_dict)
+    added: list[SeededChapter] = []
+    skipped: list[str] = []
+    seen: set[str] = set()
+    for ch in chapters:
+        key = _normalize_chapter(ch.name)
+        if not key or key in seen or (index is not None and index.has_chapter(subject, ch.name, grade)):
+            skipped.append(ch.name)
+            continue
+        seen.add(key)
+        row = SeededChapter(
+            subject=subject.value,
+            grade=grade,
+            name=ch.name,
+            name_key=key,
+            topics=list(ch.topics) or None,
+            created_by=user.id,
+        )
+        session.add(row)
+        added.append(row)
+    try:
+        await session.flush()
+    except IntegrityError:
+        # A concurrent request seeded the same chapter first.
+        await session.rollback()
+        raise ConflictError("Some of these chapters were just added by someone else. Reload and try again.")
+    if added:
+        await reload_seeded(session)
+    warning = None
+    if added and not had_syllabus:
+        warning = (
+            "No syllabus was loaded before, so generation now accepts only the chapters "
+            "seeded here. Seed every chapter you want to generate from."
+        )
+    return added, skipped, warning
+
+
+async def remove_seeded(session: AsyncSession, user: User, seeded_id: uuid.UUID) -> None:
+    row = await session.get(SeededChapter, seeded_id)
+    if row is None:
+        raise NotFoundError("That seeded chapter no longer exists.")
+    if user.role != "Admin" and row.created_by != user.id:
+        raise ForbiddenError("Only the teacher who added this chapter, or an administrator, can remove it.")
+    await session.delete(row)
+    await session.flush()
+    await reload_seeded(session)
 
 
 async def get_or_create_subject(session: AsyncSession, name: SubjectEnum) -> Subject:

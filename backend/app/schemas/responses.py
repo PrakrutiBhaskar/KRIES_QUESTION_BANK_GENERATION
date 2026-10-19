@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
 from generation_engine.schemas import QuestionType, Subject
 
@@ -209,3 +209,24 @@ class BlueprintJobOut(BaseModel):
     error: str | None = None
     detail: str | None = None
     error_status: int | None = None
+
+
+class SeededChapterOut(BaseModel):
+    """A chapter added from the Syllabus page."""
+
+    id: uuid.UUID
+    subject: Subject
+    grade: int
+    name: str
+    topics: list[str] = Field(default_factory=list)
+    created_by: uuid.UUID | None = None
+    # True when the signed-in user may remove it (its creator, or an administrator).
+    can_remove: bool = False
+
+
+class SeedSyllabusOut(BaseModel):
+    added: list[SeededChapterOut]
+    # Names left out because the grade's syllabus already has them.
+    skipped: list[str]
+    # Set when seeding changes how generation behaves in a way worth knowing about.
+    warning: str | None = None

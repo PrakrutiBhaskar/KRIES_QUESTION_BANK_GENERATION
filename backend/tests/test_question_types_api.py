@@ -298,7 +298,8 @@ async def test_migration_0009_is_the_head_and_applies_cleanly(tmp_path):
     )
     heads = run("heads")
     assert heads.returncode == 0, heads.stderr
-    assert "0009" in heads.stdout
+    # 0009 added the Fill / Match types; 0011 (seeded_chapters) is now the head
+    assert "0011" in heads.stdout
     up = run("upgrade", "head")
     assert up.returncode == 0, up.stderr
     # and back: a downgrade past 0009 is a harmless no-op, not an error

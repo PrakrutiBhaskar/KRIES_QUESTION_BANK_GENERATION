@@ -49,7 +49,8 @@ def build_engine(url: str | None = None, echo: bool | None = None) -> AsyncEngin
 # questions.created_by, 0004 for paper_questions.section, 0005 for
 # users.preferences, 0006 for the figures table and questions.figure_id /
 # answer_figure_id, 0007 for questions.verification_status / verification_note,
-# 0008 for the figure metadata used by figure-based generation).
+# 0008 for the figure metadata used by figure-based generation, 0010 for
+# questions.marks_split).
 _ADDED_COLUMNS = [
     ("questions", "created_by"),
     ("paper_questions", "section"),
@@ -58,6 +59,7 @@ _ADDED_COLUMNS = [
     ("questions", "answer_figure_id"),
     ("questions", "verification_status"),
     ("questions", "verification_note"),
+    ("questions", "marks_split"),
     ("figures", "subject"),
     ("figures", "chapter"),
     ("figures", "topic"),

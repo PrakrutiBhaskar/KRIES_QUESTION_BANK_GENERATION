@@ -100,6 +100,32 @@ class Chapter(Base):
     subject: Mapped[Subject] = relationship(back_populates="chapters", lazy="joined")
 
 
+class SeededChapter(Base, TimestampMixin):
+    """A chapter added to the syllabus from the Syllabus page (not from a textbook or syllabus.json).
+
+    Merged into the live syllabus index at startup and whenever the list
+    changes (services/syllabus.reload_seeded), so a new syllabus takes effect
+    without a restart. Textbook and syllabus.json chapters are never stored here.
+    """
+
+    __tablename__ = "seeded_chapters"
+    __table_args__ = (
+        UniqueConstraint("subject", "grade", "name_key", name="uq_seeded_chapters"),
+        CheckConstraint("grade IN (7, 8, 9)", name="ck_seeded_chapters_grade"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    grade: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    # The name as the syllabus index compares it (case/punctuation-insensitive).
+    name_key: Mapped[str] = mapped_column(Text, nullable=False)
+    topics: Mapped[list[str] | None] = mapped_column(JSONBType, nullable=True)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
+
+
 class Figure(Base, TimestampMixin):
     """An uploaded diagram that can be attached to questions.
 
@@ -211,6 +237,13 @@ class Question(Base, TimestampMixin):
     # "unverified". Flagged questions are never served from the cache.
     verification_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     verification_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # A teacher's own marks split for the answer key, e.g.
+    # [{"name": "Diagram", "marks": 2}, {"name": "Explanation", "marks": 3}].
+    # NULL means "work it out automatically" (services/export/answer_format.py).
+    # It must add up to the question's marks; the exporters ignore it if it no
+    # longer does (for example when a paper overrides the marks).
+    marks_split: Mapped[list[dict] | None] = mapped_column(JSONBType, nullable=True)
 
     # `content_hash` backs the duplicate guard on insert — see
     # services/questions.py. Module A already de-duplicates within a batch;

@@ -203,7 +203,7 @@ def render_paper_html(paper, *, include_answer_key: bool = True) -> str:
             else:
                 fa = format_answer(
                     q.answer, item.effective_marks, q.type.value,
-                    has_figure=answer_fig is not None,
+                    has_figure=answer_fig is not None, custom_split=getattr(q, "marks_split", None)
                 )
                 parts.append(f"<div><span class='label'>{n}.</span>")
                 if len(fa.points) > 1:

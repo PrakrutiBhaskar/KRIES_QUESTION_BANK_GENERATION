@@ -83,6 +83,12 @@ def get_engine() -> GenerationEngine:
     return _engine
 
 
+def use_syllabus(index) -> None:
+    """Point the running engine at a rebuilt syllabus index (it keeps its own reference)."""
+    if _engine is not None:
+        _engine.syllabus = index
+
+
 def set_engine(engine: GenerationEngine | None) -> None:
     """Test/DI hook — pass None to reset."""
     global _engine

@@ -16,6 +16,8 @@ from .common import (
     ErrorOut,
     FigureDetailOut,
     FigureOut,
+    MarksSplitOut,
+    MarksSplitPart,
     MaskedQuestionOut,
     Page,
     QuestionOut,
@@ -33,6 +35,8 @@ from .requests import (
     PracticeSessionIn,
     QuestionIn,
     QuestionPatch,
+    SeedChapterIn,
+    SeedSyllabusIn,
     VerifyIn,
 )
 from .responses import (
@@ -48,12 +52,20 @@ from .responses import (
     PaperOut,
     PaperQuestionOut,
     PracticeSessionOut,
+    SeededChapterOut,
+    SeedSyllabusOut,
     RevealOut,
     SubjectOut,
     VerifyOut,
 )
 
 __all__ = [
+    "SeedChapterIn",
+    "SeedSyllabusIn",
+    "SeededChapterOut",
+    "SeedSyllabusOut",
+    "MarksSplitOut",
+    "MarksSplitPart",
     "PreferencesOut",
     "PreferencesPatch",
     "ProfileUpdateIn",

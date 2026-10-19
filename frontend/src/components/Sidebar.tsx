@@ -8,9 +8,11 @@ import {
   LogOut,
   GraduationCap,
   Images,
+  Library,
   X,
 } from 'lucide-react';
 import { useApp } from '../hooks/useApp';
+import { canEditContent } from '../lib/roles';
 
 interface SidebarProps {
   mobile?: boolean;
@@ -22,6 +24,11 @@ const NAV_ITEMS = [
   { to: '/generate', icon: Wand2, label: 'Generate' },
   { to: '/question-papers', icon: FileText, label: 'Question Papers' },
   { to: '/question-banks', icon: BookOpen, label: 'Question Banks' },
+];
+
+// Shown to teachers and administrators (the API enforces this too).
+const EDITOR_NAV_ITEMS = [
+  { to: '/syllabus', icon: Library, label: 'Syllabus' },
 ];
 
 // Only shown to administrators (the API enforces this too).
@@ -72,6 +79,7 @@ export default function Sidebar({ mobile = false, onClose }: SidebarProps) {
         </p>
         {[
           ...NAV_ITEMS,
+          ...(canEditContent(user?.role) ? EDITOR_NAV_ITEMS : []),
           ...(user?.role === 'Admin' ? ADMIN_NAV_ITEMS : []),
         ].map(({ to, icon: Icon, label }) => (
           <NavLink

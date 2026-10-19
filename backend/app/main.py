@@ -21,7 +21,7 @@ from .ratelimit import RateLimitMiddleware
 from .routers import auth, export, figures, papers, practice, questions, syllabus
 from .services.export import active_renderer
 from .services.generation import get_engine, set_engine
-from .services.syllabus import load_syllabus_index, seed_from_index
+from .services.syllabus import load_syllabus_index, reload_seeded, seed_from_index
 
 logging.basicConfig(
     level=logging.DEBUG if settings.debug else logging.INFO,
@@ -74,10 +74,16 @@ async def lifespan(app: FastAPI):
     # otherwise chapters only appear lazily, after someone generates a
     # question for them first. Idempotent: safe to run on every startup.
     seeded = 0
-    if index is not None:
-        async with SessionLocal() as session:
-            seeded = await seed_from_index(session, index)
-            await session.commit()
+    async with SessionLocal() as session:
+        try:
+            # Textbook / syllabus.json chapters plus any seeded from the Syllabus page.
+            index = await reload_seeded(session)
+        except Exception as exc:  # e.g. the seeded_chapters table is not migrated yet
+            await session.rollback()
+            logger.warning("Could not load seeded chapters: %s", exc)
+            if index is not None:
+                seeded = await seed_from_index(session, index)
+        await session.commit()
 
     if settings.jwt_secret_is_ephemeral:
         logger.warning(
