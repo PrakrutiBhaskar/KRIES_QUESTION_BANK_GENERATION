@@ -451,3 +451,64 @@ async def test_unknown_job_is_a_404(client):
 async def test_job_endpoints_validate_and_require_sign_in(client, anon_client):
     assert (await client.post("/papers/blueprint/jobs", json=blueprint(surprise=True))).status_code == 400
     assert (await anon_client.post("/papers/blueprint/jobs", json=blueprint())).status_code == 401
+
+
+# --- a paper for the entire subject ----------------------------------------------
+
+
+def _whole_subject(n_chapters: int, sections=None) -> dict:
+    """Every chapter of a subject with an even share of the marks (the last takes the rounding)."""
+    share = round(100 / n_chapters, 4)
+    chapters = [{"name": f"Chapter {i + 1}", "weightage": share} for i in range(n_chapters)]
+    chapters[-1]["weightage"] = round(100 - share * (n_chapters - 1), 4)
+    return blueprint(
+        chapters=chapters,
+        sections=sections
+        or [
+            {"name": "Section A", "type": "MCQ", "marks_per_question": 1, "total_marks": 30},
+            {"name": "Section B", "type": "Short", "marks_per_question": 2, "total_marks": 20},
+            {"name": "Section C", "type": "Long", "marks_per_question": 5, "total_marks": 20},
+        ],
+    )
+
+
+async def test_a_paper_can_cover_more_than_twelve_chapters(client, groq_stub):
+    r = await client.post("/papers/blueprint/preview", json=_whole_subject(24))
+    assert r.status_code == 200, r.text
+    assert len(r.json()["chapters"]) == 24
+
+
+async def test_the_largest_paper_covers_sixty_chapters_and_no_more(client, groq_stub):
+    ok = await client.post(
+        "/papers/blueprint/preview",
+        json=_whole_subject(
+            60, [{"name": "A", "type": "MCQ", "marks_per_question": 1, "total_marks": 90}]
+        ),
+    )
+    assert ok.status_code == 200, ok.text
+    too_many = await client.post(
+        "/papers/blueprint/preview",
+        json=_whole_subject(
+            61, [{"name": "A", "type": "MCQ", "marks_per_question": 1, "total_marks": 90}]
+        ),
+    )
+    assert too_many.status_code == 400  # validation errors are 400 in this API
+
+
+@pytest.mark.parametrize("n_chapters", [13, 18, 25, 40])
+def test_an_even_whole_subject_paper_touches_every_chapter(n_chapters):
+    # With even weightage and at least as many questions as chapters, no chapter is left out.
+    bp = BlueprintIn(**_whole_subject(n_chapters))
+    plan = build_plan(bp)
+    assert sum(s.question_count for s in bp.sections) >= n_chapters
+    assert all(c.planned_questions >= 1 for c in plan.response.chapters)
+
+
+def test_fewer_questions_than_chapters_leaves_some_chapters_out():
+    bp = BlueprintIn(
+        **_whole_subject(
+            20, [{"name": "A", "type": "MCQ", "marks_per_question": 1, "total_marks": 10}]
+        )
+    )
+    plan = build_plan(bp)
+    assert sum(1 for c in plan.response.chapters if c.planned_questions == 0) == 10

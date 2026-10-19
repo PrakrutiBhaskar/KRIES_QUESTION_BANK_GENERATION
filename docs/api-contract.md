@@ -194,6 +194,14 @@ Reorder questions / update marks / update title. Teachers and administrators onl
 
 ---
 
+### Blueprint papers for a whole subject
+`POST /papers/blueprint`, `/papers/blueprint/preview` and `/papers/blueprint/jobs` take up to 60
+`chapters` (each `{name, weightage}`, weightage adding up to 100), enough to cover every chapter
+of a subject in one grade. List them all with even weightage to build a paper for the entire
+subject. The paper is still limited to 100 questions, and a chapter can only get a question if
+there are at least as many questions as chapters (the preview shows `planned_questions` per
+chapter, so a chapter left at 0 is visible before anything is generated).
+
 ## 4. Export
 
 ### `POST /export/{paper_id}`

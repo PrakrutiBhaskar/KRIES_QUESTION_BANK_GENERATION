@@ -39,7 +39,7 @@ const DEFAULT_MARKS_BY_TYPE: MarksByType = { MCQ: [1], Short: [1, 2, 3], Long: [
 // Limits enforced by the backend (schemas/requests.py); checked here so the
 // user sees the problem next to the field instead of after a failed request.
 const MAX_QUESTIONS = 100;
-const MAX_CHAPTERS = 12;
+const MAX_CHAPTERS = 60; // matches the backend (a whole subject fits)
 const MAX_SECTIONS = 8;
 
 interface SectionRow extends BlueprintSection {
@@ -139,7 +139,15 @@ export default function QuestionPapersPage() {
     setWeights(splitEvenly(chapters.map((c) => c.name).filter((n) => next.has(n))));
   };
 
-  const selectAllChapters = () => setWeights(splitEvenly(chapters.slice(0, MAX_CHAPTERS).map((c) => c.name)));
+  // Every chapter of the subject in this grade, sharing the marks evenly.
+  const selectAllChapters = () => {
+    if (chapters.length > MAX_CHAPTERS) {
+      showToast(`A paper can draw on at most ${MAX_CHAPTERS} chapters; this subject has ${chapters.length}.`, 'warning');
+      return;
+    }
+    setWeights(splitEvenly(chapters.map((c) => c.name)));
+  };
+  const wholeSubject = chapters.length > 0 && picked.length === chapters.length;
   const clearChapters = () => setWeights({});
   const evenSplit = () => setWeights(splitEvenly(picked));
 
@@ -202,7 +210,7 @@ export default function QuestionPapersPage() {
 
   const blueprint: BlueprintInput = useMemo(
     () => ({
-      title,
+      title: title.trim() || (wholeSubject ? `${subject} Full Syllabus Question Paper (Grade ${grade})` : ''),
       subject,
       grade,
       chapters: picked.map((name) => ({ name, weightage: weights[name] })),
@@ -215,7 +223,7 @@ export default function QuestionPapersPage() {
       })),
       refresh: false,
     }),
-    [title, subject, grade, picked, weights, sections],
+    [title, subject, grade, picked, weights, sections, wholeSubject],
   );
 
   // --- live preview of the split ------------------------------------------------
@@ -273,6 +281,8 @@ export default function QuestionPapersPage() {
   // Leaving the page stops polling; the server still finishes and saves the paper.
   useEffect(() => () => buildAbort.current?.abort(), []);
 
+  // Chapters the plan leaves without a single question (only possible when there are more chapters than questions).
+  const uncovered = plan?.chapters.filter((c) => c.plannedQuestions === 0) ?? [];
   const gaps = plan?.chapters.filter((c) => Math.abs(c.plannedMarks - c.targetMarks) > 1) ?? [];
 
   return (
@@ -342,12 +352,12 @@ export default function QuestionPapersPage() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Chapters &amp; weightage</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Pick the chapters this paper covers and what share of the marks each gets.
+                  Pick the chapters this paper covers and what share of the marks each gets, or use Entire subject to cover every chapter.
                 </p>
               </div>
               <div className="flex gap-3 shrink-0 text-xs font-medium">
                 <button type="button" onClick={selectAllChapters} disabled={chapters.length === 0} className="text-indigo-600 hover:text-indigo-800 disabled:opacity-40">
-                  Select all
+                  Entire subject
                 </button>
                 <button type="button" onClick={clearChapters} disabled={picked.length === 0} className="text-slate-500 hover:text-slate-800 disabled:opacity-40">
                   Clear
@@ -371,7 +381,20 @@ export default function QuestionPapersPage() {
               </p>
             )}
 
-            <ul className="space-y-1.5">
+            {wholeSubject && (
+              <p className="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-800">
+                Entire subject: this paper covers all {chapters.length} chapters of {subject}, Grade {grade}.
+              </p>
+            )}
+            {picked.length > totalQuestions && totalQuestions > 0 && (
+              <p className="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                This paper has {totalQuestions} question{totalQuestions === 1 ? '' : 's'} but covers {picked.length} chapters, so
+                at least {picked.length - totalQuestions} chapter{picked.length - totalQuestions === 1 ? '' : 's'} will have no
+                question. Add questions to a section, or pick fewer chapters.
+              </p>
+            )}
+
+            <ul className="space-y-1.5 max-h-[28rem] overflow-y-auto pr-1">
               {chapters.map((c) => {
                 const on = c.name in weights;
                 return (
@@ -596,6 +619,11 @@ export default function QuestionPapersPage() {
                         })}
                       </tbody>
                     </table>
+                    {uncovered.length > 0 && (
+                      <p className="mt-2 text-xs font-medium text-red-600">
+                        No question is planned for {uncovered.map((g) => g.chapter).join(', ')}.
+                      </p>
+                    )}
                     {gaps.length > 0 && (
                       <p className="mt-2 text-xs text-amber-700">
                         Questions are whole units, so {gaps.map((g) => g.chapter).join(', ')}{' '}

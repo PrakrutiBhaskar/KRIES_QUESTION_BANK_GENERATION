@@ -280,7 +280,9 @@ class PracticeSessionIn(BaseModel):
 # section is worth (and what kind of question fills it), and how the paper's
 # marks are split across chapters. The server turns it into a concrete list of
 # questions — see services/blueprint.py.
-MAX_BLUEPRINT_CHAPTERS = 12
+# Large enough for a whole subject's chapters in one grade (the longest syllabus
+# runs to a few dozen). The real bound on the work is MAX_BLUEPRINT_QUESTIONS below.
+MAX_BLUEPRINT_CHAPTERS = 60
 MAX_BLUEPRINT_SECTIONS = 8
 # Each question may mean an LLM call's worth of work and the request is one
 # long transaction, so the size of a single paper is capped.
