@@ -147,6 +147,15 @@ class QuestionPatch(BaseModel):
             raise ValueError("must not be blank")
         return v.strip() if v is not None else None
 
+    @field_validator("answer", mode="before")
+    @classmethod
+    def answer_not_blank(cls, v):
+        # Runs only when the client sent the field, so an explicit null or a
+        # blank string is refused instead of being treated as "not provided".
+        if v is None or (isinstance(v, str) and not v.strip()):
+            raise ValueError("must not be blank")
+        return v
+
 
 class ExportIn(BaseModel):
     """

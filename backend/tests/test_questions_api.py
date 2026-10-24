@@ -314,6 +314,7 @@ async def test_a_manual_fill_question_needs_exactly_one_blank(client):
         **MANUAL_MCQ,
         "type": "Fill",
         "options": None,
+        "explanation": "",  # a 1-mark Fill answer takes no explanation
         "text": "Plants make food by a process called photosynthesis.",
         "answer": "photosynthesis",
     }
